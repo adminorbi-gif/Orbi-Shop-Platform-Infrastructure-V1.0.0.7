@@ -5,7 +5,7 @@ This guide covers how to deploy the Orbi Shop platform on a standard Google Clou
 ## Step 1: Create the VM Instance
 1. Go to the [Google Cloud Console](https://console.cloud.google.com).
 2. Navigate to **Compute Engine > VM instances** and click **Create Instance**.
-3. **Machine configuration**: An `e2-micro` or `e2-small` is fine for starting out. 
+3. **Machine configuration**: An `e2-medium` (4GB RAM) or higher is recommended. (Note: Using `e2-micro` or `e2-small` will likely cause the VM to run out of memory and crash during `npm run build` or when handling heavy traffic).
 4. **Boot disk**: Choose **Ubuntu** (Ubuntu 22.04 LTS or 24.04 LTS).
 5. **Firewall**: Check **Allow HTTP traffic** and **Allow HTTPS traffic**.
 6. Click **Create**.
@@ -58,8 +58,8 @@ Compile the project for production and start it in the background:
 # Build the application (creates dist/server.cjs and front-end static files)
 npm run build
 
-# Start the application using PM2
-pm2 start npm --name "orbi-shop" -- start
+# Start the application using PM2 (runs the compiled server directly in production mode)
+NODE_ENV=production pm2 start dist/server.cjs --name "orbi-shop"
 
 # Tell PM2 to automatically restart the app if the VM reboots
 pm2 startup
