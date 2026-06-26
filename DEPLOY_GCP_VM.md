@@ -34,8 +34,8 @@ sudo npm install -g pm2
 Clone your project from GitHub:
 
 ```bash
-git clone https://github.com/adminorbi-gif/Orbi-Shop-Platform-Infrastructure-V1.0.0.6.git
-cd Orbi-Shop-Platform-Infrastructure-V1.0.0.6
+git clone https://github.com/adminorbi-gif/Orbi-Shop-Platform-Infrastructure-V1.0.0.7.git
+cd Orbi-Shop-Platform-Infrastructure-V1.0.0.7
 ```
 
 ## Step 4: Install Dependencies & Set Environment Variables
@@ -43,15 +43,32 @@ cd Orbi-Shop-Platform-Infrastructure-V1.0.0.6
 # Install npm packages
 npm install
 
-# Create your .env file
-cp .env.example .env
-
-# Edit the .env file to add your real keys
-nano .env
+# Clear the .env file and open it for editing
+> .env && nano .env
 ```
-*(In the `nano` editor, paste your Supabase keys, Gemini keys, and generate a 32-character string for your `ENCRYPTION_KEY`. Press `Ctrl + X`, then `Y`, then `Enter` to save).*
+*(In the `nano` editor, paste your clean environment variables including your Supabase keys, Gemini keys, and a 32-character string for your `ENCRYPTION_KEY`. Press `Ctrl + X`, then `Y`, then `Enter` to save).*
 
-## Step 5: Build and Start the App
+## Step 5: Create a Swap File (Crucial for Memory Issues)
+If you are using a VM with less than 8GB of RAM, the `npm run build` command might fail with a **"JavaScript heap out of memory"** error. Creating a swap file provides extra virtual memory to prevent crashes:
+
+```bash
+# Create a 4GB swap file
+sudo fallocate -l 4G /swapfile
+
+# Secure the swap file
+sudo chmod 600 /swapfile
+
+# Make the file a swap space
+sudo mkswap /swapfile
+
+# Enable the swap
+sudo swapon /swapfile
+
+# Make it permanent across reboots
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+
+## Step 6: Build and Start the App
 Compile the project for production and start it in the background:
 
 ```bash
@@ -67,7 +84,7 @@ pm2 startup
 pm2 save
 ```
 
-## Step 6: Configure Nginx as a Reverse Proxy (Optional but Recommended)
+## Step 7: Configure Nginx as a Reverse Proxy (Optional but Recommended)
 By default, the app runs on port 3000. To make it accessible cleanly over port 80 (standard HTTP):
 
 ```bash
@@ -105,7 +122,7 @@ sudo nginx -t
 sudo systemctl restart nginx
 ```
 
-## Step 7: Access Your Site
+## Step 8: Access Your Site
 You can now visit your Google Cloud VM's **External IP** address in your web browser. 
 
-*(If you ever push new code to GitHub, simply SSH in, `git pull`, `npm run build`, and `pm2 restart orbi-shop` to deploy the updates.)*
+*(If you ever push new code to GitHub, simply SSH in, `git pull`, `npm run build`, and `pm2 restart orbi-shop` to deploy the updates. If you see `npm: command not found`, make sure you ran Step 2 to install Node.js!)*
