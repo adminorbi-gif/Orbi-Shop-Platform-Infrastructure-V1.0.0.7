@@ -1,0 +1,10 @@
+{
+  "name": "Remix: Orbi Shop V1.0.0.9",
+  "description": "Oficial Orbi shop Market place",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

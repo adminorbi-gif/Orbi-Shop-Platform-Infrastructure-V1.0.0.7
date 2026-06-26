@@ -1,0 +1,98 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Roboto+Mono:wght@800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", var(--font-sans);
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-money: "Roboto Mono", "JetBrains Mono", monospace;
+  --color-primary: #1e293b;
+  --color-accent: #f59e0b;
+  --color-success: #10b981;
+  --color-bg: #f1f5f9;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-primary);
+  font-family: var(--font-sans);
+  overscroll-behavior-y: none; /* Prevents elastic Safari/Chrome pull-to-refresh on main container */
+  -webkit-touch-callout: none; /* Prevents callout sheet on long tap */
+  word-break: break-word;
+}
+
+/* Eliminate native tap overlay and selection issues to feel like standard compiled mobile apps */
+button,
+a,
+select,
+input[type="button"],
+input[type="submit"],
+[role="button"],
+.interactive-tap {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation; /* Improves response speed on double-tap actions */
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes statusHighlight {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); border-color: rgba(245, 158, 11, 1); }
+  50% { transform: scale(1.03); box-shadow: 0 0 0 15px rgba(245, 158, 11, 0); border-color: rgba(245, 158, 11, 0.3); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); border-color: inherit; }
+}
+
+@keyframes flashSuccess {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(16, 185, 129, 0.15); }
+}
+
+.animate-marquee {
+  animation: marquee 25s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+.animate-status-update {
+  animation: statusHighlight 1.8s ease-in-out 3;
+}
+
+.animate-status-flash {
+  animation: flashSuccess 2s ease-in-out;
+}
+
+/* Hide scrollbars on mobile screens for modern touch experience */
+@media (max-width: 767px) {
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  * {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+* {
+  -webkit-overflow-scrolling: touch; /* Momentum scrolling on iOS */
+}
+
+.overflow-x-auto, .overflow-x-scroll,
+.no-scrollbar {
+  overscroll-behavior-x: contain;
+}
+
+.overflow-y-auto, .overflow-y-scroll,
+.custom-scrollbar {
+  overscroll-behavior-y: contain;
+}

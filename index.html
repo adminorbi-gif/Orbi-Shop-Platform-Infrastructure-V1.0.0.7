@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="description" content="Shop with Orbi - The Most Trusted E-Commerce Marketplace in Tanzania, Dar es salaam, and Africa. Get quality, authenticity, and guaranteed payment protection. Nunua mtandaoni kwa usalama." />
+    <meta name="keywords" content="Orbi Shop, Electronics, Fashion, Furniture, Cars, Online Shopping, Verified Sellers, Tanzania, Dar es salaam, Africa, Bei za Friji za hisense, Bei za simu, Nunua mtandaoni, E-commerce Africa, Shopping in Tanzania, Bidhaa orijino, Orbi Tanzania" />
+    <meta name="geo.region" content="TZ" />
+    <meta name="geo.placename" content="Dar es Salaam" />
+    <meta property="og:title" content="Orbi Shop - Trusted E-Commerce Marketplace" />
+    <meta property="og:description" content="Shop with Orbi - The Most Trusted E-Commerce Marketplace in Tanzania, Dar es salaam, and Africa. Every product carries an implicit Orbi guarantee of trust with payment protection." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Orbi Shop" />
+    <meta property="og:image" content="https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@OrbiShop" />
+    <meta name="twitter:title" content="Orbi Shop - Trusted E-Commerce Marketplace" />
+    <meta name="twitter:description" content="Shop safely with trusted sellers and complete payment protection on Orbi Shop." />
+    <meta name="twitter:image" content="https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png" />
+    <title>Orbi Shop</title>
+    <link rel="icon" type="image/png" href="https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png" />
+    <link rel="apple-touch-icon" href="https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png" />
+    <link rel="canonical" href="https://shop.orbifinancial.com" />
+    <link rel="search" type="application/opensearchdescription+xml" title="Orbi Shop" href="/opensearch.xml" />
+    
+    <!-- AI Crawler Identification and indexing support -->
+    <meta name="ai-agent" content="Orbi Shop Product Engine" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    
+    <!-- Directives for AI Bots to crawl and index products effectively -->
+    <meta name="ia_archiver" content="index, follow" />
+    <meta name="googlebot" content="index, follow" />
+    <meta name="google-extended" content="index, follow" />
+    <meta name="gptbot" content="index, follow" />
+    <meta name="chatgpt-user" content="index, follow" />
+    <meta name="anthropic-ai" content="index, follow" />
+    <meta name="applebot" content="index, follow" />
+    <meta name="applebot-extended" content="index, follow" />
+    <meta name="bingbot" content="index, follow" />
+    
+    <meta property="og:url" content="https://shop.orbifinancial.com" />
+    <script id="dynamic-seo-schema"></script>
+    <script>
+      (function() {
+        var base = window.location.origin;
+        var canonical = document.querySelector('link[rel="canonical"]');
+        if (canonical) canonical.setAttribute('href', base + window.location.pathname + window.location.search);
+        var ogUrl = document.querySelector('meta[property="og:url"]');
+        if (ogUrl) ogUrl.setAttribute('content', base + window.location.pathname + window.location.search);
+        
+        // Prevent indexing of strictly private admin pages
+        var searchParams = new URLSearchParams(window.location.search);
+        var isSensitive = searchParams.has('admin') ||
+                          window.location.pathname.startsWith('/i');
+        if (isSensitive) {
+          var robots = document.querySelector('meta[name="robots"]');
+          if (robots) robots.setAttribute('content', 'noindex, nofollow');
+        }
+
+        var schemaEl = document.getElementById('dynamic-seo-schema');
+        if (schemaEl) {
+          schemaEl.type = 'application/ld+json';
+          
+          // Check if we are viewing a specific product
+          var productId = searchParams.get('productId') || searchParams.get('product');
+          var productName = searchParams.get('name') || "Orbi Shop Product";
+          var productNameSw = searchParams.get('nameSw');
+          var productPrice = searchParams.get('price');
+          
+          var schemas = [];
+          
+          // 1. Site Search Schema (Always present)
+          schemas.push({
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "Orbi Shop",
+            "url": base + "/",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": base + "/?q={search_term_string}"
+              },
+              "query-input": "required name=search_term_string"
+            }
+          });
+          
+          if (productId) {
+            // Update Meta Description dynamically for search results
+            var metaDesc = document.querySelector('meta[name="description"]');
+            var priceDisplay = productPrice ? productPrice + " TZS" : "bei nzuri";
+            var baseName = productNameSw || productName;
+            var swDesc = "Bei ya " + baseName + " ni " + priceDisplay + ". Nunua sasa kwenye Orbi Shop Tanzania.";
+            if (metaDesc) metaDesc.setAttribute('content', swDesc);
+
+            // Update OG and Twitter descriptions
+            var ogDesc = document.querySelector('meta[property="og:description"]');
+            if (ogDesc) ogDesc.setAttribute('content', swDesc);
+            var twDesc = document.querySelector('meta[name="twitter:description"]');
+            if (twDesc) twDesc.setAttribute('content', swDesc);
+
+            // Update Page Title
+            document.title = "Bei ya " + baseName + " | Orbi Shop";
+
+            // Specific Product Schema for better indexing of product details
+            schemas.push({
+              "@context": "https://schema.org",
+              "@type": "Product",
+              "id": base + "/?productId=" + productId,
+              "name": productName,
+              "alternateName": productNameSw || undefined,
+              "description": swDesc + " Buy " + productName + " at the best price on Africa's Trusted Marketplace.",
+              "sku": productId,
+              "offers": {
+                "@type": "Offer",
+                "price": productPrice || "0.00",
+                "priceCurrency": "TZS",
+                "availability": "https://schema.org/InStock",
+                "url": base + "/?productId=" + productId
+              }
+            });
+          } else {
+            // General Marketplace Schema
+            schemas.push({
+              "@context": "https://schema.org",
+              "@type": "ItemList",
+              "name": "Orbi Shop Marketplace Navigation",
+              "description": "Deep link crawl map for Orbi Shop Marketplace items, helping index pages directly on Google and external search providers.",
+              "itemListElement": [
+                {
+                  "@type": "ListItem",
+                  "position": 1,
+                  "name": "Orbi Shop Home Marketplace - Buyer Shop",
+                  "url": base + "/"
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 2,
+                  "name": "About Us & Secure Escrow Information",
+                  "url": base + "/?about=true"
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 3,
+                  "name": "Staff and Merchant Registration",
+                  "url": base + "/?seller-signup=true"
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 4,
+                  "name": "Seller & Merchant Dashboard Login",
+                  "url": base + "/?seller-login=true"
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 5,
+                  "name": "Seller Product Portal Manager",
+                  "url": base + "/?seller-productportal=true"
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 6,
+                  "name": "Order Tracking & Delivery Status",
+                  "url": base + "/?track=true"
+                }
+              ]
+            });
+          }
+          schemaEl.textContent = JSON.stringify(schemas, null, 2);
+        }
+      })();
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

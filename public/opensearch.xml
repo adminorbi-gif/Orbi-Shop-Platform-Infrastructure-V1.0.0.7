@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+  <ShortName>Orbi Shop</ShortName>
+  <Description>Search Orbi Shop for products in Tanzania</Description>
+  <Tags>shopping ecommerce tanzania electronics fashion</Tags>
+  <Contact>support@orbifinancial.com</Contact>
+  <Url type="text/html" template="https://shop.orbifinancial.com/?q={searchTerms}"/>
+  <Image height="16" width="16" type="image/png">https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png</Image>
+  <Developer>Orbi Financial</Developer>
+  <InputEncoding>UTF-8</InputEncoding>
+</OpenSearchDescription>

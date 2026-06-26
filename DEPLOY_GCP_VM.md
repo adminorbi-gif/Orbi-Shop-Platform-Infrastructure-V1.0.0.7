@@ -1,0 +1,111 @@
+# Google Cloud VM Deployment Guide
+
+This guide covers how to deploy the Orbi Shop platform on a standard Google Cloud Compute Engine VM using Ubuntu.
+
+## Step 1: Create the VM Instance
+1. Go to the [Google Cloud Console](https://console.cloud.google.com).
+2. Navigate to **Compute Engine > VM instances** and click **Create Instance**.
+3. **Machine configuration**: An `e2-micro` or `e2-small` is fine for starting out. 
+4. **Boot disk**: Choose **Ubuntu** (Ubuntu 22.04 LTS or 24.04 LTS).
+5. **Firewall**: Check **Allow HTTP traffic** and **Allow HTTPS traffic**.
+6. Click **Create**.
+
+## Step 2: SSH into the VM & Install Dependencies
+Once the VM is running, click the **SSH** button next to it in the Google Cloud Console.
+
+Run the following commands to install Node.js 20, Git, and PM2 (a production process manager for Node.js):
+
+```bash
+# Update the package list
+sudo apt update && sudo apt upgrade -y
+
+# Install Node.js v20
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Install Git and Nginx
+sudo apt install -y git nginx
+
+# Install PM2 globally
+sudo npm install -g pm2
+```
+
+## Step 3: Clone the Repository
+Clone your project from GitHub:
+
+```bash
+git clone https://github.com/adminorbi-gif/Orbi-Shop-Platform-Infrastructure-V1.0.0.6.git
+cd Orbi-Shop-Platform-Infrastructure-V1.0.0.6
+```
+
+## Step 4: Install Dependencies & Set Environment Variables
+```bash
+# Install npm packages
+npm install
+
+# Create your .env file
+cp .env.example .env
+
+# Edit the .env file to add your real keys
+nano .env
+```
+*(In the `nano` editor, paste your Supabase keys, Gemini keys, and generate a 32-character string for your `ENCRYPTION_KEY`. Press `Ctrl + X`, then `Y`, then `Enter` to save).*
+
+## Step 5: Build and Start the App
+Compile the project for production and start it in the background:
+
+```bash
+# Build the application (creates dist/server.cjs and front-end static files)
+npm run build
+
+# Start the application using PM2
+pm2 start npm --name "orbi-shop" -- start
+
+# Tell PM2 to automatically restart the app if the VM reboots
+pm2 startup
+# (Run the command PM2 outputs here, it will look like 'sudo env PATH...')
+pm2 save
+```
+
+## Step 6: Configure Nginx as a Reverse Proxy (Optional but Recommended)
+By default, the app runs on port 3000. To make it accessible cleanly over port 80 (standard HTTP):
+
+```bash
+# Create an Nginx config file
+sudo nano /etc/nginx/sites-available/orbi-shop
+```
+
+Paste the following configuration:
+```nginx
+server {
+    listen 80;
+    server_name YOUR_VM_EXTERNAL_IP; # (Or your domain name if you have one)
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+Enable the configuration and restart Nginx:
+```bash
+# Enable the site
+sudo ln -s /etc/nginx/sites-available/orbi-shop /etc/nginx/sites-enabled/
+
+# Remove the default Nginx site
+sudo rm /etc/nginx/sites-enabled/default
+
+# Test Nginx configuration and restart
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+## Step 7: Access Your Site
+You can now visit your Google Cloud VM's **External IP** address in your web browser. 
+
+*(If you ever push new code to GitHub, simply SSH in, `git pull`, `npm run build`, and `pm2 restart orbi-shop` to deploy the updates.)*
