@@ -1,30 +1,21 @@
-import React, { useState, useEffect } from "react";
-import { Store, User, ShoppingBag, LogIn, ExternalLink } from "lucide-react";
-import { navigateTo, getNavigationState } from "../utils/navigation";
+import React, { useState } from "react";
+import { Store, ShoppingBag, LogIn } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export function FloatingShortcutNav() {
-  const [navState, setNavState] = useState(getNavigationState());
   const [isOpen, setIsOpen] = useState(true);
-  const [isInternal, setIsInternal] = useState(() => {
-    return window.location.search.includes("internal-nav=true") || window.location.hash.includes("#internal-nav");
-  });
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    const checkState = () => {
-      setNavState(getNavigationState());
-      setIsInternal(window.location.search.includes("internal-nav=true") || window.location.hash.includes("#internal-nav"));
-    };
-    window.addEventListener("popstate", checkState);
-    const interval = setInterval(checkState, 400);
-    return () => {
-      window.removeEventListener("popstate", checkState);
-      clearInterval(interval);
-    };
-  }, []);
+  const isInternal = import.meta.env.DEV || import.meta.env.VITE_ENABLE_INTERNAL_NAV === "true";
 
   if (!isInternal) {
     return null;
   }
+
+  const isClient = location.pathname === "/" || location.pathname.startsWith("/product") || location.pathname.startsWith("/checkout") || location.pathname.startsWith("/track");
+  const isSellerLogin = location.pathname === "/seller/login";
+  const isSellerSignup = location.pathname === "/seller/signup";
 
   return (
     <div id="orbi-floating-nav" className="fixed bottom-6 right-6 z-[99999] font-sans">
@@ -44,9 +35,9 @@ export function FloatingShortcutNav() {
             <div className="flex flex-wrap md:flex-nowrap gap-1">
               {/* Buyer Home */}
               <button
-                onClick={() => navigateTo("")}
+                onClick={() => navigate("/")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black tracking-wide uppercase transition cursor-pointer select-none ${
-                  navState.isClient
+                  isClient
                     ? "bg-amber-500 text-slate-950 font-black shadow-lg"
                     : "hover:bg-slate-800 text-slate-300 hover:text-white"
                 }`}
@@ -57,9 +48,9 @@ export function FloatingShortcutNav() {
 
               {/* Seller / Admin Login */}
               <button
-                onClick={() => navigateTo("?seller-login=true")}
+                onClick={() => navigate("/seller/login")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black tracking-wide uppercase transition cursor-pointer select-none ${
-                  navState.isSellerLogin && !navState.isSellerSignup
+                  isSellerLogin
                     ? "bg-amber-500 text-slate-950 font-black shadow-lg"
                     : "hover:bg-slate-800 text-slate-300 hover:text-white"
                 }`}
@@ -70,9 +61,9 @@ export function FloatingShortcutNav() {
 
               {/* Seller Signup */}
               <button
-                onClick={() => navigateTo("?seller-signup=true")}
+                onClick={() => navigate("/seller/signup")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black tracking-wide uppercase transition cursor-pointer select-none ${
-                  navState.isSellerSignup
+                  isSellerSignup
                     ? "bg-amber-500 text-slate-950 font-black shadow-lg"
                     : "hover:bg-slate-800 text-slate-300 hover:text-white"
                 }`}

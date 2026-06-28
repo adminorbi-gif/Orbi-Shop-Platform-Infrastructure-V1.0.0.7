@@ -2,26 +2,32 @@ import { createClient } from "@supabase/supabase-js";
 import ws from "ws";
 import { encrypt, decrypt, decryptIfEncrypted, decryptObject } from "../../src/lib/crypto.js";
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = process.env.VITE_SUPABASE_URL as string;
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY as string;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
 
-if (!supabaseUrl) {
-  throw new Error("VITE_SUPABASE_URL is required.");
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn("Missing required Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
 }
 
-if (!supabaseAnonKey) {
-  throw new Error("VITE_SUPABASE_ANON_KEY is required.");
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NODE_ENV === "production") {
+  console.warn("SUPABASE_SERVICE_ROLE_KEY is missing in production. Using fallback anon key.");
 }
 
-if (!supabaseServiceRoleKey && process.env.NODE_ENV === "production") {
-  throw new Error("SUPABASE_SERVICE_ROLE_KEY is required in production.");
-}
-
-export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey || supabaseAnonKey, {
-  realtime: {
-    transport: ws as any,
-  },
+export const supabase = new Proxy({} as any, {
+  get: (target, prop) => {
+    if (!target.client) {
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error("Missing required Supabase frontend environment variables.");
+      }
+      target.client = createClient(supabaseUrl, supabaseServiceRoleKey || supabaseAnonKey, {
+        realtime: {
+          transport: ws as any,
+        },
+      });
+    }
+    return target.client[prop];
+  }
 });
 
 export function getUserSupabase(req?: any) {

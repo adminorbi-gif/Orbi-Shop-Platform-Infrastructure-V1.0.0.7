@@ -299,7 +299,7 @@ Your goal:
    - "all": None or generic packaging.
 6. Write a brief professional explanation of your choice in both Swahili (Kiswahili) and English so the administrator knows why this is recommended.
 
-Respond with ONLY a raw, complete JSON object. Absolutely no markdown formatting, no ```json blocks, and no extra text wrapping. The JSON schema must be exactly:
+Respond with ONLY a raw, complete JSON object. Absolutely no markdown formatting, no \`\`\`json blocks, and no extra text wrapping. The JSON schema must be exactly:
 {
   "suggestedNiche": "The name of the Niche",
   "suggestedCategory": "The name of the Category",

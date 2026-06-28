@@ -5,7 +5,7 @@ import { encrypt } from "../lib/supabase.js";
 
 const router = Router();
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://lvkyttxfgrmsxafvtcxw.supabase.co';
+const supabaseUrl = process.env.VITE_SUPABASE_URL as string;
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_0ThBuOrA98M6awmeGKc3cw_nrV-mJtO';
 const supabase = createClient(supabaseUrl, supabaseKey, {
   realtime: {

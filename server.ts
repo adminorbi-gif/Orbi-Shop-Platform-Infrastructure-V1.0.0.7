@@ -108,8 +108,9 @@ async function startServer() {
       if (productMatch) {
         try {
           const productId = productMatch[1];
-          const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://lvkyttxfgrmsxafvtcxw.supabase.co";
-          const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_0ThBuOrA98M6awmeGKc3cw_nrV-mJtO";
+          const supabaseUrl = process.env.VITE_SUPABASE_URL as string;
+          const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY as string;
+          if (!supabaseUrl || !supabaseKey) throw new Error("Missing required Supabase frontend environment variables.");
           const supabase = createClient(supabaseUrl, supabaseKey);
           
           const { data: product } = await supabase.from("products").select("name, nameSw, description, price, images").eq("id", productId).single();
@@ -148,8 +149,9 @@ async function startServer() {
       if (productMatch) {
         try {
           const productId = productMatch[1];
-          const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://lvkyttxfgrmsxafvtcxw.supabase.co";
-          const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_0ThBuOrA98M6awmeGKc3cw_nrV-mJtO";
+          const supabaseUrl = process.env.VITE_SUPABASE_URL as string;
+          const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY as string;
+          if (!supabaseUrl || !supabaseKey) throw new Error("Missing required Supabase frontend environment variables.");
           const supabase = createClient(supabaseUrl, supabaseKey);
           
           const { data: product } = await supabase.from("products").select("name, nameSw, description, price, images").eq("id", productId).single();

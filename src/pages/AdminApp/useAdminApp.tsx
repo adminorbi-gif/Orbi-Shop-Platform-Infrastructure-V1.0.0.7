@@ -276,24 +276,23 @@ const { showAlert } = useDialog();
   const [loading, setLoading] = useState(true);
   const [lang, setLang] = useState<Lang>("sw");
   const [showApplyModal, setShowApplyModal] = useState(() => {
-    return window.location.search.includes("seller-signup=true") || window.location.search.includes("seller-apply=true") || window.location.hash.includes("#seller-signup") || window.location.hash.includes("#seller-apply");
+    return window.location.pathname === "/seller/signup" || window.location.search.includes("seller-signup=true") || window.location.search.includes("seller-apply=true") || window.location.hash.includes("#seller-signup") || window.location.hash.includes("#seller-apply");
   });
 
   useEffect(() => {
     const handleUrlChangeOnAdmin = () => {
-      const activeSignup = window.location.search.includes("seller-signup=true") || window.location.search.includes("seller-apply=true") || window.location.hash.includes("#seller-signup") || window.location.hash.includes("#seller-apply");
+      const activeSignup = window.location.pathname === "/seller/signup" || window.location.search.includes("seller-signup=true") || window.location.search.includes("seller-apply=true") || window.location.hash.includes("#seller-signup") || window.location.hash.includes("#seller-apply");
       if (activeSignup) {
         setShowApplyModal(true);
-      } else if (window.location.search.includes("seller-login=true") || window.location.search.includes("admin=true")) {
+      } else if (window.location.pathname === "/seller/login" || window.location.search.includes("seller-login=true") || window.location.search.includes("admin=true") || window.location.pathname.startsWith("/admin")) {
         setShowApplyModal(false);
       }
     };
     window.addEventListener("popstate", handleUrlChangeOnAdmin);
-    const intervalAdmin = setInterval(handleUrlChangeOnAdmin, 400);
+    handleUrlChangeOnAdmin();
 
     return () => {
       window.removeEventListener("popstate", handleUrlChangeOnAdmin);
-      clearInterval(intervalAdmin);
     };
   }, []);
 
