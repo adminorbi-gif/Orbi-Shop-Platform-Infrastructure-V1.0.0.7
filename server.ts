@@ -47,7 +47,7 @@ async function startServer() {
     cors({
       origin:
         process.env.NODE_ENV === "production"
-          ? ["https://orbifinancial.com"] // Allow only your domain in production
+          ? ["https://orbifinancial.com", "https://shop.orbifinancial.com"] // Allow only your domains in production
           : "*", // Allow all in development
       methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     })

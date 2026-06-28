@@ -980,7 +980,7 @@ const { showAlert, showConfirm } = useDialog();
   useEffect(() => {
     const fetchPopular = async () => {
       try {
-        const res = await fetch("/api/search/popular");
+        const res = await fetch("/api/v1/search/popular");
         const data = await res.json();
         if (data && data.success && Array.isArray(data.popular)) {
           setBackendPopularSearches(data.popular);
