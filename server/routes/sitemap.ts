@@ -22,7 +22,7 @@ const slugify = (text: string) => {
     .replace(/--+/g, '-');
 };
 
-router.get("/", async (req, res) => {
+router.get(["/", "/sitemap.xml"], async (req, res) => {
   try {
     // Fetch visible products for the sitemap
     const { data: products } = await supabase
