@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { supabase, getSupabase } from '../lib/supabase.js';
+import crypto from 'crypto';
 
 const router = Router();
 
@@ -118,11 +119,11 @@ router.post('/verify', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Incorrect phone number.' });
     }
 
-    // Generate 6-digit OTP code
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate 6-digit OTP code using secure RNG
+    const otp = crypto.randomInt(100000, 999999).toString();
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes from now
 
-    // Store OTP in-memory
+    // Store OTP in-memory -- consider migrating to a DB-backed store for persistence
     recoveryOtps.set(customerId, { phone, otp, expiresAt });
 
     // Send the OTP via SMS using OrbiTalk direct SMS
@@ -165,8 +166,8 @@ router.post('/verify-otp', async (req, res) => {
     // Remove OTP from map after successful verification
     recoveryOtps.delete(customerId);
 
-    // Generate actual temporary reset token
-    const token = 'TEMP_RESET_TOKEN_' + Date.now();
+    // Generate actual temporary reset token using a secure random value
+    const token = crypto.randomBytes(32).toString("hex");
     res.json({ success: true, token });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
@@ -178,13 +179,14 @@ router.post('/reset-password', async (req, res) => {
   const { customerId, token, password } = req.body;
   
   // Validate token here in real scenario
-  if (!token.startsWith('TEMP_RESET_TOKEN_')) {
+  // Minimal emergency check: ensure token looks like a 64 hex string
+  if (!/^[0-9a-f]{64}$/.test(token)) {
     return res.status(400).json({ success: false, message: 'Invalid token.' });
   }
 
   try {
-    // This assumes you store plain-text or have a way to hash it.
-    // Given the project uses SQL, handle hashing/updating carefully.
+    // This assumes you store hashed passwords or have a secure way to set them.
+    // Given the project uses SQL, handle hashing/updating carefully. Consider using bcrypt.
     const { error } = await supabase
       .from('customers')
       .update({ password })
