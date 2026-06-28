@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { supabase, getSupabase } from "../lib/supabase.js";
+import { getSupabase, supabase } from "../lib/supabase.js";
+import { requireAuth, requireRole } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -57,7 +58,7 @@ router.get("/", async (req, res) => {
 });
 
 // POST /api/v1/products - Create/Update product
-router.post("/", async (req, res) => {
+router.post("/", requireAuth, requireRole("admin", "seller"), async (req, res) => {
   try {
     const product = req.body;
 
@@ -124,7 +125,7 @@ router.post("/", async (req, res) => {
 });
 
 // DELETE /api/v1/products/:id - Delete continuous product
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", requireAuth, requireRole("admin"), async (req, res) => {
   try {
     const { id } = req.params;
     let { error } = await getSupabase(req).from('products').delete().eq('id', id);
@@ -142,7 +143,7 @@ router.delete("/:id", async (req, res) => {
 });
 
 // DELETE /api/v1/products/niche/:niche - Delete products under target niche
-router.delete("/niche/:niche", async (req, res) => {
+router.delete("/niche/:niche", requireAuth, requireRole("admin"), async (req, res) => {
   try {
     const { niche } = req.params;
     let { error } = await getSupabase(req).from('products').delete().like('category', `${niche}::%`);
@@ -160,7 +161,7 @@ router.delete("/niche/:niche", async (req, res) => {
 });
 
 // UPDATE /api/v1/products/niche/rename - Rename niche in products
-router.post("/niche/rename", async (req, res) => {
+router.post("/niche/rename", requireAuth, requireRole("admin"), async (req, res) => {
   try {
     const { oldNiche, newNiche } = req.body;
     if (!oldNiche || !newNiche) {
@@ -214,7 +215,7 @@ function getGemini() {
 }
 
 // POST /api/v1/products/ai-suggest-description - Suggest e-commerce copy via Gemini
-router.post("/ai-suggest-description", async (req, res) => {
+router.post("/ai-suggest-description", requireAuth, requireRole("admin", "seller"), async (req, res) => {
   try {
     const { name, category, niche, tags } = req.body;
     if (!name) {
@@ -249,7 +250,7 @@ Requirements:
 });
 
 // POST /api/v1/products/ai-suggest-niche - Suggest niche and category based on name and description
-router.post("/ai-suggest-niche", async (req, res) => {
+router.post("/ai-suggest-niche", requireAuth, requireRole("admin", "seller"), async (req, res) => {
   try {
     const { name, description, availableNiches } = req.body;
     if (!name) {
@@ -298,7 +299,7 @@ Your goal:
    - "all": None or generic packaging.
 6. Write a brief professional explanation of your choice in both Swahili (Kiswahili) and English so the administrator knows why this is recommended.
 
-Respond with ONLY a raw, complete JSON object. Absolutely no markdown formatting, no \`\`\`json blocks, and no extra text wrapping. The JSON schema must be exactly:
+Respond with ONLY a raw, complete JSON object. Absolutely no markdown formatting, no ```json blocks, and no extra text wrapping. The JSON schema must be exactly:
 {
   "suggestedNiche": "The name of the Niche",
   "suggestedCategory": "The name of the Category",
