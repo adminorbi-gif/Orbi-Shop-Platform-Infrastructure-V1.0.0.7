@@ -1540,8 +1540,7 @@ export default function ClientApp() {
                 {/* Top Selling & Recommended (Segmented Behavior Modules) */}
                 <div className="flex flex-col space-y-6 sm:space-y-10">
                   {/* BEHAVIOR MODULE 1: TOP DEALS (Lowest Prices with specific pricing formatting & labels) */}
-                  {topDealsProducts.length > 0 &&
-                    !isLoading &&
+                  {(topDealsProducts.length > 0 || isLoading) &&
                     selectedCategory === "Zote" &&
                     search === "" && (
                       <div className="lg:py-6 py-4 bg-transparent relative overflow-hidden flex flex-col border-b border-slate-200">
@@ -1565,7 +1564,13 @@ export default function ClientApp() {
                         </div>
 
                         <div className="flex gap-2.5 md:gap-3 overflow-x-auto pb-4 pt-1 scrollbar-none flex-nowrap -mx-2 px-2 sm:-mx-4 sm:px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8">
-                          {topDealsProducts.map((p) => {
+                          {isLoading ? (
+                            Array.from({ length: 6 }).map((_, i) => (
+                              <div key={`td-skel-${i}`} className="w-[105px] sm:w-[155px] shrink-0 h-full">
+                                <ProductSkeleton />
+                              </div>
+                            ))
+                          ) : topDealsProducts.map((p) => {
                             const pSeller = sellers.find(
                               (s) => s.id === p.sellerId,
                             );
@@ -1581,7 +1586,7 @@ export default function ClientApp() {
                               <div
                                 key={`deal-${p.id}`}
                                 onClick={() => handleProductSelect(p)}
-                                className="w-[130px] sm:w-[155px] shrink-0 bg-transparent hover:bg-slate-50 transition cursor-pointer snap-start flex flex-col group justify-between"
+                                className="w-[105px] sm:w-[155px] shrink-0 bg-transparent hover:bg-slate-50 transition cursor-pointer snap-start flex flex-col group justify-between"
                               >
                                 <div>
                                   <div className="aspect-square w-full rounded-lg sm:rounded-xl overflow-hidden bg-slate-100 relative mb-2">
@@ -1612,7 +1617,7 @@ export default function ClientApp() {
                                   <PriceDisplay
                                     amount={p.price}
                                     colorClass="text-[#ff4c00]"
-                                    className="text-[13px] sm:text-[14px] mb-1"
+                                    className="text-[12px] sm:text-[14px] mb-1 flex-shrink-0"
                                   />
                                   <p className="text-[9px] text-[#ff4c00] mt-0.5 font-medium leading-none text-left truncate w-full">
                                     {lang === "sw"
@@ -1628,8 +1633,7 @@ export default function ClientApp() {
                     )}
 
                   {/* BEHAVIOR MODULE 2: NEW ARRIVALS (Newest items showcase) */}
-                  {newArrivalsProducts.length > 0 &&
-                    !isLoading &&
+                  {(newArrivalsProducts.length > 0 || isLoading) &&
                     selectedCategory === "Zote" &&
                     search === "" && (
                       <div className="lg:py-6 py-4 bg-transparent relative overflow-hidden flex flex-col border-b border-slate-200">
@@ -1657,7 +1661,13 @@ export default function ClientApp() {
 
                         {/* Slide track */}
                         <div className="flex gap-2.5 md:gap-3 overflow-x-auto pb-4 pt-1 scrollbar-none flex-nowrap -mx-2 px-2 sm:-mx-4 sm:px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8">
-                          {newArrivalsProducts.map((p) => {
+                          {isLoading ? (
+                            Array.from({ length: 6 }).map((_, i) => (
+                              <div key={`na-skel-${i}`} className="w-[105px] sm:w-[155px] shrink-0 h-full">
+                                <ProductSkeleton />
+                              </div>
+                            ))
+                          ) : newArrivalsProducts.map((p) => {
                             const pSeller = sellers.find(
                               (s) => s.id === p.sellerId,
                             );
@@ -1665,7 +1675,7 @@ export default function ClientApp() {
                               <div
                                 key={`new-${p.id}`}
                                 onClick={() => handleProductSelect(p)}
-                                className="w-[130px] sm:w-[155px] shrink-0 bg-transparent hover:bg-slate-50 transition cursor-pointer snap-start flex flex-col group justify-between"
+                                className="w-[105px] sm:w-[155px] shrink-0 bg-transparent hover:bg-slate-50 transition cursor-pointer snap-start flex flex-col group justify-between"
                               >
                                 <div>
                                   <div className="aspect-square w-full rounded-lg sm:rounded-xl overflow-hidden bg-slate-100 relative mb-2">
@@ -1694,7 +1704,7 @@ export default function ClientApp() {
                                   <PriceDisplay
                                     amount={p.price}
                                     colorClass="text-[#ff4c00]"
-                                    className="text-[13px] sm:text-[14px] mb-1"
+                                    className="text-[12px] sm:text-[14px] mb-1 flex-shrink-0"
                                   />
                                   <p className="text-[9px] text-[#ff4c00] mt-0.5 font-medium leading-none text-left truncate w-full">
                                     {p.category}
@@ -1708,8 +1718,7 @@ export default function ClientApp() {
                     )}
 
                   {/* BEHAVIOR MODULE 3: PRO & PREMIUM FEATURED SELLERS (Vendor Prioritization) */}
-                  {proSellerProducts.length > 0 &&
-                    !isLoading &&
+                  {(proSellerProducts.length > 0 || isLoading) &&
                     selectedCategory === "Zote" &&
                     search === "" && (
                       <div
@@ -1742,7 +1751,13 @@ export default function ClientApp() {
 
                         {/* Slide track */}
                         <div className="flex gap-2.5 md:gap-3 overflow-x-auto pb-4 pt-1 scrollbar-none flex-nowrap -mx-2 px-2 sm:-mx-4 sm:px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8">
-                          {proSellerProducts.map((p) => {
+                          {isLoading ? (
+                            Array.from({ length: 6 }).map((_, i) => (
+                              <div key={`pro-skel-${i}`} className="w-[130px] sm:w-[155px] shrink-0 h-full">
+                                <ProductSkeleton />
+                              </div>
+                            ))
+                          ) : proSellerProducts.map((p) => {
                             const pSeller = sellers.find(
                               (s) => s.id === p.sellerId,
                             );
@@ -2146,13 +2161,13 @@ export default function ClientApp() {
                 {/* Main Grid */}
                 <div className="">
                   {isLoading ? (
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(175px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(190px,1fr))] xl:grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-1.5 py-1 sm:gap-2">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-2 py-1 sm:gap-3">
                       {Array.from({ length: 12 }).map((_, i) => (
                         <ProductSkeleton key={i} />
                       ))}
                     </div>
                   ) : filteredProducts.length > 0 ? (
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(175px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(190px,1fr))] xl:grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-1.5 py-1 sm:gap-2">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-2 py-1 sm:gap-3">
                       <AnimatePresence mode="popLayout">
                         {filteredProducts.flatMap((p, idx) => {
                           const pSeller = sellers.find(
@@ -2288,7 +2303,7 @@ export default function ClientApp() {
                           </div>
 
                           {/* Similar Products Grid */}
-                          <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(175px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(190px,1fr))] xl:grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-1.5 py-1 sm:gap-2">
+                          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-1.5 py-1 sm:gap-2">
                             <AnimatePresence mode="popLayout">
                               {similarSuggestions.map((p) => {
                                 const pSeller = sellers.find(
@@ -3520,7 +3535,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         onClick={() => onSelect(p)}
       >
         <div
-          className="relative aspect-[3/4] sm:aspect-[4/5] bg-[#f8fafc] rounded-lg sm:rounded-xl overflow-hidden mb-2 sm:mb-2.5 cursor-pointer"
+          className="relative aspect-square bg-[#f8fafc] rounded-lg sm:rounded-xl overflow-hidden mb-2 sm:mb-2.5 cursor-pointer"
           onClick={(e) => {
             e.stopPropagation();
             if (onInteract) onInteract();
@@ -3632,17 +3647,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <div className="flex flex-col flex-1 px-1 justify-between pb-1 mt-0.5">
           <div>
             <h3
-              className="text-[11px] sm:text-[12px] md:text-[13px] font-medium leading-[1.3] text-slate-800 line-clamp-2 h-auto mb-1 flex-shrink-0 group-hover:text-[#ff4c00] transition-colors"
+              className="text-[10px] sm:text-[11px] md:text-[12px] font-medium leading-[1.2] text-slate-800 line-clamp-2 h-auto mb-0.5 flex-shrink-0 group-hover:text-[#ff4c00] transition-colors"
               title={p.name}
             >
               {p.name}
             </h3>
             {avgRating > 0 && (
-              <div className="flex items-center gap-1 mb-1 mt-0.5">
+              <div className="flex items-center gap-0.5 mb-0.5 mt-0.5">
                 <span className="flex items-center text-[#ff4c00]">
-                  <Star fill="currentColor" size={10} strokeWidth={0} />
+                  <Star fill="currentColor" size={9} strokeWidth={0} />
                 </span>
-                <span className="text-[10px] font-black text-slate-800 leading-none">
+                <span className="text-[9px] font-black text-slate-800 leading-none">
                   {avgRating}{" "}
                   <span className="text-slate-400 font-medium font-sans">
                     ({reviews.length})
@@ -3650,32 +3665,22 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 </span>
               </div>
             )}
-            <div className="mt-1 flex flex-col justify-start mb-1.5">
-              <div className="flex items-center gap-1.5 flex-wrap whitespace-nowrap">
+            <div className="mt-0.5 flex flex-col justify-start mb-1">
+              <div className="flex items-center gap-1 flex-nowrap whitespace-nowrap overflow-hidden">
                 <PriceDisplay
                   amount={p.price}
                   colorClass="text-[#ff4c00]"
-                  className="text-[13px] sm:text-[15px]"
+                  className="text-[12px] sm:text-[14px] flex-shrink-0"
                 />
                 {p.oldPrice && p.oldPrice > p.price && (
                   <PriceDisplay
                     amount={p.oldPrice}
                     colorClass="text-slate-400/90 line-through font-medium"
-                    className="text-[10px]"
+                    className="text-[9px] truncate"
                   />
                 )}
               </div>
-              {p.oldPrice && p.oldPrice > p.price ? (
-                <div className="text-[9px] text-slate-500 line-clamp-1 mt-1 font-medium">
-                  {lang === "sw"
-                    ? "Chini kwa zinazofanana"
-                    : "Lowest among similar"}
-                </div>
-              ) : (
-                <div className="text-[9px] text-[#ff4c00] line-clamp-1 mt-1 font-medium">
-                  {lang === "sw" ? "Bidhaa mpya, karibu" : "New Arrivals"}
-                </div>
-              )}
+              {/* Hide detailed description to save space */}
             </div>
           </div>
 

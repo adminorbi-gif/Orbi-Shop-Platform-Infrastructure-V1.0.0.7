@@ -53,7 +53,7 @@ export const PriceDisplay: React.FC<PriceDisplayProps> = ({
 
   return (
     <span
-      className={`font-money font-[800] tabular-nums tracking-tight inline-flex items-baseline ${colorClass} ${selectedSizeClass} ${className} transition-all`}
+      className={`font-money font-[800] tabular-nums tracking-tight inline-flex items-center flex-nowrap whitespace-nowrap ${colorClass} ${selectedSizeClass} ${className} transition-all`}
       style={{ 
         fontVariantNumeric: "tabular-nums",
         ...fontScaleStyle

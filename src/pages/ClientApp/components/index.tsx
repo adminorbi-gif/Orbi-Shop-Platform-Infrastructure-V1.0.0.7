@@ -3901,18 +3901,17 @@ export function AuthModal({
 
 export function ProductSkeleton() {
   return (
-    <div className="bg-white p-2 sm:p-2.5 rounded-xl border border-slate-200 shadow-[0_4px_16px_-8px_rgba(0,0,0,0.04)] flex flex-col">
-      <div className="relative aspect-[3/4] sm:aspect-[4/5] bg-slate-100 animate-pulse rounded-lg sm:rounded-xl mb-2 sm:mb-2.5"></div>
-      <div className="px-0.5 flex-1 flex flex-col justify-between">
+    <div className="flex flex-col h-full">
+      <div className="relative aspect-square bg-slate-100 animate-pulse rounded-lg sm:rounded-xl overflow-hidden mb-2 sm:mb-2.5"></div>
+      <div className="flex flex-col flex-1 px-1 justify-between pb-1 mt-0.5">
         <div>
-          <div className="h-3 sm:h-4 bg-slate-100 rounded animate-pulse w-5/6 mb-1"></div>
-          <div className="h-2.5 sm:h-3 bg-slate-100 rounded animate-pulse w-2/3 mb-2"></div>
+          <div className="h-3 sm:h-3.5 bg-slate-100 rounded animate-pulse w-5/6 mb-1.5"></div>
+          <div className="h-3 sm:h-3.5 bg-slate-100 rounded animate-pulse w-1/2 mb-2"></div>
         </div>
-        <div className="mt-auto">
-          <div className="h-3.5 sm:h-4 bg-slate-100 rounded animate-pulse w-1/2 mb-3"></div>
-          <div className="flex gap-1 sm:gap-1.5 md:gap-2">
-            <div className="flex-1 h-7 sm:h-9 md:h-10 bg-slate-150 bg-slate-100 animate-pulse rounded-lg sm:rounded-xl"></div>
-            <div className="w-7 h-7 sm:w-9 sm:h-9 md:w-10 md:h-10 bg-slate-100 animate-pulse rounded-lg sm:rounded-xl shrink-0"></div>
+        <div className="mt-1 flex flex-col gap-1 w-full">
+          <div className="flex gap-1 w-full">
+            <div className="flex-1 h-6 sm:h-7 bg-slate-100 animate-pulse rounded-full"></div>
+            <div className="flex-1 h-6 sm:h-7 bg-slate-100 animate-pulse rounded-full"></div>
           </div>
         </div>
       </div>
