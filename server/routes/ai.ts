@@ -1,18 +1,9 @@
 import { Router } from "express";
-import { createClient } from "@supabase/supabase-js";
-import ws from "ws";
-import { getGeminiClient } from "../lib/gemini";
-import { OrbiSecurityPolicy } from "../../src/engine/OrbiSecurityPolicy";
+import { supabase } from "../lib/supabase.js";
+import { getGeminiClient } from "../lib/gemini.js";
+import { OrbiSecurityPolicy } from "../../src/engine/OrbiSecurityPolicy.js";
 
 const router = Router();
-
-const supabaseUrl = process.env.VITE_SUPABASE_URL as string;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_0ThBuOrA98M6awmeGKc3cw_nrV-mJtO';
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  realtime: {
-    transport: ws as any,
-  },
-});
 
 // AI Bilingual Support & Recommendation Route (Multimodal Enabled)
 router.post("/assistant", async (req, res) => {

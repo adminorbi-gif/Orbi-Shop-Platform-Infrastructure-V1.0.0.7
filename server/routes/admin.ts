@@ -1,16 +1,7 @@
 import { Router } from "express";
-import { createClient } from "@supabase/supabase-js";
-import ws from "ws";
+import { supabase } from "../lib/supabase.js";
 
 const router = Router();
-
-const supabaseUrl = process.env.VITE_SUPABASE_URL as string;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_0ThBuOrA98M6awmeGKc3cw_nrV-mJtO';
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  realtime: {
-    transport: ws as any,
-  },
-});
 
 router.get("/pilot_scan", async (req, res) => {
   try {

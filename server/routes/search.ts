@@ -1,18 +1,9 @@
 import { Router } from "express";
-import { createClient } from "@supabase/supabase-js";
-import ws from "ws";
-import { getGeminiClient } from "../lib/gemini";
-import { BILINGUAL_DICTIONARY } from "../../src/lib/searchDictionary";
+import { supabase } from "../lib/supabase.js";
+import { getGeminiClient } from "../lib/gemini.js";
+import { BILINGUAL_DICTIONARY } from "../../src/lib/searchDictionary.js";
 
 const router = Router();
-
-const supabaseUrl = process.env.VITE_SUPABASE_URL as string;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_0ThBuOrA98M6awmeGKc3cw_nrV-mJtO';
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  realtime: {
-    transport: ws as any,
-  },
-});
 
 const searchCache = new Map<string, string[]>();
 let circuitBreakerActiveUntil = 0;

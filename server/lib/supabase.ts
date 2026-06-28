@@ -2,8 +2,8 @@ import { createClient } from "@supabase/supabase-js";
 import ws from "ws";
 import { encrypt, decrypt, decryptIfEncrypted, decryptObject } from "../../src/lib/crypto.js";
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY as string;
+const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL) as string;
+const supabaseAnonKey = (process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY) as string;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
 
 if (!supabaseUrl || !supabaseAnonKey) {

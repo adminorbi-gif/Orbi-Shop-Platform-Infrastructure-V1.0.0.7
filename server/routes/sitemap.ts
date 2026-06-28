@@ -1,29 +1,8 @@
 import { Router } from "express";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "../lib/supabase.js";
 import { SitemapStream, streamToPromise } from "sitemap";
-import ws from "ws";
 
 const router = Router();
-
-const supabaseUrl =
-  process.env.VITE_SUPABASE_URL as string;
-const supabaseKey =
-  process.env.VITE_SUPABASE_ANON_KEY as string;
-const supabase = new Proxy({} as any, {
-  get: (target, prop) => {
-    if (!target.client) {
-      if (!supabaseUrl || !supabaseKey) {
-        throw new Error("Missing required Supabase frontend environment variables.");
-      }
-      target.client = createClient(supabaseUrl, supabaseKey, {
-        realtime: {
-          transport: ws as any,
-        },
-      });
-    }
-    return target.client[prop];
-  }
-});
 
 const slugify = (text: string) => {
   return text

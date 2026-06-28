@@ -1,7 +1,8 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import { createClient } from "@supabase/supabase-js";
+
+import { supabase } from "./server/lib/supabase.js";
 import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
@@ -108,10 +109,7 @@ async function startServer() {
       if (productMatch) {
         try {
           const productId = productMatch[1];
-          const supabaseUrl = process.env.VITE_SUPABASE_URL as string;
-          const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY as string;
-          if (!supabaseUrl || !supabaseKey) throw new Error("Missing required Supabase frontend environment variables.");
-          const supabase = createClient(supabaseUrl, supabaseKey);
+          if (!process.env.VITE_SUPABASE_URL || !process.env.VITE_SUPABASE_ANON_KEY) throw new Error("Missing required Supabase frontend environment variables.");
           
           const { data: product } = await supabase.from("products").select("name, nameSw, description, price, images").eq("id", productId).single();
           
@@ -149,10 +147,7 @@ async function startServer() {
       if (productMatch) {
         try {
           const productId = productMatch[1];
-          const supabaseUrl = process.env.VITE_SUPABASE_URL as string;
-          const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY as string;
-          if (!supabaseUrl || !supabaseKey) throw new Error("Missing required Supabase frontend environment variables.");
-          const supabase = createClient(supabaseUrl, supabaseKey);
+          if (!process.env.VITE_SUPABASE_URL || !process.env.VITE_SUPABASE_ANON_KEY) throw new Error("Missing required Supabase frontend environment variables.");
           
           const { data: product } = await supabase.from("products").select("name, nameSw, description, price, images").eq("id", productId).single();
           

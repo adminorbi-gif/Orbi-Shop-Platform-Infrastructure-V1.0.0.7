@@ -1,17 +1,7 @@
 import { Router } from "express";
-import { createClient } from "@supabase/supabase-js";
-import ws from "ws";
-import { encrypt } from "../lib/supabase.js";
+import { supabase, encrypt } from "../lib/supabase.js";
 
 const router = Router();
-
-const supabaseUrl = process.env.VITE_SUPABASE_URL as string;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_0ThBuOrA98M6awmeGKc3cw_nrV-mJtO';
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  realtime: {
-    transport: ws as any,
-  },
-});
 
 function parseWholesaleTiersFromText(description: string = ""): any[] {
   const result: any[] = [];
