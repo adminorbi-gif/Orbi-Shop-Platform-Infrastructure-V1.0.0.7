@@ -682,8 +682,10 @@ export const OrderItemRow = React.memo(function OrderItemRow({
 import { useDialog } from "../../components/CustomDialogContext";
 import { CameraBarcodeScanner } from "../../components/CameraBarcodeScanner";
 
+import { ErrorBoundary } from "../../ErrorBoundary";
+
 export default function AdminApp() {
-    const {
+  const {
     showAlert,
     isLogged,
     setIsLogged,
@@ -799,9 +801,11 @@ export default function AdminApp() {
   }
 
   return (
-    <I18nContext.Provider value={{ lang: lang || "sw", setLang }}>
-      <AdminDashboard onLogout={logout} />
-    </I18nContext.Provider>
+    <ErrorBoundary>
+      <I18nContext.Provider value={{ lang: lang || "sw", setLang }}>
+        <AdminDashboard onLogout={logout} />
+      </I18nContext.Provider>
+    </ErrorBoundary>
   );
 }
 

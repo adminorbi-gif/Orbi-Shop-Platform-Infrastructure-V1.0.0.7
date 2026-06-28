@@ -224,6 +224,7 @@ import {
   Wheat,
 } from "lucide-react";
 import { Lang, t } from "../../lib/i18nClient";
+import { apiFetch } from "../../lib/db";
 import {
   AboutUsSection,
   ApplySellerModal,
@@ -980,8 +981,7 @@ const { showAlert, showConfirm } = useDialog();
   useEffect(() => {
     const fetchPopular = async () => {
       try {
-        const res = await fetch("/api/v1/search/popular");
-        const data = await res.json();
+        const data = await apiFetch("/api/v1/search/popular");
         if (data && data.success && Array.isArray(data.popular)) {
           setBackendPopularSearches(data.popular);
         }

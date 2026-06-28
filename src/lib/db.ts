@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 import { Product, Promotion, Order, Customer, Message, Niche, SellerProfile, SubscriptionPlan, MarketplaceAd, Review, PromotionalBanner, OrderStatusLog } from '../types';
 
 // Helper for calling modular backend API endpoints with standard response wrappers
-const apiFetch = async (url: string, options: RequestInit = {}) => {
+export const apiFetch = async (url: string, options: RequestInit = {}) => {
   let token = "";
   try {
     const { data: { session } } = await supabase.auth.getSession();
@@ -10,6 +10,9 @@ const apiFetch = async (url: string, options: RequestInit = {}) => {
       token = session.access_token;
     }
   } catch (e) {}
+
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
+  const fullUrl = url.startsWith("http") ? url : `${baseUrl.replace(/\/$/, '')}${url}`;
 
   const finalOptions = {
     ...options,
@@ -20,7 +23,7 @@ const apiFetch = async (url: string, options: RequestInit = {}) => {
     }
   };
   try {
-    const res = await fetch(url, finalOptions);
+    const res = await fetch(fullUrl, finalOptions);
     if (!res.ok) {
       const textErr = await res.text();
       let errorMessage = textErr || `Server returned error status ${res.status}`;
