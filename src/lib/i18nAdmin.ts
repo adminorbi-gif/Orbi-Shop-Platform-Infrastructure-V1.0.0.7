@@ -136,5 +136,7 @@ export const adminDict = {
 };
 
 export function t(lang: Lang, key: keyof typeof adminDict['sw']): string {
-  return adminDict[lang][key] || adminDict['sw'][key] || key;
+  const currentLang = lang || 'sw';
+  const dict = adminDict[currentLang] || adminDict['sw'];
+  return dict[key] || adminDict['sw'][key] || key;
 }
