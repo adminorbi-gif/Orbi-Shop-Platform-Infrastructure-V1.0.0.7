@@ -2,25 +2,21 @@ import { createClient } from "@supabase/supabase-js";
 import ws from "ws";
 import { encrypt, decrypt, decryptIfEncrypted, decryptObject } from "../../src/lib/crypto.js";
 
-const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL) as string;
-const supabaseAnonKey = (process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY) as string;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("Missing required Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
-}
-
-if (!process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NODE_ENV === "production") {
-  console.warn("SUPABASE_SERVICE_ROLE_KEY is missing in production. Using fallback anon key.");
-}
+const getSupabaseUrl = () => (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL) as string;
+const getSupabaseAnonKey = () => (process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY) as string;
+const getSupabaseServiceRoleKey = () => process.env.SUPABASE_SERVICE_ROLE_KEY as string;
 
 export const supabase = new Proxy({} as any, {
   get: (target, prop) => {
     if (!target.client) {
-      if (!supabaseUrl || !supabaseAnonKey) {
+      const url = getSupabaseUrl();
+      const anonKey = getSupabaseAnonKey();
+      const serviceRoleKey = getSupabaseServiceRoleKey();
+      
+      if (!url || !anonKey) {
         throw new Error("Missing required Supabase frontend environment variables.");
       }
-      target.client = createClient(supabaseUrl, supabaseServiceRoleKey || supabaseAnonKey, {
+      target.client = createClient(url, serviceRoleKey || anonKey, {
         realtime: {
           transport: ws as any,
         },
@@ -32,8 +28,14 @@ export const supabase = new Proxy({} as any, {
 
 export function getUserSupabase(req?: any) {
   const authHeader = req?.headers?.authorization || "";
+  const url = getSupabaseUrl();
+  const anonKey = getSupabaseAnonKey();
 
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  if (!url || !anonKey) {
+    throw new Error("Missing required Supabase frontend environment variables.");
+  }
+
+  return createClient(url, anonKey, {
     global: {
       headers: authHeader ? { Authorization: authHeader } : {},
     },
@@ -44,11 +46,14 @@ export function getUserSupabase(req?: any) {
 }
 
 export function getAdminSupabase() {
-  if (!supabaseServiceRoleKey) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for admin database access.");
+  const url = getSupabaseUrl();
+  const serviceRoleKey = getSupabaseServiceRoleKey();
+
+  if (!serviceRoleKey || !url) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY and URL are required for admin database access.");
   }
 
-  return createClient(supabaseUrl, supabaseServiceRoleKey, {
+  return createClient(url, serviceRoleKey, {
     realtime: {
       transport: ws as any,
     },
