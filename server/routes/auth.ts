@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { supabase, getSupabase } from '../lib/supabase.js';
 import crypto from 'crypto';
+import { supabase, getSupabase, getAdminSupabase } from '../lib/supabase.js';
 
 const router = Router();
 
@@ -88,8 +88,7 @@ router.post('/initiate', async (req, res) => {
 
     const { phone, name } = customer;
     // Mask phone: keep first 5, last 2, mask the middle
-    // Assuming phone starts with +255...
-    const maskedPhone = phone.length > 7 
+    const maskedPhone = phone && phone.length > 7 
       ? phone.substring(0, 5) + '*******' + phone.substring(phone.length - 2)
       : '*******';
 
@@ -99,14 +98,12 @@ router.post('/initiate', async (req, res) => {
   }
 });
 
-// In-memory store for recovery OTPs
-// Maps customerId to { phone, otp, expiresAt }
-const recoveryOtps = new Map<string, { phone: string; otp: string; expiresAt: number }>();
+// DB-backed password reset flow using password_reset_tokens table
+// Table schema (see db/migrations): id, customer_id, token_hash, expires_at, used, used_at, created_at
 
-// Endpoint to verify full phone number and send OTP
+// Endpoint to verify full phone number and send OTP (stored hashed in DB)
 router.post('/verify', async (req, res) => {
   const { customerId, phone } = req.body;
-  
   try {
     const { data: customer, error } = await supabase
       .from('customers')
@@ -119,12 +116,22 @@ router.post('/verify', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Incorrect phone number.' });
     }
 
-    // Generate 6-digit OTP code using secure RNG
+    // Generate 6-digit OTP code securely
     const otp = crypto.randomInt(100000, 999999).toString();
-    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes from now
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 minutes
 
-    // Store OTP in-memory -- consider migrating to a DB-backed store for persistence
-    recoveryOtps.set(customerId, { phone, otp, expiresAt });
+    // Hash the OTP before storing
+    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+
+    // Store hashed OTP in password_reset_tokens (use admin client to bypass RLS)
+    const { error: insertErr } = await getAdminSupabase()
+      .from('password_reset_tokens')
+      .insert([{ customer_id: customerId, token_hash: otpHash, expires_at: expiresAt }]);
+
+    if (insertErr) {
+      console.error('[AUTH] Failed to insert OTP token into DB:', insertErr.message || insertErr);
+      return res.status(500).json({ success: false, message: 'Failed to create reset token session.' });
+    }
 
     // Send the OTP via SMS using OrbiTalk direct SMS
     const { sendOrbiTalkDirectSMS } = await import('./talk.js');
@@ -134,41 +141,67 @@ router.post('/verify', async (req, res) => {
       recipient: phone,
       body: smsMessage,
       requestId: `otp-pass-reset-${customerId}-${Date.now()}`
-    }).catch(smsErr => {
-      console.error("[ORBI-TALK-OTP-RECOVERY] Failed to send SMS:", smsErr.message);
-    });
+    }).catch(smsErr => console.error('[ORBI-TALK-OTP-RECOVERY] Failed to send SMS:', smsErr?.message || smsErr));
 
+    // Do NOT return the raw OTP. Client should prompt user to enter it from SMS.
     res.json({ success: true, requiresOtp: true });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// Endpoint to verify the OTP and issue reset token
+// Endpoint to verify the OTP and issue reset token (long-lived token returned to client)
 router.post('/verify-otp', async (req, res) => {
   const { customerId, otp } = req.body;
-
   try {
-    const record = recoveryOtps.get(customerId);
-    if (!record) {
-      return res.status(400).json({ success: false, message: 'No recovery OTP session found. Please start over.' });
+    if (!customerId || !otp) return res.status(400).json({ success: false, message: 'customerId and otp required' });
+
+    const otpHash = crypto.createHash('sha256').update(String(otp)).digest('hex');
+
+    // Find matching, unused OTP token for this customer
+    const now = new Date().toISOString();
+    const { data: rows, error } = await getAdminSupabase()
+      .from('password_reset_tokens')
+      .select('*')
+      .eq('customer_id', customerId)
+      .eq('token_hash', otpHash)
+      .eq('used', false)
+      .gt('expires_at', now)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error('[AUTH] OTP lookup error:', error.message || error);
+      return res.status(500).json({ success: false, message: 'OTP verification failed' });
     }
 
-    if (Date.now() > record.expiresAt) {
-      recoveryOtps.delete(customerId);
-      return res.status(400).json({ success: false, message: 'OTP has expired. Please request a new one.' });
+    if (!rows || rows.length === 0) {
+      return res.status(400).json({ success: false, message: 'Incorrect or expired OTP code.' });
     }
 
-    if (record.otp !== otp.trim()) {
-      return res.status(400).json({ success: false, message: 'Incorrect OTP code.' });
+    const tokenRow = rows[0];
+
+    // Mark OTP row as used
+    await getAdminSupabase().from('password_reset_tokens').update({ used: true, used_at: new Date().toISOString() }).eq('id', tokenRow.id);
+
+    // Generate actual temporary reset token (long random string) and store its hash in DB
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const resetExpiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+
+    const { error: insertErr } = await getAdminSupabase().from('password_reset_tokens').insert([{
+      customer_id: customerId,
+      token_hash: resetTokenHash,
+      expires_at: resetExpiresAt
+    }]);
+
+    if (insertErr) {
+      console.error('[AUTH] Failed to insert reset token into DB:', insertErr.message || insertErr);
+      return res.status(500).json({ success: false, message: 'Failed to create reset token.' });
     }
 
-    // Remove OTP from map after successful verification
-    recoveryOtps.delete(customerId);
-
-    // Generate actual temporary reset token using a secure random value
-    const token = crypto.randomBytes(32).toString("hex");
-    res.json({ success: true, token });
+    // Return the reset token to the client so they can call /reset-password; do NOT log it.
+    res.json({ success: true, token: resetToken });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -177,22 +210,53 @@ router.post('/verify-otp', async (req, res) => {
 // Endpoint to reset password
 router.post('/reset-password', async (req, res) => {
   const { customerId, token, password } = req.body;
-  
-  // Validate token here in real scenario
-  // Minimal emergency check: ensure token looks like a 64 hex string
-  if (!/^[0-9a-f]{64}$/.test(token)) {
-    return res.status(400).json({ success: false, message: 'Invalid token.' });
-  }
+  if (!customerId || !token || !password) return res.status(400).json({ success: false, message: 'customerId, token and password are required' });
 
   try {
-    // This assumes you store hashed passwords or have a secure way to set them.
-    // Given the project uses SQL, handle hashing/updating carefully. Consider using bcrypt.
-    const { error } = await supabase
+    const tokenHash = crypto.createHash('sha256').update(String(token)).digest('hex');
+    const now = new Date().toISOString();
+
+    // Find matching, unused token
+    const { data: rows, error } = await getAdminSupabase()
+      .from('password_reset_tokens')
+      .select('*')
+      .eq('customer_id', customerId)
+      .eq('token_hash', tokenHash)
+      .eq('used', false)
+      .gt('expires_at', now)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error('[AUTH] Reset token lookup error:', error.message || error);
+      return res.status(500).json({ success: false, message: 'Token verification failed' });
+    }
+
+    if (!rows || rows.length === 0) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired reset token.' });
+    }
+
+    const tokenRow = rows[0];
+
+    // Hash the provided password for storage. Use a strong KDF (scrypt) with ENCRYPTION_SALT
+    const salt = process.env.ENCRYPTION_SALT || 'static_salt';
+    const keyLen = 64;
+    const passwordHash = crypto.scryptSync(String(password), salt, keyLen).toString('hex');
+
+    // Update the customer's password (use admin client to bypass RLS)
+    const { error: updateErr } = await getAdminSupabase()
       .from('customers')
-      .update({ password })
+      .update({ password: passwordHash })
       .eq('id', customerId);
 
-    if (error) throw error;
+    if (updateErr) {
+      console.error('[AUTH] Failed to update customer password:', updateErr.message || updateErr);
+      return res.status(500).json({ success: false, message: 'Failed to update password.' });
+    }
+
+    // Mark token as used
+    await getAdminSupabase().from('password_reset_tokens').update({ used: true, used_at: new Date().toISOString() }).eq('id', tokenRow.id);
+
     res.json({ success: true, message: 'Password updated successfully.' });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
