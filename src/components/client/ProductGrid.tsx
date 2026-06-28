@@ -127,7 +127,7 @@ export function ProductGrid({
             <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{p.category || "General"}</p>
-                <h4 className="text-sm font-bold text-slate-800 line-clamp-2 leading-snug group-hover:text-[#ff4c00] transition-colors mb-2">
+                <h4 className="text-[13px] sm:text-[14px] font-black text-slate-800 line-clamp-2 leading-snug group-hover:text-[#ff4c00] transition-colors mb-2">
                   {lang === "sw" ? (p.nameSw || p.name) : p.name}
                 </h4>
                 
@@ -143,9 +143,9 @@ export function ProductGrid({
               </div>
 
               <div className="space-y-3">
-                <div className="flex items-baseline gap-1.5">
-                  <PriceDisplay amount={p.price} size="lg" colorClass="text-slate-900 font-black" />
-                  {p.oldPrice && (
+                <div className="flex items-baseline gap-1.5 flex-wrap">
+                  <PriceDisplay amount={p.price} size="lg" colorClass="text-slate-900 font-black flex-shrink-0" />
+                  {p.oldPrice && p.oldPrice > p.price && (
                     <span className="text-[10px] text-slate-300 line-through font-bold">{formatCurrency(p.oldPrice)}</span>
                   )}
                 </div>

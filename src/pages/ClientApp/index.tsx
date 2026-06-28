@@ -1299,7 +1299,7 @@ export default function ClientApp() {
             </div>
           </main>
         ) : (
-          <main className="flex-1 w-full bg-slate-50/50 pb-12 overflow-hidden flex flex-col pt-0 md:pt-4">
+          <main className="flex-1 w-full bg-slate-50 pb-12 overflow-hidden flex flex-col pt-0 md:pt-4">
             <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8">
               {!viewSeller ? (
                 <>
@@ -1610,10 +1610,10 @@ export default function ClientApp() {
                               <div
                                 key={`deal-${p.id}`}
                                 onClick={() => handleProductSelect(p)}
-                                className="w-[105px] sm:w-[155px] shrink-0 bg-transparent hover:bg-slate-50 transition cursor-pointer snap-start flex flex-col group justify-between"
+                                className="w-[105px] sm:w-[155px] shrink-0 bg-white hover:-translate-y-0.5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-slate-100/60 p-1.5 sm:p-2 rounded-xl sm:rounded-2xl transition-all cursor-pointer snap-start flex flex-col group justify-between"
                               >
                                 <div>
-                                  <div className="aspect-square w-full rounded-lg sm:rounded-xl overflow-hidden bg-slate-100 relative mb-2">
+                                  <div className="aspect-square w-full rounded-lg sm:rounded-xl overflow-hidden bg-[#f1f5f9]/50 relative mb-2">
                                     <img
                                       src={p.images[0]}
                                       alt={p.name}
@@ -1632,17 +1632,26 @@ export default function ClientApp() {
                                     )}
                                   </div>
 
-                                  <h4 className="text-[11px] sm:text-[12px] font-medium text-slate-800 line-clamp-2 leading-[1.3] group-hover:text-[#ff4c00] transition-colors mb-1">
+                                  <h4 className="text-[12px] sm:text-[13px] font-black text-slate-800 line-clamp-2 leading-[1.3] group-hover:text-[#ff4c00] transition-colors mb-1">
                                     {p.name}
                                   </h4>
                                 </div>
 
                                 <div className="mt-1">
-                                  <PriceDisplay
-                                    amount={p.price}
-                                    colorClass="text-[#ff4c00]"
-                                    className="text-[12px] sm:text-[14px] mb-1 flex-shrink-0"
-                                  />
+                                  <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                                    <PriceDisplay
+                                      amount={p.price}
+                                      colorClass="text-[#ff4c00]"
+                                      className="text-[12px] sm:text-[14px] flex-shrink-0"
+                                    />
+                                    {p.oldPrice && p.oldPrice > p.price && (
+                                      <PriceDisplay
+                                        amount={p.oldPrice}
+                                        colorClass="text-slate-400/90 line-through font-medium"
+                                        className="text-[9px] sm:text-[10px]"
+                                      />
+                                    )}
+                                  </div>
                                   <p className="text-[9px] text-[#ff4c00] mt-0.5 font-medium leading-none text-left truncate w-full">
                                     {lang === "sw"
                                       ? "Chini kwa zinazofanana"
@@ -1699,10 +1708,10 @@ export default function ClientApp() {
                               <div
                                 key={`new-${p.id}`}
                                 onClick={() => handleProductSelect(p)}
-                                className="w-[105px] sm:w-[155px] shrink-0 bg-transparent hover:bg-slate-50 transition cursor-pointer snap-start flex flex-col group justify-between"
+                                className="w-[105px] sm:w-[155px] shrink-0 bg-white hover:-translate-y-0.5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-slate-100/60 p-1.5 sm:p-2 rounded-xl sm:rounded-2xl transition-all cursor-pointer snap-start flex flex-col group justify-between"
                               >
                                 <div>
-                                  <div className="aspect-square w-full rounded-lg sm:rounded-xl overflow-hidden bg-slate-100 relative mb-2">
+                                  <div className="aspect-square w-full rounded-lg sm:rounded-xl overflow-hidden bg-[#f1f5f9]/50 relative mb-2">
                                     <img
                                       src={p.images[0]}
                                       alt={p.name}
@@ -1719,17 +1728,26 @@ export default function ClientApp() {
                                     )}
                                   </div>
 
-                                  <h4 className="text-[11px] sm:text-[12px] font-medium text-slate-800 line-clamp-2 leading-[1.3] group-hover:text-[#ff4c00] transition-colors mb-1">
+                                  <h4 className="text-[12px] sm:text-[13px] font-black text-slate-800 line-clamp-2 leading-[1.3] group-hover:text-[#ff4c00] transition-colors mb-1">
                                     {p.name}
                                   </h4>
                                 </div>
 
                                 <div className="mt-1">
-                                  <PriceDisplay
-                                    amount={p.price}
-                                    colorClass="text-[#ff4c00]"
-                                    className="text-[12px] sm:text-[14px] mb-1 flex-shrink-0"
-                                  />
+                                  <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                                    <PriceDisplay
+                                      amount={p.price}
+                                      colorClass="text-[#ff4c00]"
+                                      className="text-[12px] sm:text-[14px] flex-shrink-0"
+                                    />
+                                    {p.oldPrice && p.oldPrice > p.price && (
+                                      <PriceDisplay
+                                        amount={p.oldPrice}
+                                        colorClass="text-slate-400/90 line-through font-medium"
+                                        className="text-[9px] sm:text-[10px]"
+                                      />
+                                    )}
+                                  </div>
                                   <p className="text-[9px] text-[#ff4c00] mt-0.5 font-medium leading-none text-left truncate w-full">
                                     {p.category}
                                   </p>
@@ -1806,17 +1824,26 @@ export default function ClientApp() {
                                     </div>
                                   </div>
 
-                                  <h4 className="text-[11px] sm:text-[12px] font-medium text-slate-800 line-clamp-2 leading-[1.3] group-hover:text-[#ff4c00] transition-colors mb-1">
+                                  <h4 className="text-[12px] sm:text-[13px] font-black text-slate-800 line-clamp-2 leading-[1.3] group-hover:text-[#ff4c00] transition-colors mb-1">
                                     {p.name}
                                   </h4>
                                 </div>
 
                                 <div className="mt-1">
-                                  <PriceDisplay
-                                    amount={p.price}
-                                    colorClass="text-[#ff4c00]"
-                                    className="text-[13px] sm:text-[14px] mb-1"
-                                  />
+                                  <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                                    <PriceDisplay
+                                      amount={p.price}
+                                      colorClass="text-[#ff4c00]"
+                                      className="text-[13px] sm:text-[14px] flex-shrink-0"
+                                    />
+                                    {p.oldPrice && p.oldPrice > p.price && (
+                                      <PriceDisplay
+                                        amount={p.oldPrice}
+                                        colorClass="text-slate-400/90 line-through font-medium"
+                                        className="text-[9px] sm:text-[10px]"
+                                      />
+                                    )}
+                                  </div>
                                   {pSeller && (
                                     <p className="text-[9px] text-[#ff4c00] mt-0.5 font-medium flex items-center gap-1 w-full truncate">
                                       <Store size={10} className="shrink-0" />{" "}
@@ -3555,11 +3582,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
   return (
     <>
       <div
-        className="flex flex-col group transition-all duration-300 hover:-translate-y-0.5 cursor-pointer h-full"
+        className="flex flex-col group transition-all duration-300 hover:-translate-y-0.5 cursor-pointer h-full bg-white rounded-xl sm:rounded-2xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-slate-100/60 p-1.5 sm:p-2"
         onClick={() => onSelect(p)}
       >
         <div
-          className="relative aspect-square bg-[#f8fafc] rounded-lg sm:rounded-xl overflow-hidden mb-2 sm:mb-2.5 cursor-pointer"
+          className="relative aspect-square bg-[#f1f5f9]/50 rounded-lg sm:rounded-xl overflow-hidden mb-2 sm:mb-2.5 cursor-pointer"
           onClick={(e) => {
             e.stopPropagation();
             if (onInteract) onInteract();
@@ -3671,7 +3698,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <div className="flex flex-col flex-1 px-1 justify-between pb-1 mt-0.5">
           <div>
             <h3
-              className="text-[10px] sm:text-[11px] md:text-[12px] font-medium leading-[1.2] text-slate-800 line-clamp-2 h-auto mb-0.5 flex-shrink-0 group-hover:text-[#ff4c00] transition-colors"
+              className="text-[12px] sm:text-[13px] md:text-[14px] font-bold leading-[1.3] text-slate-800 line-clamp-2 h-auto mb-0.5 flex-shrink-0 group-hover:text-[#ff4c00] transition-colors"
               title={p.name}
             >
               {p.name}
@@ -3690,17 +3717,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
               </div>
             )}
             <div className="mt-0.5 flex flex-col justify-start mb-1">
-              <div className="flex items-center gap-1 flex-nowrap whitespace-nowrap overflow-hidden">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <PriceDisplay
                   amount={p.price}
                   colorClass="text-[#ff4c00]"
-                  className="text-[12px] sm:text-[14px] flex-shrink-0"
+                  className="text-[13px] sm:text-[15px] font-black flex-shrink-0"
                 />
                 {p.oldPrice && p.oldPrice > p.price && (
                   <PriceDisplay
                     amount={p.oldPrice}
                     colorClass="text-slate-400/90 line-through font-medium"
-                    className="text-[9px] truncate"
+                    className="text-[10px] sm:text-[11px]"
                   />
                 )}
               </div>
