@@ -6,8 +6,17 @@ const KEY_LENGTH = 32; // 256 bits
 
 // Ensure key is 32 bytes
 const getEncryptionKey = () => {
-  const key = process.env.ENCRYPTION_KEY || 'default-super-secret-key-32-chars';
-  return crypto.scryptSync(key, 'salt', KEY_LENGTH);
+  const key = process.env.ENCRYPTION_KEY;
+
+  if (!key) {
+    throw new Error("ENCRYPTION_KEY is required.");
+  }
+
+  if (key.length < 32) {
+    throw new Error("ENCRYPTION_KEY must be at least 32 characters long.");
+  }
+
+  return crypto.scryptSync(key, process.env.ENCRYPTION_SALT || "orbi-shop-v1", KEY_LENGTH);
 };
 
 export const encrypt = (text: string, isPassword = false): string => {
