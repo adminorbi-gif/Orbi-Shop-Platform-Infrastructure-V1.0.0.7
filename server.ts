@@ -1,5 +1,10 @@
 import express from "express";
 import path from "path";
+import dns from "node:dns";
+
+// Fix for Node 18+ hanging on IPv6 when the host has no IPv6 route (common on GCP VMs)
+dns.setDefaultResultOrder("ipv4first");
+
 import { createServer as createViteServer } from "vite";
 
 import adminRouter from "./server/routes/admin.js";
