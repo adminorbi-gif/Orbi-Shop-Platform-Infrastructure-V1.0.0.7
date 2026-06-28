@@ -647,7 +647,7 @@ export default function ClientApp() {
       )}
 
       {/* Dynamic SEO Product Discovery Map - Hidden from UI but accessible to search engine crawlers */}
-      <div className="sr-only opacity-0 pointer-events-none absolute -bottom-full" aria-hidden="true">
+      <div className="sr-only" aria-hidden="true">
         <h3>Product Sitemap Discovery - Bei za Bidhaa Tanzania</h3>
         {products.slice(0, 150).map(p => {
           const swName = p.nameSw || p.name;
