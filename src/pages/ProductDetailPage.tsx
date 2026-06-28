@@ -210,6 +210,7 @@ export default function ProductDetailPage({
   }, [seller, lang]);
 
   const [imgIdx, setImgIdx] = useState(0);
+  const [showFullImage, setShowFullImage] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showNotify, setShowNotify] = useState(false);
   const [notifyEmail, setNotifyEmail] = useState("");
@@ -522,7 +523,10 @@ export default function ProductDetailPage({
           
           {/* Left Column: Images */}
           <div className="w-full md:w-1/2 flex flex-col gap-4">
-            <div className="relative aspect-square sm:aspect-[4/3] bg-white rounded-3xl overflow-hidden shadow-xs shrink-0 border border-slate-200/60 p-4 flex items-center justify-center">
+            <div 
+              className="relative aspect-square sm:aspect-[4/3] bg-white rounded-3xl overflow-hidden shadow-xs shrink-0 border border-slate-200/60 p-4 flex items-center justify-center cursor-zoom-in"
+              onClick={() => setShowFullImage(true)}
+            >
               <img
                 src={product.images[imgIdx]}
                 alt={product.name}
@@ -1304,6 +1308,75 @@ export default function ProductDetailPage({
       <script type="application/ld+json">
         {JSON.stringify(structuredData)}
       </script>
+
+      {/* Full Image Modal */}
+      {showFullImage && (
+        <div className="fixed inset-0 z-[9999999] bg-black/90 backdrop-blur flex flex-col items-center justify-center animate-in fade-in duration-200">
+          <button
+            onClick={() => setShowFullImage(false)}
+            className="absolute top-4 right-4 md:top-8 md:right-8 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-all cursor-pointer z-50"
+          >
+            <X size={28} />
+          </button>
+          
+          {product.images.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setImgIdx((i) => (i - 1 + product.images.length) % product.images.length);
+              }}
+              className="absolute left-2 md:left-8 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full text-white transition-all cursor-pointer z-50"
+            >
+              <ChevronLeft size={32} />
+            </button>
+          )}
+
+          <div 
+            className="relative w-full max-w-5xl max-h-[85vh] flex items-center justify-center p-4 cursor-zoom-out"
+            onClick={() => setShowFullImage(false)}
+          >
+            <img
+              src={product.images[imgIdx]}
+              alt={product.name}
+              className="max-w-full max-h-[85vh] object-contain select-none"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+
+          {product.images.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setImgIdx((i) => (i + 1) % product.images.length);
+              }}
+              className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full text-white transition-all cursor-pointer z-50"
+            >
+              <ChevronRight size={32} />
+            </button>
+          )}
+          
+          {/* Thumbnails in Modal */}
+          {product.images.length > 1 && (
+            <div className="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 overflow-x-auto max-w-full px-4 py-2">
+              {product.images.map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setImgIdx(idx)}
+                  className={`w-14 h-14 md:w-16 md:h-16 shrink-0 rounded-xl overflow-hidden border-2 transition-all p-0.5 cursor-pointer ${
+                    idx === imgIdx ? "border-orange-500 bg-white" : "border-white/20 hover:border-white/50"
+                  }`}
+                >
+                  <img
+                    src={img}
+                    alt={`Thumb ${idx}`}
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

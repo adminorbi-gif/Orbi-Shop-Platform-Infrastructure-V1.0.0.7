@@ -2548,11 +2548,7 @@ export default function ClientApp() {
               </h4>
               <div className="flex flex-col items-center sm:items-start gap-3">
                 <a
-                  href="/?seller-signup=true"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setShowApplySellerModal(true);
-                  }}
+                  href="/seller/signup"
                   className="bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-slate-300 hover:text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer inline-flex"
                 >
                   <ShieldCheck size={14} /> Apply as Seller
@@ -2686,11 +2682,7 @@ export default function ClientApp() {
             </div>
             <div className="flex gap-4">
               <a
-                href="/?seller-login=true"
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigateTo("?seller-login=true");
-                }}
+                href="/seller/login"
                 className="hover:text-white font-bold transition flex items-center gap-2 outline-none cursor-pointer"
               >
                 <Store size={12} /> Admin

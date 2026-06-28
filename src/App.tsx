@@ -16,14 +16,24 @@ function ProtectedRoute({ children, fallbackPath }: { children: React.ReactNode,
 
   if (isAuthenticated === null) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white font-sans">
-        <div className="flex flex-col items-center gap-4">
-          <img 
-            src="https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png" 
-            alt="Orbi Shop Logo" 
-            className="w-24 h-24 object-contain animate-pulse grayscale rounded-full" 
-            referrerPolicy="no-referrer"
-          />
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-50 font-sans">
+        <div className="flex flex-col items-center gap-6 text-center max-w-sm px-6">
+          <div className="relative">
+            <div className="absolute inset-0 bg-blue-100 rounded-full blur-xl opacity-50 animate-pulse"></div>
+            <img 
+              src="https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png" 
+              alt="Orbi Shop Logo" 
+              className="relative w-28 h-28 object-contain animate-bounce drop-shadow-xl" 
+              referrerPolicy="no-referrer"
+            />
+          </div>
+          <div className="flex flex-col items-center gap-2 mt-4">
+            <div className="flex gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -47,14 +57,24 @@ export default function App() {
   return (
     <div className="relative min-h-screen">
       <Suspense fallback={
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white font-sans">
-          <div className="flex flex-col items-center gap-4">
-            <img 
-              src="https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png" 
-              alt="Orbi Shop Logo" 
-              className="w-24 h-24 object-contain animate-pulse grayscale rounded-full" 
-              referrerPolicy="no-referrer"
-            />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-50 font-sans">
+          <div className="flex flex-col items-center gap-6 text-center max-w-sm px-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-blue-100 rounded-full blur-xl opacity-50 animate-pulse"></div>
+              <img 
+                src="https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png" 
+                alt="Orbi Shop Logo" 
+                className="relative w-28 h-28 object-contain animate-bounce drop-shadow-xl" 
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <div className="flex flex-col items-center gap-2 mt-4">
+              <div className="flex gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              </div>
+            </div>
           </div>
         </div>
       }>
