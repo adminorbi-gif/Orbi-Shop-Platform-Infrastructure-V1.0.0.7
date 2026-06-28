@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://shop.orbifinancial.com/sitemap.xml
+Sitemap: https://orbifinancial.com/sitemap.xml

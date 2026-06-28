@@ -694,22 +694,10 @@ const { showAlert, showConfirm } = useDialog();
   } | null>(null);
   const [allReviews, setAllReviews] = useState<Record<string, any[]>>({});
 
-  // Dynamic SEO Metadata Management
+  // Dynamic SEO URL Management
   useEffect(() => {
     const updateMetadata = () => {
       if (selectedProduct) {
-        const priceValue = formatCurrency(selectedProduct.price);
-        const priceText = lang === "sw" ? `TSh ${priceValue}` : `${priceValue} TZS`;
-        const displayName = selectedProduct.nameSw || selectedProduct.name;
-        
-        // Swahili-first Title for local search optimization
-        document.title = `Bei ya ${displayName} - ${priceText} | Orbi Shop`;
-        
-        const metaDesc = document.querySelector('meta[name="description"]');
-        if (metaDesc) {
-          metaDesc.setAttribute('content', `Nunua ${displayName} kwa bei ya ${priceText}. ${selectedProduct.description.substring(0, 150)}... Wauzaji walioidhinishwa Orbi Shop Tanzania.`);
-        }
-        
         // Update URL search params silently for fallback script
         const url = new URL(window.location.href);
         const oldName = url.searchParams.get('name');
@@ -722,14 +710,6 @@ const { showAlert, showConfirm } = useDialog();
           }
           url.searchParams.set('price', selectedProduct.price.toString());
           window.history.replaceState({}, '', url.toString());
-        }
-      } else {
-        document.title = lang === "sw" ? "Orbi Shop - Soko Linaloaminika Tanzania" : "Orbi Shop - Trusted E-Commerce Marketplace Tanzania";
-        const metaDesc = document.querySelector('meta[name="description"]');
-        if (metaDesc) {
-          metaDesc.setAttribute('content', lang === "sw" 
-            ? "Nunua na Orbi - Soko linaloaminika zaidi la E-commerce nchini Tanzania na Afrika. Ubora na usalama wa malipo uliothibitishwa."
-            : "Shop with Orbi - The Most Trusted E-Commerce Marketplace in Tanzania and Africa. quality, authenticity, and guaranteed payment protection.");
         }
       }
     };

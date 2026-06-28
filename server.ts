@@ -1,5 +1,10 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
+import { createClient } from "@supabase/supabase-js";
+import helmet from "helmet";
+import cors from "cors";
+import rateLimit from "express-rate-limit";
 import { createServer as createViteServer } from "vite";
 
 import adminRouter from "./server/routes/admin.js";
@@ -26,7 +31,37 @@ import traRouter from "./server/routes/tra.js";
 
 async function startServer() {
   const app = express();
+  app.set("trust proxy", 1);
   const PORT = 3000;
+
+  // 1. Helmet Security Headers
+  app.use(
+    helmet({
+      contentSecurityPolicy: false, // Disable CSP to prevent blocking Vite or inline scripts
+      crossOriginEmbedderPolicy: false,
+    })
+  );
+
+  // 2. CORS Configuration
+  app.use(
+    cors({
+      origin:
+        process.env.NODE_ENV === "production"
+          ? ["https://orbifinancial.com"] // Allow only your domain in production
+          : "*", // Allow all in development
+      methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    })
+  );
+
+  // 3. Rate Limiting for API routes
+  const apiLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 100, // limit each IP to 100 requests per windowMs
+    message: { error: "Too many requests, please try again later." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  app.use("/api", apiLimiter);
 
   // Add JSON body parser middleware which is necessary for Express POST endpoints
   app.use(express.json());
@@ -64,12 +99,78 @@ async function startServer() {
       server: { middlewareMode: true },
       appType: "spa",
     });
-    app.use(vite.middlewares);
+    
+    // Custom middleware to inject SEO tags in development
+    app.use(async (req, res, next) => {
+      const url = req.originalUrl;
+      const productMatch = url.match(/\/shop\/.*--([a-zA-Z0-9-]+)(?:\?.*)?$/);
+      
+      if (productMatch) {
+        try {
+          const productId = productMatch[1];
+          const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://lvkyttxfgrmsxafvtcxw.supabase.co";
+          const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_0ThBuOrA98M6awmeGKc3cw_nrV-mJtO";
+          const supabase = createClient(supabaseUrl, supabaseKey);
+          
+          const { data: product } = await supabase.from("products").select("name, nameSw, description, price, images").eq("id", productId).single();
+          
+          if (product) {
+            let html = await fs.promises.readFile(path.join(process.cwd(), "index.html"), "utf-8");
+            html = await vite.transformIndexHtml(url, html);
+            
+            const title = `Bei ya ${product.nameSw || product.name} | Orbi Shop`;
+            const desc = `Nunua ${product.nameSw || product.name} kwa bei ya TSh ${product.price}. ${product.description ? product.description.substring(0, 150) : ''}...`;
+            const image = product.images && product.images[0] ? product.images[0] : "https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png";
+            
+            html = html.replace(/<title>.*?<\/title>/, `<title>${title}</title>`);
+            html = html.replace(/<meta name="description".*?>/, `<meta name="description" content="${desc}" />`);
+            html = html.replace(/<meta property="og:title".*?>/, `<meta property="og:title" content="${title}" />`);
+            html = html.replace(/<meta property="og:description".*?>/, `<meta property="og:description" content="${desc}" />`);
+            html = html.replace(/<meta property="og:image".*?>/, `<meta property="og:image" content="${image}" />`);
+            
+            return res.status(200).set({ "Content-Type": "text/html" }).end(html);
+          }
+        } catch (e) {
+          console.error("Error injecting SEO tags:", e);
+        }
+      }
+      vite.middlewares(req, res, next);
+    });
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+    app.use(express.static(distPath, { index: false }));
+    
+    app.get("*", async (req, res) => {
+      const url = req.originalUrl;
+      const productMatch = url.match(/\/shop\/.*--([a-zA-Z0-9-]+)(?:\?.*)?$/);
+      let html = await fs.promises.readFile(path.join(distPath, "index.html"), "utf-8");
+      
+      if (productMatch) {
+        try {
+          const productId = productMatch[1];
+          const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://lvkyttxfgrmsxafvtcxw.supabase.co";
+          const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_0ThBuOrA98M6awmeGKc3cw_nrV-mJtO";
+          const supabase = createClient(supabaseUrl, supabaseKey);
+          
+          const { data: product } = await supabase.from("products").select("name, nameSw, description, price, images").eq("id", productId).single();
+          
+          if (product) {
+            const title = `Bei ya ${product.nameSw || product.name} | Orbi Shop`;
+            const desc = `Nunua ${product.nameSw || product.name} kwa bei ya TSh ${product.price}. ${product.description ? product.description.substring(0, 150) : ''}...`;
+            const image = product.images && product.images[0] ? product.images[0] : "https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png";
+            
+            html = html.replace(/<title>.*?<\/title>/, `<title>${title}</title>`);
+            html = html.replace(/<meta name="description".*?>/, `<meta name="description" content="${desc}" />`);
+            html = html.replace(/<meta property="og:title".*?>/, `<meta property="og:title" content="${title}" />`);
+            html = html.replace(/<meta property="og:description".*?>/, `<meta property="og:description" content="${desc}" />`);
+            html = html.replace(/<meta property="og:image".*?>/, `<meta property="og:image" content="${image}" />`);
+          }
+        } catch (e) {
+          console.error("Error injecting SEO tags in production:", e);
+        }
+      }
+      
+      res.status(200).set({ "Content-Type": "text/html" }).send(html);
     });
   }
 

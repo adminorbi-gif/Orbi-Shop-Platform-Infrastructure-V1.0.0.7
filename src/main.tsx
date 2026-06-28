@@ -4,6 +4,7 @@ import App from './App.tsx';
 import './index.css';
 import { DialogProvider } from './components/CustomDialogContext.tsx';
 import { aiPilotEngine } from './engine/AIPilotEngine';
+import { HelmetProvider } from 'react-helmet-async';
 
 // Start the background engine for platform-wide automated tasks.
 // Delay it to prevent blocking the initial render.
@@ -13,8 +14,10 @@ setTimeout(() => {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <DialogProvider>
-      <App />
-    </DialogProvider>
+    <HelmetProvider>
+      <DialogProvider>
+        <App />
+      </DialogProvider>
+    </HelmetProvider>
   </StrictMode>,
 );

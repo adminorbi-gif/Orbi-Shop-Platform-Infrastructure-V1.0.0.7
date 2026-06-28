@@ -1,5 +1,6 @@
 import { useClientApp } from "./useClientApp";
 import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from "react";
+import { Helmet } from "react-helmet-async";
 import { supabase, supabaseUrl, supabaseKey } from "../../lib/supabase";
 import { db } from "../../lib/db";
 import {
@@ -633,6 +634,29 @@ export default function ClientApp() {
 
   return (
     <>
+      <Helmet>
+        <title>
+          {selectedProduct 
+            ? `Bei ya ${selectedProduct.nameSw || selectedProduct.name} - ${lang === "sw" ? 'TSh ' : ''}${formatCurrency(selectedProduct.price)}${lang !== "sw" ? ' TZS' : ''} | Orbi Shop` 
+            : (lang === "sw" ? "Orbi Shop - Soko Linaloaminika Tanzania" : "Orbi Shop - Trusted E-Commerce Marketplace Tanzania")}
+        </title>
+        <meta 
+          name="description" 
+          content={selectedProduct 
+            ? `Nunua ${selectedProduct.nameSw || selectedProduct.name} kwa bei ya ${formatCurrency(selectedProduct.price)}. ${selectedProduct.description.substring(0, 150)}... Wauzaji walioidhinishwa Orbi Shop Tanzania.`
+            : (lang === "sw" ? "Nunua na Orbi - Soko linaloaminika zaidi la E-commerce nchini Tanzania na Afrika. Ubora na usalama wa malipo uliothibitishwa." : "Shop with Orbi - The Most Trusted E-Commerce Marketplace in Tanzania and Africa. quality, authenticity, and guaranteed payment protection.")}
+        />
+        <meta property="og:title" content={selectedProduct 
+            ? `Bei ya ${selectedProduct.nameSw || selectedProduct.name} - ${lang === "sw" ? 'TSh ' : ''}${formatCurrency(selectedProduct.price)}${lang !== "sw" ? ' TZS' : ''} | Orbi Shop` 
+            : (lang === "sw" ? "Orbi Shop - Soko Linaloaminika Tanzania" : "Orbi Shop - Trusted E-Commerce Marketplace Tanzania")} />
+        <meta property="og:description" content={selectedProduct 
+            ? `Nunua ${selectedProduct.nameSw || selectedProduct.name} kwa bei ya ${formatCurrency(selectedProduct.price)}. ${selectedProduct.description.substring(0, 150)}... Wauzaji walioidhinishwa Orbi Shop Tanzania.`
+            : (lang === "sw" ? "Nunua na Orbi - Soko linaloaminika zaidi la E-commerce nchini Tanzania na Afrika. Ubora na usalama wa malipo uliothibitishwa." : "Shop with Orbi - The Most Trusted E-Commerce Marketplace in Tanzania and Africa. quality, authenticity, and guaranteed payment protection.")} />
+        {selectedProduct && selectedProduct.images && selectedProduct.images[0] && (
+          <meta property="og:image" content={selectedProduct.images[0]} />
+        )}
+        <meta property="og:type" content={selectedProduct ? "product" : "website"} />
+      </Helmet>
       {isLoading && <LoadingOverlay />}
       {showAboutPage && (
         <div className="fixed inset-0 z-[999999] bg-white overflow-y-auto">
