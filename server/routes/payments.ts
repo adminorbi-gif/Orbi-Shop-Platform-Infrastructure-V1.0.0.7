@@ -1,50 +1,86 @@
 import { Router } from "express";
 import { supabase, getSupabase, encrypt, decrypt } from "../lib/supabase.js";
 import { sendOrbiTalkTemplate } from "./talk.js";
+import { callOrbiPayGateway, getPaySafeHoldMinutes, getPayServiceKey } from "../lib/orbiPayGateway.js";
 
 const router = Router();
+
+async function initiatePaySafeEscrow(req: any) {
+  const {
+    amount,
+    orderId,
+    customerId,
+    customerName,
+    customerEmail,
+    customerPhone,
+    sellerId,
+    sellerWalletId,
+    buyer,
+    seller,
+    currency = "TZS",
+    description,
+  } = req.body;
+  if (!orderId || !amount || Number.isNaN(Number(amount))) {
+    const error = new Error("orderId and numeric amount are required to initiate a live ORBI PaySafe escrow.");
+    (error as any).status = 400;
+    throw error;
+  }
+
+  console.log(`Initiating live ORBI PaySafe escrow for Order ${orderId} of ${currency} ${amount}`);
+
+  const result = await callOrbiPayGateway("/v1/paysafe/escrows", {
+    method: "POST",
+    serviceKey: getPayServiceKey(req),
+    body: {
+      reference: String(orderId),
+      amount: Number(amount),
+      currency,
+      confirm: true,
+      description: description || "ORBI Shop protected checkout",
+      buyer: buyer || {
+        userId: customerId,
+        name: customerName,
+        email: customerEmail,
+        phone: customerPhone,
+      },
+      seller: seller || {
+        userId: sellerId,
+        walletId: sellerWalletId,
+      },
+      metadata: {
+        source: "orbi-shop",
+        shopOrderId: orderId,
+        customerId,
+        sellerId,
+        holdMinutes: getPaySafeHoldMinutes(),
+      },
+    },
+  });
+
+  return {
+    ...result,
+    status: result.status || "PENDING",
+    escrowState: "held_pending_authorization",
+    message: "PaySafe escrow initialized through live ORBI Pay Gateway.",
+  };
+}
 
 // Example Orbi Pay Webhook/Payment Intent Initialization Endpoint
 router.post("/initiate", async (req, res) => {
   try {
-    const { amount, orderId, customerId, paymentMethod, currency = "TZS" } = req.body;
-    
-    // In a real implementation, you would call the actual Payment Gateway API here
-    // For now, we mock the success response to be processed by Orbi Pay
-    
-    console.log(`Initiating Orbi Pay transaction for Order ${orderId} of ${currency} ${amount} via ${paymentMethod || 'standard'}`);
-    
-    res.json({
-      success: true,
-      transactionId: `ORBI-PAY-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-      status: "pending_orbi_paysafe",
-      redirectUrl: "https://pay.orbifinancial.com/checkout/mock",
-      amount,
-      currency,
-      message: "Payment intent initialized successfully via Orbi Pay Gateway"
-    });
+    res.json(await initiatePaySafeEscrow(req));
   } catch (error: any) {
     console.error("[PAYMENTS] Failed to initiate payment:", error.message);
-    res.status(500).json({ success: false, message: "Internal server error during payment initialization" });
+    res.status(error.status || 500).json({ success: false, message: error.message, details: error.details });
   }
 });
 
 // Legacy handler for backwards compatibility
 router.post("/create-intent", async (req, res) => {
   try {
-    const { amount, orderId, customerId } = req.body;
-    
-    console.log(`Creating payment intent for Order ${orderId} of TZS ${amount}`);
-    
-    res.json({
-      success: true,
-      transactionId: `ORBI-PAY-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-      status: "pending_orbi_paysafe",
-      amount,
-      message: "Payment intent created successfully via Orbi Pay Gateway"
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Internal server error during payment processing" });
+    res.json(await initiatePaySafeEscrow(req));
+  } catch (error: any) {
+    res.status(error.status || 500).json({ success: false, message: error.message || "Internal server error during payment processing", details: error.details });
   }
 });
 
@@ -71,77 +107,99 @@ router.get("/status/:transactionId", async (req, res) => {
   try {
     const { transactionId } = req.params;
     console.log(`[PAYMENTS] Checking status for transaction: ${transactionId}`);
-    
-    // In production, make a GET request to Orbi Pay Gateway API
-    
-    res.json({
-      success: true,
-      transactionId,
-      status: "completed", // Mock status
-      escrowState: "held",
-      checkedAt: new Date().toISOString()
+
+    const result = await callOrbiPayGateway(`/v1/merchant/orders/${encodeURIComponent(transactionId)}/payment-status`, {
+      serviceKey: getPayServiceKey(req),
     });
+
+    res.json({ success: true, transactionId, checkedAt: new Date().toISOString(), ...result });
   } catch (error: any) {
     console.error("[PAYMENTS] Status check failed:", error.message);
-    res.status(500).json({ success: false, message: "Failed to verify transaction status" });
+    res.status(error.status || 500).json({ success: false, message: error.message, details: error.details });
   }
 });
 
 // Escrow Operations
 router.post("/escrow/release", async (req, res) => {
   try {
-    const { orderId, sellerId } = req.body;
+    const { orderId, escrowId, sellerId, amount, currency = "TZS", reason, customer } = req.body;
+    const activeEscrowId = escrowId || orderId;
     console.log(`[ESCROW] Initiating funds release for Order ${orderId} to Seller ${sellerId}`);
-    
-    // Call Orbi Pay Gateway API to release funds from escrow to merchant
-    
-    res.json({
-      success: true,
-      message: "Escrow funds released successfully to merchant ledger.",
-      escrowState: "released",
-      releasedAt: new Date().toISOString()
+
+    const result = await callOrbiPayGateway(`/v1/paysafe/escrows/${encodeURIComponent(activeEscrowId)}/release`, {
+      method: "POST",
+      serviceKey: getPayServiceKey(req),
+      body: {
+        reference: String(orderId || activeEscrowId),
+        amount: amount ? Number(amount) : undefined,
+        currency,
+        reason: reason || "ORBI Shop delivery release requested",
+        customer,
+        metadata: { orderId, sellerId, source: "orbi-shop" },
+      },
     });
+
+    res.json({ ...result, escrowState: result.status || "external_pending", releasedAt: new Date().toISOString() });
   } catch (error: any) {
     console.error("[ESCROW] Release failed:", error.message);
-    res.status(500).json({ success: false, message: "Failed to release escrow funds." });
+    res.status(error.status || 500).json({ success: false, message: error.message, details: error.details });
   }
 });
 
 router.post("/escrow/refund", async (req, res) => {
   try {
-    const { orderId, buyerId, reason } = req.body;
+    const { orderId, escrowId, buyerId, amount, currency = "TZS", reason, customer } = req.body;
+    const activeEscrowId = escrowId || orderId;
     console.log(`[ESCROW] Initiating funds refund for Order ${orderId} back to Buyer ${buyerId}. Reason: ${reason}`);
-    
-    // Call Orbi Pay Gateway API to reverse/refund escrow hold back to original payment method
-    
-    res.json({
-      success: true,
-      message: "Escrow funds refunded successfully to buyer.",
-      escrowState: "refunded",
-      refundedAt: new Date().toISOString()
+
+    const result = await callOrbiPayGateway(`/v1/paysafe/escrows/${encodeURIComponent(activeEscrowId)}/refund`, {
+      method: "POST",
+      serviceKey: getPayServiceKey(req),
+      body: {
+        reference: String(orderId || activeEscrowId),
+        amount: amount ? Number(amount) : undefined,
+        currency,
+        reason: reason || "ORBI Shop refund requested",
+        customer,
+        metadata: { orderId, buyerId, source: "orbi-shop" },
+      },
     });
+
+    res.json({ ...result, escrowState: "refunded", refundedAt: new Date().toISOString() });
   } catch (error: any) {
     console.error("[ESCROW] Refund failed:", error.message);
-    res.status(500).json({ success: false, message: "Failed to refund escrow funds." });
+    res.status(error.status || 500).json({ success: false, message: error.message, details: error.details });
   }
 });
 
 router.post("/escrow/dispute", async (req, res) => {
   try {
-    const { orderId, partyId, reason } = req.body;
+    const { orderId, escrowId, partyId, reason, customer } = req.body;
+    const activeEscrowId = escrowId || orderId;
     console.log(`[ESCROW] Locking funds due to dispute on Order ${orderId} by party ${partyId}. Reason: ${reason}`);
-    
-    // Call Orbi Pay Gateway API to lock escrow state (preventing auto-release)
-    
-    res.json({
-      success: true,
-      message: "Escrow funds have been locked due to active dispute arbitration.",
-      escrowState: "disputed",
-      lockedAt: new Date().toISOString()
+
+    if (!activeEscrowId) {
+      return res.status(400).json({
+        success: false,
+        error: "escrowId or orderId is required to dispute a live ORBI PaySafe escrow.",
+      });
+    }
+
+    const result = await callOrbiPayGateway(`/v1/paysafe/escrows/${encodeURIComponent(activeEscrowId)}/dispute`, {
+      method: "POST",
+      serviceKey: getPayServiceKey(req),
+      body: {
+        reference: String(orderId || activeEscrowId),
+        reason: reason || `ORBI Shop dispute for order ${orderId}`,
+        customer,
+        metadata: { orderId, partyId, source: "orbi-shop" },
+      },
     });
+
+    res.json({ ...result, escrowState: "disputed", lockedAt: new Date().toISOString() });
   } catch (error: any) {
     console.error("[ESCROW] Dispute lock failed:", error.message);
-    res.status(500).json({ success: false, message: "Failed to lock escrow funds." });
+    res.status(error.status || 500).json({ success: false, message: error.message, details: error.details });
   }
 });
 
