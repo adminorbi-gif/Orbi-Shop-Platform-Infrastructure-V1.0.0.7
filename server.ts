@@ -52,6 +52,7 @@ async function startServer() {
   app.use("/api/v1/search", searchRouter);
   app.use("/api/v1/settings", settingsRouter);
   app.use("/api/sitemap", sitemapRouter);
+  app.use("/sitemap.xml", sitemapRouter);
   app.use("/api/v1/stock-notifications", stockNotificationsRouter);
   app.use("/api/v1/storage", storageRouter);
   app.use("/api/v1/subscriptions", subscriptionsRouter);
