@@ -1,11 +1,31 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
+import crypto from "crypto";
 import { supabase, getSupabase, encrypt, decrypt } from "../lib/supabase.js";
 import { sendOrbiTalkTemplate } from "./talk.js";
+import { requireAuth, requireRole } from "../middleware/auth.js";
 
 const router = Router();
 
+function verifyWebhookSignature(transactionId: string, status: string, orderId: string | undefined, reference: string | undefined, signature: string | undefined) {
+  const secret = process.env.ORBI_PAY_WEBHOOK_SECRET;
+  if (!secret) {
+    throw new Error("ORBI_PAY_WEBHOOK_SECRET is required.");
+  }
+
+  if (!signature) return false;
+
+  const payloadToSign = `${transactionId}:${status}:${orderId || reference || ""}`;
+  const expected = crypto.createHmac("sha256", secret).update(payloadToSign).digest("hex");
+
+  try {
+    return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+  } catch (e) {
+    return false;
+  }
+}
+
 // Example Orbi Pay Webhook/Payment Intent Initialization Endpoint
-router.post("/initiate", async (req, res) => {
+router.post("/initiate", requireAuth, requireRole("admin"), async (req: Request, res: Response) => {
   try {
     const { amount, orderId, customerId, paymentMethod, currency = "TZS" } = req.body;
     
@@ -30,7 +50,7 @@ router.post("/initiate", async (req, res) => {
 });
 
 // Legacy handler for backwards compatibility
-router.post("/create-intent", async (req, res) => {
+router.post("/create-intent", requireAuth, requireRole("admin"), async (req: Request, res: Response) => {
   try {
     const { amount, orderId, customerId } = req.body;
     
@@ -48,13 +68,25 @@ router.post("/create-intent", async (req, res) => {
   }
 });
 
-// Orbi Gateway Webhook listener
-router.post("/webhook", async (req, res) => {
+// Orbi Gateway Webhook listener (public endpoint: verifies HMAC signature)
+router.post("/webhook", async (req: Request, res: Response) => {
   try {
     const { transactionId, status, orderId, reference, signature } = req.body;
     console.log(`[PAYMENTS WEBHOOK] Received payload from Orbi Pay: Transaction ${transactionId} is now ${status}`);
     
-    // TODO: Verify signature against ORBI_PAY_WEBHOOK_SECRET
+    // Verify signature using ORBI_PAY_WEBHOOK_SECRET. Uses canonical string: transactionId:status:orderIdOrReference
+    const sig = signature || (req.headers["x-orbi-signature"] as string | undefined);
+
+    try {
+      const ok = verifyWebhookSignature(transactionId, status, orderId, reference, sig);
+      if (!ok) {
+        console.warn("[PAYMENTS WEBHOOK] Invalid signature for transaction", transactionId);
+        return res.status(401).json({ received: false, error: "Invalid webhook signature." });
+      }
+    } catch (err: any) {
+      console.error("[PAYMENTS WEBHOOK] Signature verification error:", err.message);
+      return res.status(500).json({ received: false, error: "Webhook signature verification failed (server misconfigured)." });
+    }
     
     // Here we would find the associated order in the database and update its Escrow status
     // Example: if status === 'successful', update order to 'PAYMENT_HELD' (Escrow)
@@ -67,7 +99,7 @@ router.post("/webhook", async (req, res) => {
 });
 
 // Check transaction status from Gateway
-router.get("/status/:transactionId", async (req, res) => {
+router.get("/status/:transactionId", requireAuth, requireRole("admin"), async (req: Request, res: Response) => {
   try {
     const { transactionId } = req.params;
     console.log(`[PAYMENTS] Checking status for transaction: ${transactionId}`);
@@ -87,8 +119,8 @@ router.get("/status/:transactionId", async (req, res) => {
   }
 });
 
-// Escrow Operations
-router.post("/escrow/release", async (req, res) => {
+// Escrow Operations (protected)
+router.post("/escrow/release", requireAuth, requireRole("admin"), async (req: Request, res: Response) => {
   try {
     const { orderId, sellerId } = req.body;
     console.log(`[ESCROW] Initiating funds release for Order ${orderId} to Seller ${sellerId}`);
@@ -107,7 +139,7 @@ router.post("/escrow/release", async (req, res) => {
   }
 });
 
-router.post("/escrow/refund", async (req, res) => {
+router.post("/escrow/refund", requireAuth, requireRole("admin"), async (req: Request, res: Response) => {
   try {
     const { orderId, buyerId, reason } = req.body;
     console.log(`[ESCROW] Initiating funds refund for Order ${orderId} back to Buyer ${buyerId}. Reason: ${reason}`);
@@ -126,7 +158,7 @@ router.post("/escrow/refund", async (req, res) => {
   }
 });
 
-router.post("/escrow/dispute", async (req, res) => {
+router.post("/escrow/dispute", requireAuth, requireRole("admin"), async (req: Request, res: Response) => {
   try {
     const { orderId, partyId, reason } = req.body;
     console.log(`[ESCROW] Locking funds due to dispute on Order ${orderId} by party ${partyId}. Reason: ${reason}`);
@@ -145,8 +177,8 @@ router.post("/escrow/dispute", async (req, res) => {
   }
 });
 
-// Merchant Payouts
-router.post("/payout/request", async (req, res) => {
+// Merchant Payouts (protected)
+router.post("/payout/request", requireAuth, requireRole("admin"), async (req: Request, res: Response) => {
   try {
     const { sellerId, amount, destinationProvider, destinationAccount } = req.body;
     console.log(`[PAYOUTS] Merchant ${sellerId} requesting payout of TZS ${amount} to ${destinationProvider} (${destinationAccount})`);
@@ -166,8 +198,8 @@ router.post("/payout/request", async (req, res) => {
   }
 });
 
-// AFRICAN MOBILE MONEY USSD PUSH TRANSACTION SIMULATOR (M-Pesa / Tigo Pesa / Airtel Money)
-router.post("/ussd-push", async (req, res) => {
+// AFRICAN MOBILE MONEY USSD PUSH TRANSACTION SIMULATOR (M-Pesa / Tigo Pesa / Airtel Money) (protected)
+router.post("/ussd-push", requireAuth, requireRole("admin"), async (req: Request, res: Response) => {
   try {
     const { phone, amount, carrier, orderId } = req.body;
     if (!phone || !amount || !carrier || !orderId) {
@@ -302,9 +334,9 @@ router.post("/ussd-push", async (req, res) => {
             ? `[Order Funded] You are invited to fulfill Order #${oId} - Orbi Shop`
             : `[Oda Imelipiwa] Unaalikwa Kuhudumia Oda #${oId} - Orbi Shop`;
 
-          const swSellerBody = `Habari ${sName},\n\nMteja ${cName} amekamilisha malipo ya oda mpya ${oId} ya kiasi cha TZS ${total.toLocaleString()}.\n\nMalipo haya yamepokelewa kikamilifu na kulindwa kwenye akaunti ya Escrow (Orbi PaySafe) na yatatolewa kwako pindi mteja akipokea mzigo wake.\n\nUnaalikwa kuingia kwenye mfumo kuthibitisha na kuanza usafirishaji mara moja kupitia Tovuti ya Wauzaji barua pepe yako ikiwa: ${sEmail}\n🔗 https://shop.orbifinancial.com/?seller-login=true\n\nAsante kwa kuingia mkataba na Orbi Shop!`;
+          const swSellerBody = `Habari ${sName},\n\nMteja ${cName} amekamilisha malipo ya oda mpya ${oId} ya kiasi cha TZS ${total.toLocaleString()}.\n\nMalipo haya yamepokelewa kikamilifu na kul[...]`;
 
-          const enSellerBody = `Dear ${sName},\n\nCustomer ${cName} has completed payment for order ${oId} worth TZS ${total.toLocaleString()}.\n\nThe funds are securely protected in Orbi PaySafe Escrow and will be fully disbursed after successful delivery.\n\nYou are invited to login to the Merchant Portal and start shipping immediately:\nEmail/Username: ${sEmail}\n🔗 https://shop.orbifinancial.com/?seller-login=true\n\nThank you for choosing Orbi Shop!`;
+          const enSellerBody = `Dear ${sName},\n\nCustomer ${cName} has completed payment for order ${oId} worth TZS ${total.toLocaleString()}.\n\nThe funds are securely protected in Orbi PaySafe[...]`;
 
           const combinedSellerBody = sLang === "en" ? enSellerBody : swSellerBody;
 

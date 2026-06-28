@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { supabase, getSupabase, encrypt, decryptObject, decrypt } from "../lib/supabase.js";
+import { requireAuth, requireRole } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -138,7 +139,7 @@ export const allowedTransitions: Record<string, string[]> = {
 };
 
 // GET /api/v1/orders - Retrieve order listings and items
-router.get("/", async (req, res) => {
+router.get("/", requireAuth, async (req, res) => {
   try {
     let selectRes = await getSupabase(req).from('orders').select(`*, items:order_items(*)`).or('is_archived.eq.false,is_archived.is.null').order('created_at', { ascending: false });
     if (selectRes.error) throw selectRes.error;
@@ -192,7 +193,7 @@ router.get("/", async (req, res) => {
 });
 
 // POST /api/v1/orders - Update order metadata (status, payment reference)
-router.post("/", async (req, res) => {
+router.post("/", requireAuth, requireRole("admin", "staff"), async (req, res) => {
   try {
     const order = req.body;
     if (order.id && order.id.length > 20) {
@@ -357,41 +358,41 @@ router.post("/", async (req, res) => {
               if (customerLang === "en") {
                 smsBody = `Hello ${cName}, your order #${cleanNumericId} total TZS ${total} has been confirmed and is being prepared for shipping! Track here: ${trackLink}`;
                 emailSubject = `Order Confirmed: Your Order #${cleanNumericId} is Approved!`;
-                emailBody = `Hello ${cName},\n\nWe are pleased to inform you that your order #${cleanNumericId} has been confirmed and accepted by Orbi Shop.\n\nOrder Value: TZS ${total}\n\nYou can track the shipping progress anytime via this unique link:\n${trackLink}\n\nThank you for choosing Orbi Shop!`;
+                emailBody = `Hello ${cName},\n\nWe are pleased to inform you that your order #${cleanNumericId} has been confirmed and accepted by Orbi Shop.\n\nOrder Value: TZS ${total}\n\nYou c[...]`;
               } else {
                 smsBody = `Habari ${cName}, oda yako #${cleanNumericId} ya jumla ya TZS ${total} imethibitishwa na inatayarishwa kwa ajili ya usafirishaji! Fuatilia hapa: ${trackLink}`;
                 emailSubject = `Oda Imethibitishwa: Oda Yako #${cleanNumericId} Imeidhinishwa!`;
-                emailBody = `Habari ${cName},\n\nTunakujulisha kuwa oda yako #${cleanNumericId} imethibitishwa na kukubaliwa na duka la Orbi Shop.\n\nThamani ya Oda: TZS ${total}\n\nUnaweza kufuatilia maendeleo ya usafirishaji wakati wowote kupitia kiungo hiki cha kipekee:\n${trackLink}\n\nAsante kwa kuchagua Orbi Shop!`;
+                emailBody = `Habari ${cName},\n\nTunakujulisha kuwa oda yako #${cleanNumericId} imethibitishwa na kukubaliwa na duka la Orbi Shop.\n\nThamani ya Oda: TZS ${total}\n\nUnaweza kufua[...]`;
               }
             } else if (mappedActiveForNotify === "shipped") {
               if (customerLang === "en") {
                 smsBody = `Hello ${cName}, our delivery partner is on the way with your order #${cleanNumericId}! Track active location live: ${trackLink}`;
                 emailSubject = `On Its Way: Your order #${cleanNumericId} has been shipped!`;
-                emailBody = `Hello ${cName},\n\nYour order #${cleanNumericId} has been handed over to our carrier and is now on its way to you!\n\nYou can view a live tracker map and follow your package using this link:\n${trackLink}\n\nThank you for shopping with us!`;
+                emailBody = `Hello ${cName},\n\nYour order #${cleanNumericId} has been handed over to our carrier and is now on its way to you!\n\nYou can view a live tracker map and follow your [...]`;
               } else {
                 smsBody = `Habari ${cName}, msafirishaji wetu yuko njiani kuleta oda yako #${cleanNumericId}! Fuatilia eneo lake live sasa hivi hapa: ${trackLink}`;
                 emailSubject = `Mzigo Uko Njiani: Oda yako #${cleanNumericId} imesafirishwa!`;
-                emailBody = `Habari ${cName},\n\nMzigo wako wa oda #${cleanNumericId} umekabidhiwa kwa msafirishaji na hivi sasa uko njiani kuelekea kwako!\n\nUnaweza kuona ramani live ya msafirishaji na kufuatilia mzigo wako kupitia kiungo hiki cha kipekee:\n${trackLink}\n\nAsante kwa kufanya biashara nasi!`;
+                emailBody = `Habari ${cName},\n\nMzigo wako wa oda #${cleanNumericId} umekabidhiwa kwa msafirishaji na hivi sasa uko njiani kuelekea kwako!\n\nUnaweza kuona ramani live ya msafiri[...]`;
               }
             } else if (mappedActiveForNotify === "delivered") {
               if (customerLang === "en") {
                 smsBody = `Hello ${cName}, your order #${cleanNumericId} was successfully delivered! Please confirm receipt to finalize payment: ${trackLink}`;
                 emailSubject = `Package Arrived: Order #${cleanNumericId} Has Been Delivered!`;
-                emailBody = `Hello ${cName},\n\nYour order #${cleanNumericId} has been successfully delivered to your specified address.\n\nPlease click this link to confirm receipt and download your official receipt:\n${trackLink}\n\nThank you, and we hope to serve you again!`;
+                emailBody = `Hello ${cName},\n\nYour order #${cleanNumericId} has been successfully delivered to your specified address.\n\nPlease click this link to confirm receipt and download [...]`;
               } else {
                 smsBody = `Habari ${cName}, oda yako #${cleanNumericId} imefikishwa salama! Tafadhali thibitisha hapa ili kukamilisha ununuzi: ${trackLink}`;
                 emailSubject = `Mzigo Umewasili: Oda #${cleanNumericId} Imefikishwa!`;
-                emailBody = `Habari ${cName},\n\nOda yako #${cleanNumericId} imefikishwa salama katika anwani yako.\n\nTafadhali bofya kiungo hiki ili kuthibitisha kupokea na kutoa mrejesho au kupakua risiti yako:\n${trackLink}\n\nTunayofuraha kukuhudumia tena!`;
+                emailBody = `Habari ${cName},\n\nOda yako #${cleanNumericId} imefikishwa salama katika anwani yako.\n\nTafadhali bofya kiungo hiki ili kuthibitisha kupokea na kutoa mrejesho au ku[...]`;
               }
             } else if (mappedActiveForNotify === "customer_confirmed") {
               if (customerLang === "en") {
                 smsBody = `Hello ${cName}, thank you for confirming receipt of order #${cleanNumericId}! Your transaction is complete. Details: ${trackLink}`;
                 emailSubject = `Purchase Completed: Order #${cleanNumericId} Received Confirmed`;
-                emailBody = `Hello ${cName},\n\nThank you for confirming receipt of your order #${cleanNumericId}.\n\nThe full buying lifecycle is now complete. Feel free to view transaction ledger history or download your receipt anytime here:\n${trackLink}\n\nIt is our absolute pleasure to serve you!`;
+                emailBody = `Hello ${cName},\n\nThank you for confirming receipt of your order #${cleanNumericId}.\n\nThe full buying lifecycle is now complete. Feel free to view transaction ledg[...]`;
               } else {
                 smsBody = `Habari ${cName}, asante kwa kuthibitisha kuwa umepokea oda #${cleanNumericId}! Ununuzi wako umekamilishwa salama. Maelezo zaidi: ${trackLink}`;
                 emailSubject = `Ununuzi Umekamilika: Oda #${cleanNumericId} Imethibitishwa Kupokelewa`;
-                emailBody = `Habari ${cName},\n\nAsante kwa kuthibitisha kuwa umepokea mzigo wako wa oda #${cleanNumericId} salama na kwa kuridhika.\n\nMamnyororo mzima wa ununuzi sasa umekamilika. Unaweza kuona mnyororo mzima wa muamala au kupakua risiti yako wakati wowote hapa:\n${trackLink}\n\nTunayofuraha kukuhudumia!`;
+                emailBody = `Habari ${cName},\n\nAsante kwa kuthibitisha kuwa umepokea mzigo wako wa oda #${cleanNumericId} salama na kwa kuridhika.\n\nMamnyororo mzima wa ununuzi sasa umekamilik[...]`;
               }
 
               // Fire official Orbi Talk SHOP_DELIVERY_CONFIRMED Template
@@ -418,11 +419,11 @@ router.post("/", async (req, res) => {
               if (customerLang === "en") {
                 smsBody = `Hello ${cName}, your order #${cleanNumericId} has been cancelled or refunded by the shop. Details: ${trackLink}`;
                 emailSubject = `Order Alert: Order #${cleanNumericId} Cancelled / Refunded`;
-                emailBody = `Hello ${cName},\n\nWe are writing to notify you that your order #${cleanNumericId} has been cancelled or refunded.\n\nFor details, inquiries, or any other issues, please visit our tracking link or reach support:\n${trackLink}\n\nThank you, and we apologize for any inconvenience!`;
+                emailBody = `Hello ${cName},\n\nWe are writing to notify you that your order #${cleanNumericId} has been cancelled or refunded.\n\nFor details, inquiries, or any other issues, ple[...]`;
               } else {
                 smsBody = `Habari ${cName}, oda yako #${cleanNumericId} imesitishwa au kughairiwa na duka. Kama una maswali wasiliana nasi. Details: ${trackLink}`;
                 emailSubject = `Taarifa ya Oda: Oda #${cleanNumericId} Imeghairiwa`;
-                emailBody = `Habari ${cName},\n\nTunakujulisha kuwa oda yako #${cleanNumericId} imesitishwa au kughairiwa.\n\nKama kuna marejesho au maswali, bofya kiungo hiki au wasiliana na usaidizi wetu:\n${trackLink}\n\nTunajali kuridhika kwako!`;
+                emailBody = `Habari ${cName},\n\nTunakujulisha kuwa oda yako #${cleanNumericId} imesitishwa au kughairiwa.\n\nKama kuna marejesho au maswali, bofya kiungo hiki au wasiliana na usa[...]`;
               }
 
               // Fire official Orbi Talk SHOP_REFUND_PROCESSED Template
@@ -523,9 +524,6 @@ router.post("/", async (req, res) => {
         const { error: logError } = await getSupabase(req).from('order_status_logs').insert([logEntry]);
         if (logError) {
           console.error("[AUDIT LOG] order_status_logs insert failed:", logError.message);
-          // Removed the brittle fallback to 'promotions' table for high engineering architecture.
-          // In a proper system, failing to write an audit log should ping an alerting system, 
-          // not pollute unrelated tables.
         }
 
         // Insert System Message for the Customer & Seller UI to see the update instantly
@@ -533,7 +531,7 @@ router.post("/", async (req, res) => {
           const { data: dbOrderItems } = await getSupabase(req).from("order_items").select("product_id").eq("order_id", order.id).limit(1);
           let sellerId = "system";
           if (dbOrderItems && dbOrderItems.length > 0) {
-             const { data: p } = await getSupabase(req).from("products").select("seller_id").eq("id", dbOrderItems[0].product_id).maybeSingle();
+             const { data: p } = await getSupabase(req).from("products").select("seller_id").eq('id', dbOrderItems[0].product_id).maybeSingle();
              if (p && p.seller_id) sellerId = p.seller_id;
           }
 
@@ -579,7 +577,7 @@ router.post("/", async (req, res) => {
 });
 
 // GET /api/v1/orders/:id - Retrieve single order
-router.get("/:id", async (req, res) => {
+router.get("/:id", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -651,7 +649,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // GET /api/v1/orders/:id/logs - Retrieve audit status change logs for an order
-router.get("/:id/logs", async (req, res) => {
+router.get("/:id/logs", requireAuth, requireRole("admin"), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -709,7 +707,7 @@ router.get("/:id/logs", async (req, res) => {
 });
 
 // DELETE /api/v1/orders/:id - Remove order from historical records (Soft delete using is_archived due to RLS)
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", requireAuth, requireRole("admin"), async (req, res) => {
   try {
     const { id } = req.params;
     // Try actual delete first
