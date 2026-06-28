@@ -9,7 +9,11 @@ const supabaseUrl =
 const supabaseKey =
   process.env.VITE_SUPABASE_ANON_KEY ||
   "sb_publishable_0ThBuOrA98M6awmeGKc3cw_nrV-mJtO";
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  realtime: {
+    transport: ws as any,
+  },
+});
 
 const slugify = (text: string) => {
   return text
