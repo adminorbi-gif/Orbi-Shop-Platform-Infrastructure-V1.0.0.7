@@ -37,6 +37,27 @@ async function startServer() {
   const app = express();
   app.set("trust proxy", 1);
   const PORT = Number(process.env.PORT || 3000);
+  const appUrl = (process.env.APP_URL || "https://shop.orbifinancial.com").replace(/\/$/, "");
+
+  const healthPayload = () => ({
+    status: "ok",
+    service: "orbi-shop",
+    publicHealthUrl: `${appUrl}/api/health`,
+    timestamp: new Date().toISOString(),
+  });
+
+  // Keep platform probes before security, CORS, rate-limit, and body parsing.
+  app.get("/health", (req, res) => {
+    res.status(200).json(healthPayload());
+  });
+
+  app.get("/ready", (req, res) => {
+    res.status(200).json(healthPayload());
+  });
+
+  app.get("/api/health", (req, res) => {
+    res.status(200).json(healthPayload());
+  });
 
   // 1. Helmet Security Headers
   app.use(
@@ -69,16 +90,6 @@ async function startServer() {
 
   // Add JSON body parser middleware which is necessary for Express POST endpoints
   app.use(express.json());
-
-  app.get("/api/health", (req, res) => {
-    const appUrl = (process.env.APP_URL || "https://shop.orbifinancial.com").replace(/\/$/, "");
-    res.json({
-      status: "ok",
-      service: "orbi-shop",
-      publicHealthUrl: `${appUrl}/api/health`,
-      timestamp: new Date().toISOString(),
-    });
-  });
 
   // Mount API Routes
   app.use("/api/v1/admin", adminRouter);
@@ -182,7 +193,6 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    const appUrl = (process.env.APP_URL || "https://shop.orbifinancial.com").replace(/\/$/, "");
     console.log(`Server running on port ${PORT}`);
     console.log(`Health check: ${appUrl}/api/health`);
   });
