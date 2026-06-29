@@ -198,6 +198,16 @@ async function initiatePaySafeEscrow(req: any) {
   }
 
   console.log(`Initiating live ORBI PaySafe escrow for Order ${orderId} of ${currency} ${amount}`);
+  const guestCheckout = !customerId && !(buyer as any)?.userId;
+  const buyerPayload = {
+    ...(buyer || {
+      userId: customerId,
+      name: customerName,
+      email: customerEmail,
+      phone: customerPhone,
+    }),
+    type: (buyer as any)?.type || (guestCheckout ? "guest" : "user"),
+  };
 
   const result = await callOrbiPayGateway("/v1/paysafe/escrows", {
     method: "POST",
@@ -208,12 +218,7 @@ async function initiatePaySafeEscrow(req: any) {
       currency,
       confirm: true,
       description: description || "ORBI Shop protected checkout",
-      buyer: buyer || {
-        userId: customerId,
-        name: customerName,
-        email: customerEmail,
-        phone: customerPhone,
-      },
+      buyer: buyerPayload,
       seller: seller || {
         userId: sellerId,
         walletId: sellerWalletId,
@@ -222,6 +227,9 @@ async function initiatePaySafeEscrow(req: any) {
         source: "orbi-shop",
         shopOrderId: orderId,
         customerId,
+        customerType: guestCheckout ? "guest" : "user",
+        guestCheckout,
+        refundPolicy: guestCheckout ? "original_payment_method_only" : undefined,
         sellerId,
         holdMinutes: getPaySafeHoldMinutes(),
       },
