@@ -84,15 +84,20 @@ const mapGatewayStatusToOrderState = (status: string) => {
   }
 };
 
-async function findOrderForWebhook(orderId: string) {
-  const byId = await supabase
-    .from("orders")
-    .select("id,legacy_id,status")
-    .eq("id", orderId)
-    .maybeSingle();
+const isUuid = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
-  if (byId.error) throw byId.error;
-  if (byId.data) return byId.data;
+async function findOrderForWebhook(orderId: string) {
+  if (isUuid(orderId)) {
+    const byId = await supabase
+      .from("orders")
+      .select("id,legacy_id,status")
+      .eq("id", orderId)
+      .maybeSingle();
+
+    if (byId.error) throw byId.error;
+    if (byId.data) return byId.data;
+  }
 
   const byLegacyId = await supabase
     .from("orders")
