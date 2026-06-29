@@ -84,6 +84,26 @@ const mapGatewayStatusToOrderState = (status: string) => {
   }
 };
 
+async function findOrderForWebhook(orderId: string) {
+  const byId = await supabase
+    .from("orders")
+    .select("id,legacy_id,status")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (byId.error) throw byId.error;
+  if (byId.data) return byId.data;
+
+  const byLegacyId = await supabase
+    .from("orders")
+    .select("id,legacy_id,status")
+    .eq("legacy_id", orderId)
+    .maybeSingle();
+
+  if (byLegacyId.error) throw byLegacyId.error;
+  return byLegacyId.data || null;
+}
+
 async function handleOrbiPayWebhook(req: any, res: any) {
   try {
     verifyOrbiPayWebhook(req);
@@ -105,6 +125,18 @@ async function handleOrbiPayWebhook(req: any, res: any) {
       });
     }
 
+    const order = await findOrderForWebhook(orderId);
+    if (!order) {
+      return res.status(202).json({
+        received: true,
+        processed: false,
+        reason: "ORDER_NOT_FOUND",
+        eventId: eventId || null,
+        orderId,
+        status,
+      });
+    }
+
     const mapped = mapGatewayStatusToOrderState(status);
     const paymentReference = `ESCROW:${mapped.orderState}:${mapped.paymentStatus}||${reference}`;
     const { data: updated, error } = await supabase
@@ -115,7 +147,7 @@ async function handleOrbiPayWebhook(req: any, res: any) {
         payment_method: "orbi_paysafe",
         payment_method_name: "ORBI PaySafe",
       })
-      .or(`id.eq.${orderId},legacy_id.eq.${orderId}`)
+      .eq("id", order.id)
       .select("id,legacy_id,status")
       .maybeSingle();
 
