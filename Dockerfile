@@ -17,8 +17,10 @@ COPY . .
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
 
-# Expose the port the app runs on
-EXPOSE 3000
+# Railway routes Docker services through the runtime PORT, which is 8080 by
+# default for this service. The app still reads process.env.PORT at runtime.
+ENV PORT=8080
+EXPOSE 8080
 
 # Set environment to production
 ENV NODE_ENV=production
