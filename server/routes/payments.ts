@@ -3,100 +3,224 @@ import crypto from "crypto";
 import { supabase, getSupabase, encrypt, decrypt } from "../lib/supabase.js";
 import { sendOrbiTalkTemplate } from "./talk.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { callOrbiPayGateway, getPaySafeHoldMinutes, getPayServiceKey } from "../lib/orbiPayGateway.js";
 
 const router = Router();
 
-function verifyWebhookSignature(transactionId: string, status: string, orderId: string | undefined, reference: string | undefined, signature: string | undefined) {
-  const secret = process.env.ORBI_PAY_WEBHOOK_SECRET;
+const stableJson = (value: unknown): string => {
+  if (value === null || value === undefined) return "null";
+  if (typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map((entry) => stableJson(entry)).join(",")}]`;
+  return `{${Object.entries(value as Record<string, unknown>)
+    .filter(([, entry]) => entry !== undefined)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, entry]) => `${JSON.stringify(key)}:${stableJson(entry)}`)
+    .join(",")}}`;
+};
+
+const safeEqual = (left: string, right: string) => {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer);
+};
+
+const verifyOrbiPayWebhook = (req: any) => {
+  const secret = String(process.env.ORBI_SHOP_PAY_WEBHOOK_SECRET || "").trim();
   if (!secret) {
-    throw new Error("ORBI_PAY_WEBHOOK_SECRET is required.");
+    console.warn("[PAYMENTS WEBHOOK] ORBI_SHOP_PAY_WEBHOOK_SECRET is not configured; accepting webhook for local/dev compatibility.");
+    return;
   }
 
-  if (!signature) return false;
+  const timestamp = String(req.get("x-orbi-pay-timestamp") || "").trim();
+  const signature = String(req.get("x-orbi-pay-signature") || "").trim().replace(/^sha256=/i, "");
+  if (!timestamp || !signature) {
+    const error = new Error("ORBI_PAY_WEBHOOK_SIGNATURE_REQUIRED");
+    (error as any).status = 401;
+    throw error;
+  }
 
-  const payloadToSign = `${transactionId}:${status}:${orderId || reference || ""}`;
-  const expected = crypto.createHmac("sha256", secret).update(payloadToSign).digest("hex");
+  const ageSeconds = Math.abs(Math.floor(Date.now() / 1000) - Number(timestamp));
+  if (!Number.isFinite(ageSeconds) || ageSeconds > Number(process.env.ORBI_SHOP_PAY_WEBHOOK_MAX_AGE_SECONDS || 300)) {
+    const error = new Error("ORBI_PAY_WEBHOOK_TIMESTAMP_INVALID");
+    (error as any).status = 401;
+    throw error;
+  }
 
+  const expected = crypto.createHmac("sha256", secret).update(`${timestamp}.${stableJson(req.body)}`).digest("hex");
+  if (!safeEqual(expected, signature)) {
+    const error = new Error("ORBI_PAY_WEBHOOK_SIGNATURE_INVALID");
+    (error as any).status = 401;
+    throw error;
+  }
+};
+
+const resolveOrderIdFromPaymentIntent = (paymentIntent: any) => {
+  const metadata = paymentIntent?.metadata || {};
+  return String(
+    metadata.shopOrderId ||
+      metadata.orderId ||
+      metadata.order_id ||
+      paymentIntent?.reference ||
+      "",
+  ).trim();
+};
+
+const mapGatewayStatusToOrderState = (status: string) => {
+  switch (status.toLowerCase()) {
+    case "completed":
+    case "processing":
+    case "pending":
+      return { orderState: "PAYMENT_HELD", paymentStatus: "held", dbStatus: "confirmed" };
+    case "requires_action":
+      return { orderState: "AWAITING_PAYMENT", paymentStatus: "requires_action", dbStatus: "pending" };
+    case "failed":
+      return { orderState: "CREATED", paymentStatus: "failed", dbStatus: "pending" };
+    case "refunded":
+      return { orderState: "REFUNDED", paymentStatus: "refunded", dbStatus: "cancelled" };
+    case "disputed":
+      return { orderState: "DISPUTED", paymentStatus: "disputed", dbStatus: "confirmed" };
+    default:
+      return { orderState: "AWAITING_PAYMENT", paymentStatus: status || "processing", dbStatus: "pending" };
+  }
+};
+
+async function handleOrbiPayWebhook(req: any, res: any) {
   try {
-    return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
-  } catch (e) {
-    return false;
+    verifyOrbiPayWebhook(req);
+
+    const eventId = String(req.body?.eventId || req.get("x-orbi-pay-event-id") || "").trim();
+    const eventType = String(req.body?.eventType || "payment_intent.updated").trim();
+    const paymentIntent = req.body?.paymentIntent || {};
+    const orderId = resolveOrderIdFromPaymentIntent(paymentIntent);
+    const status = String(paymentIntent.status || "").trim();
+    const reference = String(paymentIntent.reference || paymentIntent.id || "").trim();
+
+    console.log(`[PAYMENTS WEBHOOK] ${eventType} ${eventId || "(no-event-id)"} for order ${orderId || "(no-order)"} status ${status || "(no-status)"}`);
+
+    if (!orderId) {
+      return res.status(202).json({
+        received: true,
+        processed: false,
+        reason: "ORDER_ID_NOT_PRESENT",
+      });
+    }
+
+    const mapped = mapGatewayStatusToOrderState(status);
+    const paymentReference = `ESCROW:${mapped.orderState}:${mapped.paymentStatus}||${reference}`;
+    const { data: updated, error } = await supabase
+      .from("orders")
+      .update({
+        status: mapped.dbStatus,
+        payment_reference: encrypt(paymentReference),
+        payment_method: "orbi_paysafe",
+        payment_method_name: "ORBI PaySafe",
+      })
+      .or(`id.eq.${orderId},legacy_id.eq.${orderId}`)
+      .select("id,legacy_id,status")
+      .maybeSingle();
+
+    if (error) throw error;
+
+    return res.json({
+      received: true,
+      processed: Boolean(updated),
+      eventId: eventId || null,
+      orderId,
+      status,
+      mappedOrderState: mapped.orderState,
+      mappedPaymentStatus: mapped.paymentStatus,
+    });
+  } catch (error: any) {
+    console.error("[PAYMENTS WEBHOOK ERROR]", error.message);
+    res.status(error.status || 500).json({
+      received: false,
+      error: error.message || "Webhook processing failed",
+    });
   }
+}
+
+async function initiatePaySafeEscrow(req: any) {
+  const {
+    amount,
+    orderId,
+    customerId,
+    customerName,
+    customerEmail,
+    customerPhone,
+    sellerId,
+    sellerWalletId,
+    buyer,
+    seller,
+    currency = "TZS",
+    description,
+  } = req.body;
+  if (!orderId || !amount || Number.isNaN(Number(amount))) {
+    const error = new Error("orderId and numeric amount are required to initiate a live ORBI PaySafe escrow.");
+    (error as any).status = 400;
+    throw error;
+  }
+
+  console.log(`Initiating live ORBI PaySafe escrow for Order ${orderId} of ${currency} ${amount}`);
+
+  const result = await callOrbiPayGateway("/v1/paysafe/escrows", {
+    method: "POST",
+    serviceKey: getPayServiceKey(req),
+    body: {
+      reference: String(orderId),
+      amount: Number(amount),
+      currency,
+      confirm: true,
+      description: description || "ORBI Shop protected checkout",
+      buyer: buyer || {
+        userId: customerId,
+        name: customerName,
+        email: customerEmail,
+        phone: customerPhone,
+      },
+      seller: seller || {
+        userId: sellerId,
+        walletId: sellerWalletId,
+      },
+      metadata: {
+        source: "orbi-shop",
+        shopOrderId: orderId,
+        customerId,
+        sellerId,
+        holdMinutes: getPaySafeHoldMinutes(),
+      },
+    },
+  });
+
+  return {
+    ...result,
+    status: result.status || "PENDING",
+    escrowState: "held_pending_authorization",
+    message: "PaySafe escrow initialized through live ORBI Pay Gateway.",
+  };
 }
 
 // Example Orbi Pay Webhook/Payment Intent Initialization Endpoint
 router.post("/initiate", requireAuth, requireRole("admin"), async (req: Request, res: Response) => {
   try {
-    const { amount, orderId, customerId, paymentMethod, currency = "TZS" } = req.body;
-    
-    // In a real implementation, you would call the actual Payment Gateway API here
-    // For now, we mock the success response to be processed by Orbi Pay
-    
-    console.log(`Initiating Orbi Pay transaction for Order ${orderId} of ${currency} ${amount} via ${paymentMethod || 'standard'}`);
-    
-    res.json({
-      success: true,
-      transactionId: `ORBI-PAY-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-      status: "pending_orbi_paysafe",
-      redirectUrl: "https://pay.orbifinancial.com/checkout/mock",
-      amount,
-      currency,
-      message: "Payment intent initialized successfully via Orbi Pay Gateway"
-    });
+    res.json(await initiatePaySafeEscrow(req));
   } catch (error: any) {
     console.error("[PAYMENTS] Failed to initiate payment:", error.message);
-    res.status(500).json({ success: false, message: "Internal server error during payment initialization" });
+    res.status(error.status || 500).json({ success: false, message: error.message, details: error.details });
   }
 });
 
 // Legacy handler for backwards compatibility
 router.post("/create-intent", requireAuth, requireRole("admin"), async (req: Request, res: Response) => {
   try {
-    const { amount, orderId, customerId } = req.body;
-    
-    console.log(`Creating payment intent for Order ${orderId} of TZS ${amount}`);
-    
-    res.json({
-      success: true,
-      transactionId: `ORBI-PAY-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-      status: "pending_orbi_paysafe",
-      amount,
-      message: "Payment intent created successfully via Orbi Pay Gateway"
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Internal server error during payment processing" });
-  }
-});
-
-// Orbi Gateway Webhook listener (public endpoint: verifies HMAC signature)
-router.post("/webhook", async (req: Request, res: Response) => {
-  try {
-    const { transactionId, status, orderId, reference, signature } = req.body;
-    console.log(`[PAYMENTS WEBHOOK] Received payload from Orbi Pay: Transaction ${transactionId} is now ${status}`);
-    
-    // Verify signature using ORBI_PAY_WEBHOOK_SECRET. Uses canonical string: transactionId:status:orderIdOrReference
-    const sig = signature || (req.headers["x-orbi-signature"] as string | undefined);
-
-    try {
-      const ok = verifyWebhookSignature(transactionId, status, orderId, reference, sig);
-      if (!ok) {
-        console.warn("[PAYMENTS WEBHOOK] Invalid signature for transaction", transactionId);
-        return res.status(401).json({ received: false, error: "Invalid webhook signature." });
-      }
-    } catch (err: any) {
-      console.error("[PAYMENTS WEBHOOK] Signature verification error:", err.message);
-      return res.status(500).json({ received: false, error: "Webhook signature verification failed (server misconfigured)." });
-    }
-    
-    // Here we would find the associated order in the database and update its Escrow status
-    // Example: if status === 'successful', update order to 'PAYMENT_HELD' (Escrow)
-    
-    res.json({ received: true, processedStatus: status });
+    res.json(await initiatePaySafeEscrow(req));
   } catch (error: any) {
-    console.error("[PAYMENTS WEBHOOK ERROR]", error.message);
-    res.status(500).json({ received: false, error: "Webhook processing failed" });
+    res.status(error.status || 500).json({ success: false, message: error.message || "Internal server error during payment processing", details: error.details });
   }
 });
+
+// Orbi Pay Gateway webhook listeners. Keep both paths live for compatibility.
+router.post("/webhook", handleOrbiPayWebhook);
+router.post("/webhooks", handleOrbiPayWebhook);
 
 // Check transaction status from Gateway
 router.get("/status/:transactionId", requireAuth, requireRole("admin"), async (req: Request, res: Response) => {

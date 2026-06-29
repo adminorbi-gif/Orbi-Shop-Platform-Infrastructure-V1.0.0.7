@@ -36,7 +36,7 @@ import traRouter from "./server/routes/tra.js";
 async function startServer() {
   const app = express();
   app.set("trust proxy", 1);
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT || 3000);
 
   // 1. Helmet Security Headers
   app.use(
@@ -85,6 +85,7 @@ async function startServer() {
   app.use("/api/v1/newsletters", newslettersRouter);
   app.use("/api/v1/orders", ordersRouter);
   app.use("/api/v1/payments", paymentsRouter);
+  app.use("/api/orbi-pay", paymentsRouter);
   app.use("/api/v1/products", productsRouter);
   app.use("/api/v1/campaigns", promotionsRouter);
   app.use("/api/v1/reviews", reviewsRouter);
