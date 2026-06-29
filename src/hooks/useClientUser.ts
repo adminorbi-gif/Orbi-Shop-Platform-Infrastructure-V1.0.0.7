@@ -39,7 +39,7 @@ export function useClientUser(getInitialUserId: () => string) {
       });
       setGuestMessages(userMsgs);
     } catch (err) {
-      console.error("Error loading customer messages:", err);
+      console.warn("Error loading customer messages:", err);
     }
   }, [activeUser]);
 

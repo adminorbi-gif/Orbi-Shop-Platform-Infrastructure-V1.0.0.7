@@ -246,6 +246,7 @@ import { FinancesAdmin } from "../../components/admin/FinancesAdmin";
 import { StaffAdmin } from "../../components/admin/StaffAdmin";
 import { AdsAdmin } from "../../components/admin/AdsAdmin";
 import { CampaignsAdmin } from "../../components/admin/CampaignsAdmin";
+import { PaymentLogsAdmin } from "../../components/admin/PaymentLogsAdmin";
 const SellerApp = lazy(() => import("../SellerApp"));
 import VisitorsAnalyticsView from "../../components/VisitorsAnalytics";
 import { ApplySellerModal } from "../../components/client/ClientSubcomponents";
@@ -848,6 +849,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         return isSw ? "Seti" : "Settings";
       case "seller_settings":
         return isSw ? "Seti" : "Settings";
+      case "payment-logs":
+        return isSw ? "Leja" : "Ledger";
       default:
         return id;
     }
@@ -871,6 +874,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     | "notifications"
     | "visitors-analytics"
     | "talk-logs"
+    | "payment-logs"
   >("dashboard");
 
   // App UI State
@@ -2574,6 +2578,14 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     },
                     { id: "talk-logs", label: "Orbi Talk", icon: History },
                     {
+                      id: "payment-logs",
+                      label:
+                        lang === "sw"
+                          ? "Kumbukumbu za Malipo"
+                          : "Payment Ledger Logs",
+                      icon: ShieldCheck,
+                    },
+                    {
                       id: "messages",
                       label: t(lang, "sidebar.messages"),
                       icon: MessageSquare,
@@ -2721,6 +2733,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       icon: Activity,
                     },
                     { id: "talk-logs", label: "Talk", icon: History },
+                    { id: "payment-logs", label: "Leja", icon: ShieldCheck },
                     { id: "customers", label: "Clients", icon: Users },
                     { id: "settings", label: "Seti", icon: SettingsIcon },
                   ]
@@ -3539,6 +3552,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             {tab === "talk-logs" && (
               <div className="flex-1">
                 <TalkLogsAdmin lang={lang} />
+              </div>
+            )}
+            {tab === "payment-logs" && (
+              <div className="flex-1">
+                <PaymentLogsAdmin lang={lang} />
               </div>
             )}
             {tab === "settings" && (

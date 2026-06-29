@@ -16,7 +16,7 @@ import {
   Navigation,
   Phone
 } from 'lucide-react';
-import { db } from '../lib/db';
+import { db, apiFetch } from '../lib/db';
 import { Order, OrderStatusLog } from '../types';
 import { formatCurrency } from '../lib/storage';
 
@@ -129,6 +129,11 @@ export default function TrackOrderModal({ onClose, lang = "sw" }: Props) {
   const [smsText, setSmsText] = useState('');
   const [isOcrParsing, setIsOcrParsing] = useState(false);
   const [storedProof, setStoredProof] = useState<any>(null);
+
+  // Automated live verification states
+  const [isVerifyingAuto, setIsVerifyingAuto] = useState(false);
+  const [verificationSteps, setVerificationSteps] = useState<{ id: string; label: string; status: 'pending' | 'loading' | 'success' | 'failed' }[]>([]);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
 
   const [logs, setLogs] = useState<OrderStatusLog[]>([]);
 
@@ -265,6 +270,128 @@ export default function TrackOrderModal({ onClose, lang = "sw" }: Props) {
       setOrder({ ...order, paymentReference: localTxId.trim().toUpperCase() });
     } catch (e) {
       console.error("Failed to save payment reference to DB:", e);
+    }
+  };
+
+  const handleAutoVerification = async () => {
+    if (!localTxId.trim() || !order) return;
+    const txId = localTxId.trim().toUpperCase();
+    
+    setIsVerifyingAuto(true);
+    setVerificationError(null);
+    
+    // Set up initial steps in "pending" status
+    const initialSteps = [
+      { id: "carrier_connect", label: lang === "sw" ? "Inaunganisha na Mtandao wa Simu..." : "Connecting to carrier network...", status: "loading" as const },
+      { id: "ledger_lookup", label: lang === "sw" ? `Inatafuta muamala ${txId} kwenye leja...` : `Querying Transaction ID: ${txId} in ledger...`, status: "pending" as const },
+      { id: "amount_verify", label: lang === "sw" ? `Inahakiki kiasi cha TZS ${formatCurrency(order.total)}...` : `Verifying payment amount: TZS ${formatCurrency(order.total)}...`, status: "pending" as const },
+      { id: "escrow_hold", label: lang === "sw" ? "Inatenga Fedha Kwenye Escrow ya PaySafe..." : "Securing funds in Orbi PaySafe Escrow...", status: "pending" as const },
+      { id: "order_update", label: lang === "sw" ? "Inasajili na kukamilisha oda..." : "Finalizing order state in secure ledger...", status: "pending" as const }
+    ];
+    setVerificationSteps(initialSteps);
+
+    // Fire the API call immediately in background, but step through animations to tell the story
+    let apiCompleted = false;
+    let apiSuccess = false;
+    let apiErrorMsg = "";
+
+    apiFetch('/api/v1/payments/verify-payment-auto', {
+      method: 'POST',
+      body: JSON.stringify({ orderId: order.id, transactionId: txId })
+    }).then((res) => {
+      apiCompleted = true;
+      if (res && res.success) {
+        apiSuccess = true;
+      } else {
+        apiSuccess = false;
+        apiErrorMsg = res.message || (lang === "sw" ? "Mchakato wa kuhakiki umeshindikana." : "Verification failed.");
+      }
+    }).catch((err) => {
+      apiCompleted = true;
+      apiSuccess = false;
+      apiErrorMsg = err.message || (lang === "sw" ? "Mchakato wa kuhakiki umeshindikana." : "Verification failed.");
+    });
+
+    const updateStepStatus = (stepId: string, status: 'loading' | 'success' | 'failed') => {
+      setVerificationSteps(prev => prev.map(s => s.id === stepId ? { ...s, status } : s));
+    };
+
+    try {
+      // Step 1: Connecting
+      await new Promise(resolve => setTimeout(resolve, 800));
+      updateStepStatus("carrier_connect", "success");
+      updateStepStatus("ledger_lookup", "loading");
+
+      // Step 2: Ledger Lookup
+      await new Promise(resolve => setTimeout(resolve, 800));
+      if (apiCompleted && !apiSuccess) {
+        updateStepStatus("ledger_lookup", "failed");
+        throw new Error(apiErrorMsg);
+      }
+      updateStepStatus("ledger_lookup", "success");
+      updateStepStatus("amount_verify", "loading");
+
+      // Step 3: Amount verify
+      await new Promise(resolve => setTimeout(resolve, 800));
+      if (apiCompleted && !apiSuccess) {
+        updateStepStatus("amount_verify", "failed");
+        throw new Error(apiErrorMsg);
+      }
+      updateStepStatus("amount_verify", "success");
+      updateStepStatus("escrow_hold", "loading");
+
+      // Step 4: Escrow Hold
+      await new Promise(resolve => setTimeout(resolve, 800));
+      if (apiCompleted && !apiSuccess) {
+        updateStepStatus("escrow_hold", "failed");
+        throw new Error(apiErrorMsg);
+      }
+      updateStepStatus("escrow_hold", "success");
+      updateStepStatus("order_update", "loading");
+
+      // Step 5: Order update
+      let attempts = 0;
+      while (!apiCompleted && attempts < 15) {
+        await new Promise(resolve => setTimeout(resolve, 400));
+        attempts++;
+      }
+
+      if (!apiSuccess) {
+        updateStepStatus("order_update", "failed");
+        throw new Error(apiErrorMsg || (lang === "sw" ? "Uhakiki umeshindwa kwenye duka." : "Verification failed at ledger update."));
+      }
+
+      updateStepStatus("order_update", "success");
+      await new Promise(resolve => setTimeout(resolve, 600));
+
+      // Successfully verified!
+      const displayId = (order as any).legacy_id || order.id;
+      const proofs = JSON.parse(localStorage.getItem("orbi_payment_proofs") || "{}");
+      const data = {
+        transactionId: txId,
+        timestamp: Date.now(),
+        amount: order.total,
+        method: order.payment_method_name || order.payment_method || "Mobile Money",
+        status: "confirmed"
+      };
+      proofs[displayId] = data;
+      localStorage.setItem("orbi_payment_proofs", JSON.stringify(proofs));
+      setStoredProof(data);
+      setPaymentSubmittedLocally(true);
+
+      // Reload fresh order details
+      setOrder(prev => prev ? { 
+        ...prev, 
+        status: "confirmed" as any, 
+        paymentReference: txId,
+        payment_method_name: "ORBI PaySafe"
+      } : null);
+
+      setIsVerifyingAuto(false);
+    } catch (err: any) {
+      console.error("Auto verification flow failed:", err);
+      setVerificationError(err.message || "An error occurred during verification.");
+      setIsVerifyingAuto(false);
     }
   };
 
@@ -606,7 +733,67 @@ export default function TrackOrderModal({ onClose, lang = "sw" }: Props) {
                      </div>
                    </div>
 
-                   {!paymentSubmittedLocally ? (
+                   {!paymentSubmittedLocally ? (isVerifyingAuto ? (
+                      <div className="space-y-4 py-1">
+                        <div className="flex items-center gap-2.5 mb-1.5">
+                          <div className="w-4 h-4 rounded-full border-2 border-orange-500 border-t-transparent animate-spin shrink-0"></div>
+                          <p className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                            {lang === "sw" ? "Uhakiki wa Kiotomatiki..." : "Automated Verification..."}
+                          </p>
+                        </div>
+                        
+                        <div className="space-y-3 bg-slate-50 border border-slate-100 p-4 rounded-2.5xl">
+                          {verificationSteps.map((step) => (
+                            <div key={step.id} className="flex items-start gap-3 text-xs">
+                              <div className="mt-0.5 shrink-0">
+                                {step.status === 'success' && (
+                                  <span className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-[9px] shadow-sm">✓</span>
+                                )}
+                                {step.status === 'loading' && (
+                                  <span className="relative flex h-4 w-4">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-4 w-4 bg-orange-500 flex items-center justify-center text-[8px] text-white font-bold">•</span>
+                                  </span>
+                                )}
+                                {step.status === 'pending' && (
+                                  <span className="w-4 h-4 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[8px] text-slate-400">○</span>
+                                )}
+                                {step.status === 'failed' && (
+                                  <span className="w-4 h-4 rounded-full bg-rose-500 text-white flex items-center justify-center font-bold text-[9px] shadow-sm">✕</span>
+                                )}
+                              </div>
+                              <p className={`text-[11px] leading-tight font-medium transition-colors ${
+                                step.status === 'success' ? 'text-emerald-700 font-bold' : 
+                                step.status === 'loading' ? 'text-orange-600 font-black' : 
+                                step.status === 'failed' ? 'text-rose-600 font-extrabold' : 'text-slate-400'
+                              }`}>
+                                {step.label}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {verificationError ? (
+                          <div className="space-y-2.5 bg-rose-50 border border-rose-100 text-rose-800 p-4 rounded-2.5xl text-xs font-medium">
+                            <p className="font-extrabold text-rose-700">❌ {lang === "sw" ? "Uhakiki Umeshindikana" : "Verification Failed"}</p>
+                            <p className="text-[10.5px] text-rose-600 leading-relaxed">{verificationError}</p>
+                            <button
+                              onClick={() => {
+                                setIsVerifyingAuto(false);
+                                setVerificationError(null);
+                              }}
+                              className="w-full bg-rose-600 hover:bg-rose-700 text-white py-2 rounded-xl font-bold text-xs transition cursor-pointer mt-1"
+                            >
+                              {lang === "sw" ? "Jaribu Tena" : "Try Again"}
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-slate-400 text-center animate-pulse leading-normal">
+                            {lang === "sw" ? "Tafadhali usifunge dirisha hili. Tunahakiki risiti yako..." : "Please do not close this window. Checking receipt validity..."}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
                      <div className="space-y-3">
                        <div className="relative">
                          <input 
@@ -652,20 +839,20 @@ export default function TrackOrderModal({ onClose, lang = "sw" }: Props) {
                        )}
 
                        <button 
-                         onClick={handleManualProofSubmit}
+                         onClick={handleAutoVerification}
                          className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2.5 rounded-xl font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1"
                        >
                          <CheckCircle2 size={13} />
                          Tuma Muamala kwa Uhakiki
                        </button>
                      </div>
-                   ) : (
-                     <div className="p-3.5 bg-emerald-500/10 border border-emerald-555/20 text-emerald-800 rounded-2xl text-xs space-y-1.5 font-medium">
+                   )) : (
+                     <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 rounded-2.5xl text-xs space-y-2.5 font-medium">
                        <span className="font-bold flex items-center gap-1 text-emerald-700">
-                         🛡️ Uhakiki unashughulikiwa!
+                         🛡️ Malipo Yamethibitishwa na Kulindwa!
                        </span>
                        <p className="text-[10px] text-emerald-600 leading-relaxed">
-                         Namba ya Muamala iliyowasilishwa: <strong>{storedProof?.transactionId || localTxId || order.paymentReference}</strong>. Wasimamizi wetu wanahakiki salio sasa hivi.
+                         Namba ya Muamala: <strong className="font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded text-emerald-800">{storedProof?.transactionId || localTxId || order.paymentReference}</strong>. Kiasi ulicholipa kimehakikiwa na sasa kimehifadhiwa salama katika Escrow (Orbi PaySafe). Fedha hazitatumwa kwa muuzaji hadi utakapopokea mzigo wako na kuthibitisha ubora wake.
                        </p>
                        <button 
                          onClick={() => {

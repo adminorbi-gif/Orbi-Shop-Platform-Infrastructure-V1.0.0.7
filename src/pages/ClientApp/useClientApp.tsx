@@ -1907,7 +1907,7 @@ Zawadi ya Alama za Uaminifu zilizoongezwa kwenye kibeti chako: +${earned} Points
         });
         setGuestMessages(userMsgs);
       } catch (err) {
-        console.error("Error loading customer messages in header:", err);
+        console.warn("Error loading customer messages in header:", err);
       }
     };
     fetchGuestMsgs();

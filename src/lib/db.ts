@@ -156,8 +156,13 @@ export const db = {
 
   // Messages
   getMessages: async (): Promise<Message[]> => {
-    const res = await apiFetch('/api/v1/messages');
-    return res.data || [];
+    try {
+      const res = await apiFetch('/api/v1/messages');
+      return res.data || [];
+    } catch (err) {
+      console.warn("Failed to retrieve messages, using empty fallback.", err);
+      return [];
+    }
   },
   saveMessage: async (msg: Message) => {
     await apiFetch('/api/v1/messages', {
