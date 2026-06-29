@@ -1639,6 +1639,8 @@ export function CheckoutModal({
       setInvSettings(res);
       if (res.paymentOptions && res.paymentOptions.length > 0) {
         setPaymentMethod(res.paymentOptions[0].id);
+      } else {
+        setPaymentMethod("mobile");
       }
     });
   }, []);
@@ -1665,9 +1667,15 @@ export function CheckoutModal({
           lang,
         }),
       });
-      const data = await resp.json();
+      
+      let data;
+      try {
+        data = await resp.json();
+      } catch (parseErr) {
+        throw new Error(`Server returned non-JSON response with status ${resp.status}`);
+      }
 
-      if (data.success) {
+      if (resp.ok && data.success) {
         if (user) {
           const currentPoints = getLoyaltyPoints(user.id);
           const pointsEarned = Math.floor(
@@ -1713,11 +1721,12 @@ export function CheckoutModal({
         setLoadingMsg("");
         setStep(2);
       } else {
-        alert("Failed to process order securely.");
+        alert(data?.error || "Failed to process order securely.");
         setLoadingMsg("");
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      alert(`Error processing checkout: ${e.message || e}`);
       setLoadingMsg("");
     }
   };
@@ -1771,6 +1780,7 @@ export function CheckoutModal({
   return (
     <div className="fixed inset-0 bg-black/60 z-[99999] flex items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
       <div className="bg-white w-full h-full sm:rounded-xl sm:max-w-md overflow-y-auto sm:max-h-[95vh] relative flex flex-col">
+        {loadingMsg && <LoadingOverlay message={loadingMsg} />}
         <button
           onClick={onClose}
           className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 z-[10]"

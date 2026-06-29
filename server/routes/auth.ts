@@ -20,7 +20,12 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ success: false, error: error.message });
     }
 
-    res.json({ success: true, data });
+    res.json({
+      success: true,
+      data,
+      session: data.session,
+      user: data.user
+    });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -49,7 +54,12 @@ router.post('/signup', async (req, res) => {
       return res.status(400).json({ success: false, error: error.message });
     }
 
-    res.json({ success: true, data });
+    res.json({
+      success: true,
+      data,
+      session: data.session,
+      user: data.user
+    });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }

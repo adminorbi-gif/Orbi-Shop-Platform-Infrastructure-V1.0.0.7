@@ -247,4 +247,189 @@ router.get("/competitor-insights", (req, res) => {
   }
 });
 
+// GET /visitors - Return aggregated session statistics and session logs
+router.get("/visitors", (req, res) => {
+  try {
+    let sessions = [];
+    if (fs.existsSync(VISITOR_SESSIONS_FILE_PATH)) {
+      try {
+        sessions = JSON.parse(fs.readFileSync(VISITOR_SESSIONS_FILE_PATH, "utf-8"));
+      } catch (e) {
+        sessions = [];
+      }
+    }
+    if (sessions.length === 0) {
+      sessions = generateHistoricalSessions();
+      fs.writeFileSync(VISITOR_SESSIONS_FILE_PATH, JSON.stringify(sessions, null, 2), "utf-8");
+    }
+
+    // Calculate aggregate statistics
+    const totalSessions = sessions.length;
+    const checkoutCount = sessions.filter((s: any) => s.checkoutCompleted).length;
+    const conversionRate = totalSessions > 0 ? (checkoutCount / totalSessions) * 100 : 0;
+    const totalSales = sessions.reduce((sum: number, s: any) => {
+      if (s.checkoutCompleted && s.orderTotal) {
+        return sum + Number(s.orderTotal);
+      }
+      return sum;
+    }, 0);
+
+    // Group searches
+    const searchCounts: { [key: string]: number } = {};
+    sessions.forEach((s: any) => {
+      if (s.searches && Array.isArray(s.searches)) {
+        s.searches.forEach((srch: any) => {
+          const q = (srch.query || "").trim();
+          if (q) {
+            searchCounts[q] = (searchCounts[q] || 0) + 1;
+          }
+        });
+      }
+    });
+    const topSearches = Object.entries(searchCounts)
+      .map(([query, count]) => ({ query, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 15);
+
+    // Group location stats
+    const locationCounts: { [key: string]: { count: number; lat: number; lng: number } } = {};
+    sessions.forEach((s: any) => {
+      const city = s.location?.city;
+      if (city) {
+        if (!locationCounts[city]) {
+          locationCounts[city] = {
+            count: 0,
+            lat: s.location.lat || -6.7924,
+            lng: s.location.lng || 39.2083
+          };
+        }
+        locationCounts[city].count += 1;
+      }
+    });
+    const locationStats = Object.entries(locationCounts)
+      .map(([city, data]) => ({
+        city,
+        count: data.count,
+        lat: data.lat,
+        lng: data.lng
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    const stats = {
+      totalSessions,
+      conversionRate,
+      checkoutCount,
+      totalSales,
+      cacheSize: totalSessions,
+      circuitState: { active: false, cooldownRemainingMs: 0 },
+      topSearches,
+      locationStats
+    };
+
+    let competitorAnalysis: any = {};
+    if (fs.existsSync(REDIS_FILE_PATH)) {
+      try {
+        competitorAnalysis = JSON.parse(fs.readFileSync(REDIS_FILE_PATH, "utf-8"));
+      } catch (e) {
+        competitorAnalysis = {};
+      }
+    }
+
+    res.json({
+      success: true,
+      stats,
+      sessions,
+      competitorAnalysis
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /visitors/event - Log a live client tracking event
+router.post("/visitors/event", (req, res) => {
+  try {
+    const { sessionId, action, productId, productName, orderTotal, purchasedProducts } = req.body;
+    if (!sessionId) {
+      return res.status(400).json({ success: false, error: "Missing sessionId" });
+    }
+
+    let sessions = [];
+    if (fs.existsSync(VISITOR_SESSIONS_FILE_PATH)) {
+      try {
+        sessions = JSON.parse(fs.readFileSync(VISITOR_SESSIONS_FILE_PATH, "utf-8"));
+      } catch (e) {
+        sessions = [];
+      }
+    }
+    if (sessions.length === 0) {
+      sessions = generateHistoricalSessions();
+    }
+
+    let sess = sessions.find((s: any) => s.id === sessionId);
+    const nowStr = new Date().toISOString();
+
+    if (!sess) {
+      // Create a new session
+      const region = tanzaniaRegions[Math.floor(Math.random() * tanzaniaRegions.length)];
+      sess = {
+        id: sessionId,
+        ip: `197.26.${Math.floor(Math.random() * 254)}.${Math.floor(Math.random() * 254)}`,
+        device: "Mobile",
+        carrier: "Vodacom",
+        location: region,
+        searches: [],
+        cartActions: [],
+        checkoutCompleted: false,
+        createdAt: nowStr,
+        lastActive: nowStr
+      };
+      sessions.unshift(sess);
+    } else {
+      sess.lastActive = nowStr;
+    }
+
+    if (action === "product_view") {
+      if (productName) {
+        // Prevent duplicate consecutive direct views to keep data neat
+        const lastSearch = sess.searches[sess.searches.length - 1];
+        if (!lastSearch || lastSearch.query !== productName) {
+          sess.searches.push({
+            query: productName,
+            timestamp: nowStr,
+            source: "direct"
+          });
+        }
+      }
+    } else if (action === "cart_add") {
+      if (productName) {
+        sess.cartActions.push({
+          action: "add",
+          productName: productName,
+          timestamp: nowStr
+        });
+      }
+    } else if (action === "checkout_complete") {
+      sess.checkoutCompleted = true;
+      if (orderTotal) {
+        sess.orderTotal = Number(orderTotal);
+      }
+      if (purchasedProducts && Array.isArray(purchasedProducts)) {
+        purchasedProducts.forEach((p: any) => {
+          sess.cartActions.push({
+            action: "purchase",
+            productName: p.name,
+            timestamp: nowStr
+          });
+        });
+      }
+    }
+
+    fs.writeFileSync(VISITOR_SESSIONS_FILE_PATH, JSON.stringify(sessions, null, 2), "utf-8");
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 export default router;

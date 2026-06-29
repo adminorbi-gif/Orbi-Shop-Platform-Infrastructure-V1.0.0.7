@@ -11,7 +11,16 @@ export const apiFetch = async (url: string, options: RequestInit = {}) => {
     }
   } catch (e) {}
 
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
+  let baseUrl = import.meta.env.VITE_API_BASE_URL || "";
+  if (typeof window !== "undefined" && window.location) {
+    const hostname = window.location.hostname;
+    const isRemote = hostname !== "localhost" && hostname !== "127.0.0.1";
+    const isBaseLocal = baseUrl.includes("localhost") || baseUrl.includes("127.0.0.1");
+    const isAIStudio = hostname.includes("run.app") || hostname.includes("aistudio") || hostname.includes("google");
+    if ((isRemote && isBaseLocal) || isAIStudio) {
+      baseUrl = "";
+    }
+  }
   const fullUrl = url.startsWith("http") ? url : `${baseUrl.replace(/\/$/, '')}${url}`;
 
   const finalOptions = {

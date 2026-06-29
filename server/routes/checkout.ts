@@ -41,6 +41,8 @@ function parseWholesaleTiersFromText(description: string = ""): any[] {
 }
 
 function getProductPriceForQty(product: any, qty: number): number {
+  if (!product) return 0;
+  const price = parseFloat(product.price) || 0;
   const tiers = (product.wholesaleTiers && product.wholesaleTiers.length > 0)
     ? product.wholesaleTiers
     : parseWholesaleTiersFromText(product.description || "");
@@ -49,12 +51,17 @@ function getProductPriceForQty(product: any, qty: number): number {
     const sortedTiers = [...tiers].sort((a, b) => b.minQty - a.minQty);
     for (const tier of sortedTiers) {
       if (qty >= tier.minQty) {
-        return tier.price;
+        return parseFloat(tier.price) || price;
       }
     }
   }
-  return product.price;
+  return price;
 }
+
+const isValidUUID = (id: any): boolean => {
+  if (typeof id !== "string") return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+};
 
 router.post("/", async (req, res) => {
   try {
@@ -64,11 +71,22 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ success: false, error: "Cart is empty." });
     }
 
+    if (!name || !phone || !address) {
+      return res.status(400).json({ success: false, error: "Name, phone, and address are required fields." });
+    }
+
     const stockCheckPromises = cart.map(async (c: any) => {
-      const { data: p } = await supabase.from("products").select("stock, name").eq("id", c.product.id).single();
-      if (!p) throw new Error(`Product not found.`);
+      const prodId = c.product?.id;
+      let query = supabase.from("products").select("id, stock, name");
+      if (isValidUUID(prodId)) {
+        query = query.eq("id", prodId);
+      } else {
+        query = query.eq("legacy_id", prodId);
+      }
+      const { data: p } = await query.maybeSingle();
+      if (!p) throw new Error(`Product "${c.product?.name || 'product'}" not found.`);
       if (p.stock < c.quantity) throw new Error(`Insufficient stock for ${p.name}.`);
-      return { ...c, currentStock: p.stock };
+      return { ...c, dbProductId: p.id, currentStock: p.stock };
     });
     const validatedCart = await Promise.all(stockCheckPromises);
 
@@ -85,11 +103,24 @@ router.post("/", async (req, res) => {
     const oIds: string[] = [];
     const successfulOrders: any[] = [];
     
+    // Resolve valid customer ID from public.customers to avoid FK constraint violation
+    let dbCustomerId: string | null = null;
+    if (user?.id && isValidUUID(user.id)) {
+      const { data: custExists } = await supabase
+        .from("customers")
+        .select("id")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (custExists) {
+        dbCustomerId = user.id;
+      }
+    }
+    
     for (const sellerId in sellerGroups) {
       const sellerItems = sellerGroups[sellerId];
       const sellerTotal = sellerItems.reduce((sum: number, item: any) => {
         const actualPrice = getProductPriceForQty(item.product, item.quantity);
-        return sum + actualPrice * item.quantity;
+        return sum + actualPrice * (parseInt(item.quantity, 10) || 1);
       }, 0);
       const oId = `${oIdBase}-${sellerId}`;
       
@@ -101,7 +132,7 @@ router.post("/", async (req, res) => {
           customer_phone: encrypt(phone),
           customer_address: encrypt(address),
           customer_tin: tin ? encrypt(tin) : null,
-          customer_id: user?.id || null,
+          customer_id: dbCustomerId,
           payment_method: paymentMethod,
           payment_method_name: methodObj ? methodObj.name : paymentMethod,
           total: sellerTotal,
@@ -117,16 +148,16 @@ router.post("/", async (req, res) => {
       await supabase.from("order_items").insert(
         sellerItems.map((c: any) => ({
           order_id: oRow.id,
-          product_id: c.product.id,
+          product_id: c.dbProductId,
           name: c.product.name,
           price: getProductPriceForQty(c.product, c.quantity),
-          quantity: c.quantity,
+          quantity: parseInt(c.quantity, 10) || 1,
         }))
       );
 
       const stockUpdatePromises = sellerItems.map((c: any) => {
-        const newStock = Math.max(0, c.currentStock - c.quantity);
-        return supabase.from("products").update({ stock: newStock }).eq("id", c.product.id);
+        const newStock = Math.max(0, c.currentStock - (parseInt(c.quantity, 10) || 1));
+        return supabase.from("products").update({ stock: newStock }).eq("id", c.dbProductId);
       });
       await Promise.all(stockUpdatePromises);
       successfulOrders.push({ oId, orderRowId: oRow.id, sellerId, sellerTotal, sellerItems });

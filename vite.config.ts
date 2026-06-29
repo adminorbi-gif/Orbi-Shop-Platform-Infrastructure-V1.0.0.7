@@ -10,6 +10,9 @@ export default defineConfig(({ mode }) => {
   
   return {
     plugins: [react(), tailwindcss()],
+    resolve: {
+      dedupe: ["react", "react-dom"],
+    },
     define: {
       'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(supabaseUrl || ""),
       'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(supabaseKey || "")

@@ -77,10 +77,24 @@ async function startServer() {
   // 2. CORS Configuration
   app.use(
     cors({
-      origin:
-        process.env.NODE_ENV === "production"
-          ? ["https://orbifinancial.com", "https://shop.orbifinancial.com"] // Allow only your domains in production
-          : "*", // Allow all in development
+      origin: (origin, callback) => {
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+        if (
+          origin.includes("localhost") ||
+          origin.includes("127.0.0.1") ||
+          origin.includes("run.app") ||
+          origin.includes("aistudio") ||
+          origin.includes("google.com") ||
+          origin.includes("orbifinancial.com")
+        ) {
+          callback(null, true);
+        } else {
+          callback(null, false);
+        }
+      },
       methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     })
   );
@@ -98,12 +112,51 @@ async function startServer() {
   // Add JSON body parser middleware which is necessary for Express POST endpoints
   app.use(express.json());
 
+  // Database proxy endpoint for frontend Supabase customProxyFetch
+  app.post("/api/db/proxy", async (req, res) => {
+    try {
+      const { url, options } = req.body;
+      if (!url) {
+        return res.status(400).json({ error: "Missing URL in proxy payload" });
+      }
+
+      const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+      if (supabaseUrl && !url.startsWith(supabaseUrl)) {
+        return res.status(403).json({ error: "Forbidden proxy destination URL" });
+      }
+
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          ...options?.headers,
+        },
+      });
+
+      const body = await response.text();
+
+      // Forward content type and caching headers if present
+      response.headers.forEach((value, key) => {
+        const lowerKey = key.toLowerCase();
+        if (lowerKey === "content-type" || lowerKey === "cache-control") {
+          res.setHeader(key, value);
+        }
+      });
+
+      res.status(response.status).send(body);
+    } catch (err: any) {
+      console.error("[Database Proxy Error]:", err.message || err);
+      res.status(500).json({ success: false, error: err.message || "Failed to proxy database request" });
+    }
+  });
+
   // Mount API Routes
   app.use("/api/v1/admin", adminRouter);
   app.use("/api/v1/ai", aiRouter);
   app.use("/api/v1/analytics", analyticsRouter);
+  app.use("/api/analytics", analyticsRouter);
   app.use("/api/auth", authRouter);
   app.use("/api/v1/checkout", checkoutRouter);
+  app.use("/api/checkout", checkoutRouter);
   app.use("/api/v1/customers", customersRouter);
   app.use("/api/v1/messages", messagesRouter);
   app.use("/api/v1/newsletters", newslettersRouter);

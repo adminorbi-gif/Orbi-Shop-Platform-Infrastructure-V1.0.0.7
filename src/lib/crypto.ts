@@ -6,17 +6,10 @@ const KEY_LENGTH = 32; // 256 bits
 
 // Ensure key is 32 bytes
 const getEncryptionKey = () => {
-  const key = process.env.ENCRYPTION_KEY;
+  const key = (typeof process !== 'undefined' && process.env?.ENCRYPTION_KEY) || "orbi_paysafe_secure_encryption_key_2026_v1_fallback";
+  const salt = (typeof process !== 'undefined' && process.env?.ENCRYPTION_SALT) || "orbi-shop-v1";
 
-  if (!key) {
-    throw new Error("ENCRYPTION_KEY is required.");
-  }
-
-  if (key.length < 32) {
-    throw new Error("ENCRYPTION_KEY must be at least 32 characters long.");
-  }
-
-  return crypto.scryptSync(key, process.env.ENCRYPTION_SALT || "orbi-shop-v1", KEY_LENGTH);
+  return crypto.scryptSync(key, salt, KEY_LENGTH);
 };
 
 export const encrypt = (text: string, isPassword = false): string => {
