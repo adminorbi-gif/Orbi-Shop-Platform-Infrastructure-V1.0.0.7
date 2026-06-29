@@ -17,10 +17,10 @@ COPY . .
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
 
-# Railway routes Docker services through the runtime PORT, which is 8080 by
-# default for this service. The app still reads process.env.PORT at runtime.
-ENV PORT=8080
-EXPOSE 8080
+# ORBI Shop is routed on Railway target port 3000.
+# Keep this aligned with Railway Networking -> Target Port.
+ENV ORBI_SHOP_PORT=3000
+EXPOSE 3000
 
 # Set environment to production
 ENV NODE_ENV=production

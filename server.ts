@@ -36,7 +36,7 @@ import traRouter from "./server/routes/tra.js";
 async function startServer() {
   const app = express();
   app.set("trust proxy", 1);
-  const PORT = Number(process.env.PORT || 3000);
+  const PORT = Number(process.env.ORBI_SHOP_PORT || process.env.PORT || 3000);
   const appUrl = (process.env.APP_URL || "https://shop.orbifinancial.com").replace(/\/$/, "");
 
   const healthPayload = () => ({
