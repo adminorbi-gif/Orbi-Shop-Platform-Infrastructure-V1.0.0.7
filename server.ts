@@ -71,7 +71,13 @@ async function startServer() {
   app.use(express.json());
 
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
+    const appUrl = (process.env.APP_URL || "https://shop.orbifinancial.com").replace(/\/$/, "");
+    res.json({
+      status: "ok",
+      service: "orbi-shop",
+      publicHealthUrl: `${appUrl}/api/health`,
+      timestamp: new Date().toISOString(),
+    });
   });
 
   // Mount API Routes
@@ -176,7 +182,9 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
+    const appUrl = (process.env.APP_URL || "https://shop.orbifinancial.com").replace(/\/$/, "");
     console.log(`Server running on port ${PORT}`);
+    console.log(`Health check: ${appUrl}/api/health`);
   });
 }
 
