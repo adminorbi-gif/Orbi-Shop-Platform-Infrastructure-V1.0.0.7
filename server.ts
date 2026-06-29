@@ -36,7 +36,14 @@ import traRouter from "./server/routes/tra.js";
 async function startServer() {
   const app = express();
   app.set("trust proxy", 1);
-  const PORT = Number(process.env.ORBI_SHOP_PORT || process.env.PORT || 3000);
+  const runtimePorts = [
+    process.env.ORBI_SHOP_PORT,
+    process.env.PORT,
+    "3000",
+  ]
+    .map((port) => Number(port))
+    .filter((port) => Number.isInteger(port) && port > 0 && port < 65536);
+  const PORTS = Array.from(new Set(runtimePorts));
   const appUrl = (process.env.APP_URL || "https://shop.orbifinancial.com").replace(/\/$/, "");
 
   const healthPayload = () => ({
@@ -192,10 +199,20 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Health check: ${appUrl}/api/health`);
-  });
+  for (const port of PORTS) {
+    const server = app.listen(port, "0.0.0.0", () => {
+      console.log(`Server running on port ${port}`);
+      console.log(`Health check: ${appUrl}/api/health`);
+    });
+
+    server.on("error", (error: NodeJS.ErrnoException) => {
+      if (error.code === "EADDRINUSE") {
+        console.warn(`Port ${port} is already in use; continuing with other listeners.`);
+        return;
+      }
+      throw error;
+    });
+  }
 }
 
 startServer();

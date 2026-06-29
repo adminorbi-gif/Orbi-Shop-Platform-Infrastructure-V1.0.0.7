@@ -20,7 +20,7 @@ RUN npm run build
 # ORBI Shop is routed on Railway target port 3000.
 # Keep this aligned with Railway Networking -> Target Port.
 ENV ORBI_SHOP_PORT=3000
-EXPOSE 3000
+EXPOSE 3000 8080
 
 # Set environment to production
 ENV NODE_ENV=production
