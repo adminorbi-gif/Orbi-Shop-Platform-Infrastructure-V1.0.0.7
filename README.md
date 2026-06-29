@@ -112,12 +112,16 @@ The application is configured to be deployed as a single, compiled Node.js servi
    npm run start
    ```
 
-### Deploying to Render / Cloud Run
+### Deploying to Railway
 
-1. Connect your GitHub repository.
-2. Set the **Build Command**: `npm install && npm run build`
-3. Set the **Start Command**: `npm run start`
-4. Add all the required Environment Variables from your `.env` file to the platform's configuration dashboard.
+Railway is the active production host for ORBI Shop. The repository includes `railway.json`, which tells Railway to build from the Dockerfile, start with `npm start`, and health-check `/api/health`.
+
+1. Connect the Railway service to this GitHub repository and branch `main`.
+2. Add the production environment variables in Railway Variables.
+3. Do not set `PORT`; Railway injects it automatically and the server reads `process.env.PORT`.
+4. Deploy from Railway after every pushed change and confirm `https://shop.orbifinancial.com/api/health` returns healthy JSON.
+
+Legacy deployment paths are intentionally removed to prevent routing and environment conflicts.
 
 ## API Overview
 
