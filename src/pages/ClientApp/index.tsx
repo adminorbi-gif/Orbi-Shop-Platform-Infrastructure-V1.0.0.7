@@ -3541,7 +3541,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const isOutOfStock = p.stock <= 0;
   const [imgIdx, setImgIdx] = useState(0);
   const [showFullImage, setShowFullImage] = useState(false);
-  const [labelIdx, setLabelIdx] = useState(0);
 
   const avgRating = useMemo(() => {
     if (!reviews || reviews.length === 0) return 0;
@@ -3575,32 +3574,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
     const text = `${t((lang || "sw") as Lang, "prod.wa_inquiry")} ${prodName} (${link})`;
     return `https://wa.me/${clean}?text=${encodeURIComponent(text)}`;
   };
-
-  // Modern Dynamic Rotating Badges representing Platform Trust & Information
-  const dynamicLabels = useMemo(() => {
-    const list = [
-      { text: lang === "sw" ? "🛡️ Orbi Kinga" : "🛡️ Orbi Protected", color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
-    ];
-    if (seller?.isVerifiedSeller) {
-      list.push({ text: lang === "sw" ? "✅ Muuzaji Aliyethibitishwa" : "✅ Verified Seller", color: "bg-blue-50 text-blue-700 border-blue-100/80" });
-    }
-    list.push({ text: lang === "sw" ? "🔒 Hold ya PaySafe" : "🔒 PaySafe Hold", color: "bg-indigo-50 text-indigo-700 border-indigo-100" });
-    list.push({ text: lang === "sw" ? "🚚 Usafirishaji Upo" : "🚚 Delivery Available", color: "bg-teal-50 text-teal-700 border-teal-100" });
-    
-    if (p.stock > 0) {
-      list.push({ text: lang === "sw" ? `📦 Zipo: ${p.stock}` : `📦 Stock: ${p.stock} Units`, color: "bg-amber-50 text-amber-700 border-amber-100" });
-    } else {
-      list.push({ text: lang === "sw" ? "❌ Imeisha" : "❌ Out of Stock", color: "bg-rose-50 text-rose-700 border-rose-100" });
-    }
-    return list;
-  }, [lang, seller, p.stock]);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setLabelIdx((prev) => (prev + 1) % dynamicLabels.length);
-    }, 3000);
-    return () => clearInterval(timer);
-  }, [dynamicLabels.length]);
 
   return (
     <>
@@ -3671,21 +3644,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
           )}
 
           <div className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 flex flex-col gap-1 items-end z-10">
-            {seller?.isVerifiedSeller ? (
+            {seller?.isVerifiedSeller && (
               <div className="bg-blue-50/95 text-blue-600 border border-blue-100/60 backdrop-blur-xs text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow-xs flex items-center gap-0.5 w-fit">
                 <ShieldCheck
                   size={10}
                   className="text-blue-500 shrink-0"
                 />
                 Verified
-              </div>
-            ) : (
-              <div className="bg-emerald-50/95 text-emerald-600 border border-emerald-100/60 backdrop-blur-xs text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow-xs flex items-center gap-0.5 w-fit">
-                <ShieldCheck
-                  size={10}
-                  className="text-emerald-500 shrink-0"
-                />
-                Orbi Protected
               </div>
             )}
 
@@ -3749,32 +3714,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 </span>
               </div>
             )}
-
-            {/* Dynamic Sliding Trust Badges */}
-            <div className="flex gap-1.5 h-6 overflow-hidden items-center my-1 select-none w-full">
-              <AnimatePresence mode="popLayout">
-                <motion.div
-                  key={`lbl-1-${labelIdx}`}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                  className={`text-[9px] font-black px-1.5 py-0.5 rounded-full border flex items-center gap-1 shadow-xs truncate max-w-[50%] shrink-0 ${dynamicLabels[labelIdx]?.color}`}
-                >
-                  <span className="truncate">{dynamicLabels[labelIdx]?.text}</span>
-                </motion.div>
-                <motion.div
-                  key={`lbl-2-${labelIdx}`}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3, delay: 0.05 }}
-                  className={`text-[9px] font-black px-1.5 py-0.5 rounded-full border flex items-center gap-1 shadow-xs truncate max-w-[50%] shrink-0 ${dynamicLabels[(labelIdx + 1) % dynamicLabels.length]?.color}`}
-                >
-                  <span className="truncate">{dynamicLabels[(labelIdx + 1) % dynamicLabels.length]?.text}</span>
-                </motion.div>
-              </AnimatePresence>
-            </div>
 
             <div className="mt-0.5 flex flex-col justify-start mb-1">
               <div className="flex items-center gap-1.5 flex-wrap">

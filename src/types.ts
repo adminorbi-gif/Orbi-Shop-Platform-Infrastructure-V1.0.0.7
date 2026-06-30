@@ -170,6 +170,7 @@ export interface OrderStatusLog {
   newStatus: string;
   staffName: string;
   staffEmail: string;
+  notificationStatus?: string;
   createdAt: number;
 }
 

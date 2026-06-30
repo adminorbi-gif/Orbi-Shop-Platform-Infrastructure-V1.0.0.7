@@ -179,6 +179,24 @@ export default function TrackOrderModal({ onClose, lang = "sw" }: Props) {
     });
   };
 
+  const getDispatchStatus = (statusName: string) => {
+    const matchedLog = logs.find(l => l.newStatus === statusName);
+    if (matchedLog && matchedLog.notificationStatus) {
+      return matchedLog.notificationStatus;
+    }
+    return null;
+  };
+
+  const getDispatchStatusUI = (statusName: string) => {
+    const dispatchStr = getDispatchStatus(statusName);
+    if (!dispatchStr) return null;
+    return (
+      <span className="text-[8px] bg-sky-100 text-sky-700 font-mono font-bold rounded px-1.5 py-0.5 mt-1 inline-block border border-sky-200">
+        ✉️ {dispatchStr}
+      </span>
+    );
+  };
+
   useEffect(() => {
     if (order) {
       if (prevStatusRef.current && prevStatusRef.current !== order.status) {
@@ -530,6 +548,7 @@ export default function TrackOrderModal({ onClose, lang = "sw" }: Props) {
                           </span>
                         </div>
                        <p className="text-[10px] text-slate-500">Mteja ametoa agizo tayari na limewekwa kwenye foleni.</p>
+                       {getDispatchStatusUI('CREATED') || getDispatchStatusUI('PENDING')}
                      </div>
                    </div>
 
@@ -569,6 +588,7 @@ export default function TrackOrderModal({ onClose, lang = "sw" }: Props) {
                              ? "Mteja amewasilisha namba ya muamala. Foleni ya ukaguzi ya Orbi inafanyia kazi sasa." 
                              : "Mteja hajawasilisha namba ya muamala bado."}
                        </p>
+                       {getDispatchStatusUI('PAYMENT_HELD') || getDispatchStatusUI('CONFIRMED')}
                      </div>
                    </div>
 
@@ -601,6 +621,7 @@ export default function TrackOrderModal({ onClose, lang = "sw" }: Props) {
                              ? "Muuzaji anapiga simu/WhatsApp ili uweze kuthibitisha oda yako haraka." 
                              : "Inasubiri kuidhinishwa kwanza na duka kabla ya wasilisho kufanyika."}
                        </p>
+                       {getDispatchStatusUI('BUYER_CONFIRMED') || getDispatchStatusUI('CUSTOMER_CONFIRMED')}
                      </div>
                    </div>
 
@@ -638,6 +659,7 @@ export default function TrackOrderModal({ onClose, lang = "sw" }: Props) {
                                 : (lang === "sw" ? "Msafirishaji wetu yuko njiani kuleta mzigo." : "Our courier is on the way to deliver your package.")) 
                            : "Mzigo utapewa msafirishaji ukikamilika kufungwa na mteja kuthibitishwa."}
                        </p>
+                       {getDispatchStatusUI('SHIPPED')}
 
                        {order.status === 'shipped' && (
                          <div className="mt-3 bg-slate-900 border border-slate-800 text-white p-3.5 rounded-2xl relative overflow-hidden space-y-2 shadow-inner">
@@ -715,6 +737,7 @@ export default function TrackOrderModal({ onClose, lang = "sw" }: Props) {
                            ? "Mteja amethibitisha kuwa amepokea mzigo wake kikamilifu na salama."
                            : "Mzigo bado haujafika / unangojea uthibitisho wa kupokelewa na mteja."}
                        </p>
+                       {getDispatchStatusUI('DELIVERED') || getDispatchStatusUI('RELEASED')}
                      </div>
                    </div>
                  </div>

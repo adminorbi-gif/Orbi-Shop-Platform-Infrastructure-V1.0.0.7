@@ -560,6 +560,7 @@ CREATE TABLE IF NOT EXISTS public.order_status_logs (
   new_status TEXT,
   staff_name TEXT,
   staff_email TEXT,
+  notification_status TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   
   legacy_id TEXT

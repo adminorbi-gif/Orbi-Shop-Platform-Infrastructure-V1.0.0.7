@@ -203,6 +203,7 @@ router.post("/", requireAuth, requireRole("admin", "staff"), async (req, res) =>
       let loggedInStaffEmail = order.staffEmail || "admin.orbi@gmail.com";
       
       const appUrl = process.env.APP_URL || "https://orbi.shop";
+      let notificationDispatchStatus = "";
 
       // 1. Unconditionally retrieve existing order status and payment reference
       const { data: dbOrder } = await supabase
@@ -473,9 +474,14 @@ router.post("/", requireAuth, requireRole("admin", "staff"), async (req, res) =>
               );
             }
 
-            Promise.allSettled(dispatchTasks).then(results => {
-              console.log(`[ORBI-TALK] Dispatched ${results.length} notifications for order ${oId} status ${activeStatus}`);
-            });
+            let notificationDispatchStatus = "";
+            const results = await Promise.allSettled(dispatchTasks);
+            console.log(`[ORBI-TALK] Dispatched ${results.length} notifications for order ${oId} status ${activeStatus}`);
+            
+            const successes = results.filter(r => r.status === 'fulfilled').length;
+            if (dispatchTasks.length > 0) {
+              notificationDispatchStatus = `Dispatch: ${successes}/${dispatchTasks.length} successful`;
+            }
           }
         }
       } catch (notifyErr: any) {
@@ -518,7 +524,8 @@ router.post("/", requireAuth, requireRole("admin", "staff"), async (req, res) =>
           previous_status: previousStatus,
           new_status: activeStatus,
           staff_name: loggedInStaffName,
-          staff_email: loggedInStaffEmail
+          staff_email: loggedInStaffEmail,
+          notification_status: notificationDispatchStatus
         };
 
         const { error: logError } = await getSupabase(req).from('order_status_logs').insert([logEntry]);
@@ -668,6 +675,7 @@ router.get("/:id/logs", requireAuth, requireRole("admin"), async (req, res) => {
         newStatus: log.new_status,
         staffName: log.staff_name,
         staffEmail: log.staff_email,
+        notificationStatus: log.notification_status,
         createdAt: new Date(log.created_at).getTime()
       }));
       return res.json({ success: true, data: mapped });
@@ -691,6 +699,7 @@ router.get("/:id/logs", requireAuth, requireRole("admin"), async (req, res) => {
           newStatus: log.new_status,
           staffName: log.staff_name,
           staffEmail: log.staff_email,
+          notificationStatus: log.notification_status,
           createdAt: new Date(log.created_at).getTime()
         }));
         return res.json({ success: true, data: mapped });

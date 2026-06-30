@@ -14446,6 +14446,35 @@ export function InvoiceModal({
             </div>
           </div>
 
+          {/* System Audit Logs (Admin Only View) */}
+          {logs && logs.length > 0 && (
+            <div className="mb-4 bg-slate-900 border border-slate-850 text-slate-100 rounded-xl p-3.5 space-y-2 shrink-0 print:hidden text-[10px]">
+              <div className="font-extrabold text-[9px] text-slate-400 uppercase tracking-widest border-b border-slate-800 pb-1 mb-2">
+                Order Status Audit Logs & Orbi Talk Telemetry
+              </div>
+              <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                {logs.map((l: any) => (
+                  <div key={l.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-start border-b border-slate-800/50 pb-1.5 gap-2 sm:gap-0">
+                    <div className="space-y-0.5">
+                      <div className="flex gap-1.5 items-center">
+                        <span className="font-mono text-slate-300 font-black">{l.previousStatus} ➜ {l.newStatus}</span>
+                      </div>
+                      <div className="text-slate-500">By: {l.staffName} ({l.staffEmail})</div>
+                      {l.notificationStatus && (
+                        <div className="text-[8.5px] bg-sky-900/40 text-sky-400 font-mono inline-block px-1.5 py-0.5 rounded border border-sky-800/50 mt-1">
+                          {l.notificationStatus}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-slate-500 font-mono text-left sm:text-right whitespace-nowrap">
+                      {new Date(l.createdAt).toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Printable Sheet */}
           <div className="flex-1 flex flex-col gap-4 justify-between min-h-0 print:min-h-0 relative">
             {/* Ambient Watermark Background for carbon look */}
