@@ -4,7 +4,7 @@ import React, { useState, useMemo } from "react";
 import { db } from "../../lib/db";
 import { SchemaValidator } from "../../utils/schemaValidation";
 import { PhotoQualityGuide } from "../../components/PhotoQualityGuide";
-import { supabase, supabaseUrl, supabaseKey } from "../../lib/supabase";
+import { supabase } from "../../lib/supabase";
 import { formatCurrency } from "../../lib/storage";
 import { PriceDisplay } from "../../components/PriceDisplay";
 import { Product, Order, SellerProfile, Niche } from "../../types";
@@ -69,9 +69,69 @@ export interface SellerAppProps {
   lang: "sw" | "en";
   setLang: (lang: "sw" | "en") => void;
   onRefreshData: () => Promise<void>;
+  addToast?: (message: string, type: "success" | "error") => void;
 }
 
-export function useSellerApp({ seller, products, orders, onLogout, lang, setLang, onRefreshData }: SellerAppProps) {
+export function useSellerApp({ seller, products, orders, onLogout, lang, setLang, onRefreshData, addToast }: SellerAppProps) {
+  // ... rest of the hook implementation ...
+  // inside handleSaveProduct, replace displayAlert with addToast if available
+  const [payouts, setPayouts] = useState<any[]>([]);
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+  const [batchUpdateModalOpen, setBatchUpdateModalOpen] = useState(false);
+
+  const toggleProductSelection = (productId: string) => {
+    setSelectedProductIds(prev => {
+      const next = new Set(prev);
+      if (next.has(productId)) {
+        next.delete(productId);
+      } else {
+        next.add(productId);
+      }
+      return next;
+    });
+  };
+
+  const clearProductSelection = () => {
+    setSelectedProductIds(new Set());
+  };
+
+  const handleBatchUpdate = async (stockUpdates: { productId: string, stock: number }[]) => {
+    setSavingProduct(true);
+    try {
+        await Promise.all(stockUpdates.map(async (update) => {
+            const product = products.find(p => p.id === update.productId);
+            if (product) {
+                await db.saveProduct({ ...product, stock: update.stock });
+            }
+        }));
+        displayAlert(
+            lang === "sw" 
+                ? "Stoki zimesasishwa kwa mafanikio!" 
+                : "Stock levels updated successfully!", 
+            "success"
+        );
+        clearProductSelection();
+        setBatchUpdateModalOpen(false);
+        onRefreshData();
+    } catch (err: any) {
+        displayAlert(err.message || "Failed to update stock", "error");
+    } finally {
+        setSavingProduct(false);
+    }
+  };
+
+  React.useEffect(() => {
+    async function loadPayouts() {
+      try {
+        const list = await db.getPayouts();
+        setPayouts(list.filter((p: any) => p.sellerId === seller.id));
+      } catch (err) {
+        console.error("Failed to load payouts inside useSellerApp", err);
+      }
+    }
+    loadPayouts();
+  }, [seller.id]);
+
 const [tab, setTab] = useState<
     | "dashboard"
     | "products"
@@ -102,6 +162,9 @@ const [tab, setTab] = useState<
   const [boosterRef, setBoosterRef] = useState("");
   const [isUpdatingBooster, setIsUpdatingBooster] = useState(false);
 
+  // Order filter state
+  const [orderStatusFilter, setOrderStatusFilter] = useState("all");
+  
   // Dialog or Alerts
   const [alertMsg, setAlertMsg] = useState<{
     text: string;
@@ -656,6 +719,26 @@ const [tab, setTab] = useState<
           : "Product saved successfully into your storefront catalog!",
         "success",
       );
+
+      // Automatic Low Stock Alert
+      if (stockNum > 0 && stockNum < 5) {
+        const oldProduct = products.find((p) => p.id === payload.id);
+        if (!oldProduct || oldProduct.stock >= 5) {
+          await sendStockAlert(seller.email, prodName, stockNum, "email", lang);
+          if (seller.phone) {
+             await sendStockAlert(seller.phone, prodName, stockNum, "sms", lang);
+          }
+          if (addToast) {
+            addToast(
+              lang === "sw" 
+                ? "Tahadhari ya akiba imetumwa!" 
+                : "Stock alert sent!", 
+              "success"
+            );
+          }
+        }
+      }
+
       setProductModalOpen(false);
       onRefreshData();
     } catch (err: any) {
@@ -846,9 +929,9 @@ const [tab, setTab] = useState<
     ];
     const months = lang === "sw" ? swahiliMonths : englishMonths;
 
-    // Prefill last 5 months
+    // Prefill last 6 months
     const curMonth = new Date().getMonth();
-    for (let i = 4; i >= 0; i--) {
+    for (let i = 5; i >= 0; i--) {
       const mIdx = (curMonth - i + 12) % 12;
       salesByDay[months[mIdx]] = 0;
     }
@@ -937,6 +1020,8 @@ const [tab, setTab] = useState<
   return {
     tab,
     setTab,
+    orderStatusFilter,
+    setOrderStatusFilter,
     isPayoutRequesting,
     setIsPayoutRequesting,
     payoutAmount,
@@ -1030,11 +1115,28 @@ const [tab, setTab] = useState<
     openProductForm,
     handleSaveProduct,
     handleDeleteProduct,
+    selectedProductIds,
+    toggleProductSelection,
+    clearProductSelection,
+    batchUpdateModalOpen,
+    setBatchUpdateModalOpen,
+    handleBatchUpdate,
     sellerProducts,
     sellerOrders,
     discountSuggestions,
     applyQuickDiscount,
     computedStats,
-    handleRequestPayout
+    handleRequestPayout,
+    payouts,
+    sendStockAlert
   };
+}
+
+export async function sendStockAlert(recipient: string, productName: string, currentStock: number, channel: 'email' | 'sms', language: 'sw' | 'en') {
+  const response = await fetch('/api/talk/send-stock-alert', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recipient, productName, currentStock, channel, language })
+  });
+  return response.json();
 }

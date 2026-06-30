@@ -1,6 +1,6 @@
 import { getLoyaltyPoints, saveLoyaltyPoints, formatOrderNumber, getOrderNumber } from "../../../lib/helpers";
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { supabase, supabaseUrl, supabaseKey } from "../../../lib/supabase";
+import { supabase } from "../../../lib/supabase";
 import { db } from "../../../lib/db";
 import {
   BilingualSearchEngine,
@@ -114,6 +114,7 @@ import {
   Box,
   Brain,
   Brush,
+  Building,
   Bus,
   Calculator,
   Candy,
@@ -1509,7 +1510,7 @@ export function CheckoutModal({
   const [phone, setPhone] = useState(user?.phone || "");
   const [customerTin, setCustomerTin] = useState(user?.tin || "");
   const [address, setAddress] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("mno_tz");
   const [step, setStep] = useState(1);
   const [loadingMsg, setLoadingMsg] = useState("");
 
@@ -1649,6 +1650,17 @@ export function CheckoutModal({
     e.preventDefault();
     setLoadingMsg(t(lang, "checkout.loading"));
 
+    let paymentCategory = "mobile_money";
+    let paymentRail = "mno_tz";
+
+    if (paymentMethod === "orbi_wallet") {
+      paymentCategory = "orbi";
+      paymentRail = "orbi_wallet";
+    } else if (paymentMethod === "tz_bank") {
+      paymentCategory = "bank_transfer";
+      paymentRail = "tz_bank";
+    }
+
     try {
       const resp = await fetch("/api/checkout", {
         method: "POST",
@@ -1657,6 +1669,8 @@ export function CheckoutModal({
           cart,
           user,
           paymentMethod,
+          paymentCategory,
+          paymentRail,
           appliedCoupon,
           finalTotal,
           name,
@@ -2508,30 +2522,52 @@ export function CheckoutModal({
                   </div>
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium mb-1 text-slate-500">
-                  Njia ya Kulipia
-                </label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full border p-2.5 rounded-lg outline-none"
-                >
-                  {options.length > 0 ? (
-                    options.map((o: any) => (
-                      <option key={o.id} value={o.id}>
-                        {o.name}
-                      </option>
-                    ))
-                  ) : (
-                    <>
-                      <option value="mobile">
-                        Kwa Simu (M-Pesa, Tigo Pesa, nk.)
-                      </option>
-                      <option value="bank">Kwa Benki (CRDB, NMB, nk.)</option>
-                    </>
-                  )}
-                </select>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-black mb-3 text-slate-800 uppercase tracking-widest">
+                    {lang === "sw" ? "Chagua Njia ya Malipo" : "Choose Payment Option"}
+                  </label>
+                  <div className="space-y-2.5">
+                    <label className={`block w-full p-4 border-2 rounded-2xl transition-all cursor-pointer shadow-sm ${paymentMethod === 'orbi_wallet' ? 'border-amber-500 bg-amber-50 shadow-amber-100' : 'border-slate-100 bg-white hover:border-slate-200'}`}>
+                      <input type="radio" className="hidden" checked={paymentMethod === 'orbi_wallet'} onChange={() => setPaymentMethod('orbi_wallet')} />
+                      <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === 'orbi_wallet' ? 'bg-amber-500 text-white' : 'bg-slate-50 text-slate-400'}`}>
+                          <Wallet size={20} />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <h4 className="text-sm font-black text-slate-800">{lang === "sw" ? "Lipa na ORBI Wallet" : "Pay with ORBI Wallet"}</h4>
+                          <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-tight">{lang === "sw" ? "Malipo ya haraka ndani ya mfumo." : "Fast internal payment."}</p>
+                        </div>
+                      </div>
+                    </label>
+
+                    <label className={`block w-full p-4 border-2 rounded-2xl transition-all cursor-pointer shadow-sm ${paymentMethod === 'mno_tz' ? 'border-amber-500 bg-amber-50 shadow-amber-100' : 'border-slate-100 bg-white hover:border-slate-200'}`}>
+                      <input type="radio" className="hidden" checked={paymentMethod === 'mno_tz'} onChange={() => setPaymentMethod('mno_tz')} />
+                      <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === 'mno_tz' ? 'bg-amber-500 text-white' : 'bg-slate-50 text-slate-400'}`}>
+                          <Phone size={20} />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <h4 className="text-sm font-black text-slate-800">{lang === "sw" ? "Lipa kwa Simu" : "Pay with Mobile Money"}</h4>
+                          <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-tight">{lang === "sw" ? "M-Pesa, Tigo Pesa, nk." : "M-Pesa, Tigo Pesa, etc."}</p>
+                        </div>
+                      </div>
+                    </label>
+
+                    <label className={`block w-full p-4 border-2 rounded-2xl transition-all cursor-pointer shadow-sm ${paymentMethod === 'tz_bank' ? 'border-amber-500 bg-amber-50 shadow-amber-100' : 'border-slate-100 bg-white hover:border-slate-200'}`}>
+                      <input type="radio" className="hidden" checked={paymentMethod === 'tz_bank'} onChange={() => setPaymentMethod('tz_bank')} />
+                      <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === 'tz_bank' ? 'bg-amber-500 text-white' : 'bg-slate-50 text-slate-400'}`}>
+                          <Building size={20} />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <h4 className="text-sm font-black text-slate-800">{lang === "sw" ? "Lipa kwa Benki" : "Pay with Bank"}</h4>
+                          <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-tight">{lang === "sw" ? "Uhamisho wa kibenki (CRDB, NMB)" : "Direct bank transfer (CRDB, NMB)"}</p>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
               </div>
               <button
                 type="submit"

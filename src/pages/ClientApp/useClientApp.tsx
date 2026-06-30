@@ -2,7 +2,7 @@ import { slugify } from "../../lib/slugify";
 import { getLoyaltyPoints, saveLoyaltyPoints, formatOrderNumber } from "../../lib/helpers";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { supabase, supabaseUrl, supabaseKey } from "../../lib/supabase";
+import { supabase } from "../../lib/supabase";
 import { db } from "../../lib/db";
 import {
   BilingualSearchEngine,

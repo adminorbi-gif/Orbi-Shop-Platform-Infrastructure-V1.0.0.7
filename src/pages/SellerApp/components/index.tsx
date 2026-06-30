@@ -4,7 +4,7 @@ import React, { useState, useMemo } from "react";
 import { db } from "../../../lib/db";
 import { SchemaValidator } from "../../../utils/schemaValidation";
 import { PhotoQualityGuide } from "../../../components/PhotoQualityGuide";
-import { supabase, supabaseUrl, supabaseKey } from "../../../lib/supabase";
+import { supabase } from "../../../lib/supabase";
 import { formatCurrency } from "../../../lib/storage";
 import { PriceDisplay } from "../../../components/PriceDisplay";
 import { Product, Order, SellerProfile, Niche } from "../../../types";
@@ -200,6 +200,8 @@ export function AICopilotWidget({
 }
 
 /* SUBCOMPONENT: Store Settings Invoice customizer Form */
+export { OrderProgressIndicator } from "./OrderProgressIndicator";
+
 export function StoreSettingsForm({
   seller,
   displayAlert,

@@ -404,6 +404,30 @@ export const db = {
     });
   },
 
+  // Price drop alerts
+  addPriceDropAlert: async (alert: { productId: string, email: string, phone: string }) => {
+    try {
+      await apiFetch('/api/v1/price-alerts', {
+        method: 'POST',
+        body: JSON.stringify({
+          productId: alert.productId,
+          email: alert.email,
+          phone: alert.phone
+        })
+      });
+    } catch (err) {
+      console.warn("Saving price alert to Supabase failed, fallback to offline localStorage.", err);
+      const fallbackKey = 'orbishop_price_alerts';
+      const current = localStorage.getItem(fallbackKey);
+      let list = [];
+      if (current) {
+        try { list = JSON.parse(current); } catch {}
+      }
+      list.push({ ...alert, createdAt: Date.now() });
+      localStorage.setItem(fallbackKey, JSON.stringify(list));
+    }
+  },
+
   // Payout logs
   getPayouts: async () => {
     const res = await apiFetch('/api/v1/settings/payouts');

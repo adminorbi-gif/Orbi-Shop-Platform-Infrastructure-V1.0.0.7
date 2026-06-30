@@ -65,7 +65,12 @@ const isValidUUID = (id: any): boolean => {
 
 router.post("/", async (req, res) => {
   try {
-    const { cart, user, paymentMethod, appliedCoupon, finalTotal, name, phone, address, options, tin, lang } = req.body;
+    const { cart, user, paymentMethod, paymentCategory, paymentRail, appliedCoupon, finalTotal, name, phone, address, options, tin, lang } = req.body;
+
+    // Gateway validation simulation (strict contract)
+    if (!paymentCategory || !paymentRail) {
+      return res.status(400).json({ success: false, error: "Gateway Error: Missing paymentCategory or paymentRail. Every request must declare these fields." });
+    }
 
     if (!cart || !Array.isArray(cart) || cart.length === 0) {
       return res.status(400).json({ success: false, error: "Cart is empty." });
@@ -124,6 +129,32 @@ router.post("/", async (req, res) => {
       }, 0);
       const oId = `${oIdBase}-${sellerId}`;
       
+      // Construct the normalized payment intent as required by Gateway
+      const paymentIntent = {
+        serviceCode: "orbi-shop",
+        operation: "paysafe", // Always held/escrowed before release
+        reference: oId,
+        amount: sellerTotal,
+        currency: "TZS",
+        paymentCategory: paymentCategory,
+        paymentRail: paymentRail,
+        customer: {
+          type: dbCustomerId ? "user" : "external_customer",
+          orbiUserId: dbCustomerId,
+          name: name,
+          phone: phone
+        },
+        merchant: {
+          merchantId: sellerId,
+          settlementAccount: "paysafe"
+        },
+        metadata: {
+          orderId: oId,
+          checkoutMode: "secure_escrow"
+        }
+      };
+      console.log("[GATEWAY_SIMULATION] Normalized Payment Intent ->", JSON.stringify(paymentIntent, null, 2));
+
       const { data: oRow, error: oError } = await supabase
         .from("orders")
         .insert([{
@@ -133,11 +164,11 @@ router.post("/", async (req, res) => {
           customer_address: encrypt(address),
           customer_tin: tin ? encrypt(tin) : null,
           customer_id: dbCustomerId,
-          payment_method: paymentMethod,
-          payment_method_name: methodObj ? methodObj.name : paymentMethod,
+          payment_method: paymentRail,
+          payment_method_name: paymentCategory,
           total: sellerTotal,
           status: "pending",
-          payment_reference: encrypt("ESCROW:CREATED:requires_action||")
+          payment_reference: encrypt(`ESCROW:HELD:${paymentRail}||`) // Ensures money is marked as held safely initially
         }])
         .select("id")
         .single();

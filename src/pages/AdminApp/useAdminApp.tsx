@@ -9,7 +9,7 @@ import React, {
   useRef,
 } from "react";
 import { motion } from "motion/react";
-import { supabase, supabaseUrl, supabaseKey } from "../../lib/supabase";
+import { supabase } from "../../lib/supabase";
 import { formatCurrency } from "../../lib/storage";
 import { PriceDisplay } from "../../components/PriceDisplay";
 import { db } from "../../lib/db";

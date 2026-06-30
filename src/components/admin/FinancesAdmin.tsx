@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Order } from "../../types";
 import { useI18n } from "../../pages/AdminApp";
 import {
@@ -9,6 +9,16 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
+import {
+  ComposedChart,
+  Bar,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 export function FinancesAdmin({ orders }: { orders: Order[] }) {
   const { lang, t } = useI18n();
@@ -18,6 +28,65 @@ export function FinancesAdmin({ orders }: { orders: Order[] }) {
   const totalPending = orders
     .filter((o) => o.status === "pending")
     .reduce((acc, o) => acc + o.total, 0);
+
+  const monthlyRevenueData = useMemo(() => {
+    const last12Months: { name: string; revenue: number }[] = [];
+    const now = new Date();
+    for (let i = 11; i >= 0; i--) {
+      const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthName = month.toLocaleString(lang === "sw" ? "sw-TZ" : "en-US", {
+        month: "short",
+      });
+      const revenue = orders
+        .filter((o) => {
+          const date = new Date(o.date);
+          return (
+            o.status === "confirmed" &&
+            date.getMonth() === month.getMonth() &&
+            date.getFullYear() === month.getFullYear()
+          );
+        })
+        .reduce((acc, o) => acc + o.total, 0);
+      last12Months.push({ name: monthName, revenue });
+    }
+    return last12Months;
+  }, [orders, lang]);
+
+  const projectionData = useMemo(() => {
+    const N = monthlyRevenueData.length;
+    let W = 0;
+    let sumWX = 0;
+    let sumWY = 0;
+    let sumWXY = 0;
+    let sumWX2 = 0;
+
+    monthlyRevenueData.forEach((d, i) => {
+      const w = i + 1; // Assign higher weight to more recent months
+      W += w;
+      sumWX += w * i;
+      sumWY += w * d.revenue;
+      sumWXY += w * i * d.revenue;
+      sumWX2 += w * i * i;
+    });
+
+    // WLS formulas
+    const denominator = (W * sumWX2 - sumWX * sumWX);
+    const m = denominator === 0 ? 0 : (W * sumWXY - sumWX * sumWY) / denominator;
+    const c = (sumWY - m * sumWX) / W;
+
+    const dataWithProjection = monthlyRevenueData.map((d, i) => ({
+      ...d,
+      projection: Math.max(0, m * i + c)
+    }));
+    
+    dataWithProjection.push({
+        name: "Next",
+        revenue: 0,
+        projection: Math.max(0, m * 12 + c)
+    });
+
+    return dataWithProjection;
+  }, [monthlyRevenueData]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US").format(amount);
@@ -92,6 +161,23 @@ export function FinancesAdmin({ orders }: { orders: Order[] }) {
             <p className="text-xs text-white/50 mt-2 relative">
               All marketplace transactions are secured.
             </p>
+          </div>
+        </div>
+
+        {/* Monthly Revenue Trend Chart */}
+        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
+          <h2 className="text-lg font-black text-slate-900 mb-6">Monthly Revenue Trend (Last 12 Months)</h2>
+          <div className="h-80 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={projectionData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#64748b" }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#64748b" }} tickFormatter={(value) => `${value / 1000000}M`} />
+                <Tooltip cursor={{ fill: "#f1f5f9" }} contentStyle={{ borderRadius: "1rem", border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }} />
+                <Bar dataKey="revenue" fill="#0f172a" radius={[6, 6, 0, 0]} />
+                <Line type="monotone" dataKey="projection" stroke="#ef4444" strokeWidth={2} dot={false} strokeDasharray="5 5" />
+              </ComposedChart>
+            </ResponsiveContainer>
           </div>
         </div>
 

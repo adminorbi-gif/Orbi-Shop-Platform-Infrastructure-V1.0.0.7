@@ -24,7 +24,10 @@ import {
   Zap,
   ChevronDown,
   ChevronUp,
-  Sliders
+  Sliders,
+  Truck,
+  Calendar,
+  MapPin
 } from "lucide-react";
 import { Lang } from "../lib/i18nClient";
 import { db } from "../lib/db";
@@ -216,6 +219,10 @@ export default function ProductDetailPage({
   const [notifyEmail, setNotifyEmail] = useState("");
   const [notifyPhone, setNotifyPhone] = useState("");
   const [notifying, setNotifying] = useState(false);
+  const [showPriceDrop, setShowPriceDrop] = useState(false);
+  const [priceDropEmail, setPriceDropEmail] = useState("");
+  const [priceDropPhone, setPriceDropPhone] = useState("");
+  const [submittingPriceDrop, setSubmittingPriceDrop] = useState(false);
   const [reviews, setReviews] = useState<any[]>(product.reviews || []);
   const [newRating, setNewRating] = useState(5);
   const [newComment, setNewComment] = useState("");
@@ -224,6 +231,41 @@ export default function ProductDetailPage({
   const isOutOfStock = product.stock <= 0;
 
   const [qty, setQty] = useState(1);
+  const [selectedRegion, setSelectedRegion] = useState("Dar es Salaam");
+
+  const deliveryEstimates = useMemo(() => {
+    const baseDays = 1; // standard seller processing time
+    let addDaysMin = 0;
+    let addDaysMax = 0;
+    
+    switch(selectedRegion) {
+      case "Dar es Salaam":
+        addDaysMin = 0; addDaysMax = 1; break;
+      case "Arusha":
+      case "Mwanza":
+      case "Dodoma":
+        addDaysMin = 1; addDaysMax = 2; break;
+      case "Zanzibar":
+        addDaysMin = 2; addDaysMax = 3; break;
+      default:
+        addDaysMin = 2; addDaysMax = 4; break;
+    }
+    
+    const minDate = new Date();
+    minDate.setDate(minDate.getDate() + baseDays + addDaysMin);
+    
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + baseDays + addDaysMax);
+    
+    const formatOpts: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' };
+    const locale = lang === 'sw' ? 'sw-TZ' : 'en-US';
+    
+    return {
+      min: minDate.toLocaleDateString(locale, formatOpts),
+      max: maxDate.toLocaleDateString(locale, formatOpts)
+    };
+  }, [selectedRegion, lang]);
+
   const tiers = useMemo(() => {
     return (product.wholesaleTiers && product.wholesaleTiers.length > 0)
       ? product.wholesaleTiers
@@ -235,9 +277,25 @@ export default function ProductDetailPage({
   }, [product, qty]);
 
   const [showAllSpecs, setShowAllSpecs] = useState(false);
+  const [touchStartX, setTouchStartX] = useState(0);
+  const [touchEndX, setTouchEndX] = useState(0);
   const keyAttributes = useMemo(() => {
     return parseKeyAttributes(product.description, product.features);
   }, [product.description, product.features]);
+
+  const handleSwipe = () => {
+    if (!product || !product.images || product.images.length <= 1) return;
+    const swipeDistance = touchStartX - touchEndX;
+    const minSwipeDistance = 50;
+    
+    if (swipeDistance > minSwipeDistance) {
+      // Swiped left, go to next
+      setImgIdx((i) => (i + 1) % product.images.length);
+    } else if (swipeDistance < -minSwipeDistance) {
+      // Swiped right, go to previous
+      setImgIdx((i) => (i - 1 + product.images.length) % product.images.length);
+    }
+  };
 
   // SEO: Update Meta Tags and Page Title Dynamically
   useEffect(() => {
@@ -433,6 +491,29 @@ export default function ProductDetailPage({
     }
   };
 
+  const handlePriceDropAlert = async () => {
+    if (!priceDropEmail && !priceDropPhone) {
+      showAlert(lang === "sw" ? "Tafadhali weka barua pepe au namba ya simu" : "Please provide email or phone number", "error");
+      return;
+    }
+    setSubmittingPriceDrop(true);
+    try {
+      await db.addPriceDropAlert({
+        productId: product.id,
+        email: priceDropEmail,
+        phone: priceDropPhone,
+      });
+      showAlert(lang === "sw" ? "Taarifa ya bei ikishuka imehifadhiwa!" : "Price drop alert saved successfully!", "success");
+      setShowPriceDrop(false);
+      setPriceDropEmail("");
+      setPriceDropPhone("");
+    } catch {
+      showAlert(lang === "sw" ? "Kuna tatizo, jaribu tena" : "Something went wrong, please try again", "error");
+    } finally {
+      setSubmittingPriceDrop(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[999999] bg-[#f8fafc] flex flex-col overflow-hidden animate-in fade-in duration-200">
       
@@ -524,13 +605,28 @@ export default function ProductDetailPage({
           {/* Left Column: Images */}
           <div className="w-full md:w-1/2 flex flex-col gap-4">
             <div 
-              className="relative aspect-square sm:aspect-[4/3] bg-white rounded-3xl overflow-hidden shadow-xs shrink-0 border border-slate-200/60 p-4 flex items-center justify-center cursor-zoom-in"
+              className="relative aspect-square sm:aspect-[4/3] bg-white rounded-3xl overflow-hidden shadow-xs shrink-0 border border-slate-200/60 flex items-center justify-center cursor-zoom-in group"
               onClick={() => setShowFullImage(true)}
+              onMouseMove={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                const y = ((e.clientY - rect.top) / rect.height) * 100;
+                e.currentTarget.style.setProperty('--zoom-x', `${x}%`);
+                e.currentTarget.style.setProperty('--zoom-y', `${y}%`);
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.setProperty('--zoom-x', '50%');
+                e.currentTarget.style.setProperty('--zoom-y', '50%');
+              }}
+              onTouchStart={(e) => setTouchStartX(e.touches[0].clientX)}
+              onTouchMove={(e) => setTouchEndX(e.touches[0].clientX)}
+              onTouchEnd={handleSwipe}
             >
               <img
                 src={product.images[imgIdx]}
                 alt={product.name}
-                className="max-h-full max-w-full object-contain transition duration-300"
+                className="w-full h-full object-contain p-4 transition-transform duration-200 ease-out group-hover:scale-[2.5]"
+                style={{ transformOrigin: 'var(--zoom-x, 50%) var(--zoom-y, 50%)' }}
               />
               {product.images.length > 1 && (
                 <>
@@ -539,7 +635,7 @@ export default function ProductDetailPage({
                       e.stopPropagation();
                       setImgIdx((i) => (i - 1 + product.images.length) % product.images.length);
                     }}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full text-slate-700 hover:text-orange-600 shadow-md transition-all hover:scale-105 cursor-pointer"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full text-slate-700 hover:text-orange-600 shadow-md transition-all hover:scale-105 cursor-pointer opacity-100 group-hover:opacity-0"
                   >
                     <ChevronLeft size={24} />
                   </button>
@@ -548,7 +644,7 @@ export default function ProductDetailPage({
                       e.stopPropagation();
                       setImgIdx((i) => (i + 1) % product.images.length);
                     }}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full text-slate-700 hover:text-orange-600 shadow-md transition-all hover:scale-105 cursor-pointer"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full text-slate-700 hover:text-orange-600 shadow-md transition-all hover:scale-105 cursor-pointer opacity-100 group-hover:opacity-0"
                   >
                     <ChevronRight size={24} />
                   </button>
@@ -794,6 +890,45 @@ export default function ProductDetailPage({
                 )}
               </div>
 
+              {/* Delivery Estimation Badge */}
+              <div className="border-t border-slate-100 pt-4 mt-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-blue-50/50 border border-blue-100/50 rounded-2xl p-4">
+                  <div className="flex gap-3 items-start sm:items-center">
+                    <div className="p-2 bg-white rounded-xl shadow-sm text-blue-600 border border-blue-100">
+                      <Truck size={18} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800">
+                        {lang === "sw" ? "Makisio ya Ufikishaji" : "Estimated Delivery"}
+                      </h4>
+                      <p className="text-xs text-slate-500 font-medium mt-0.5 flex items-center gap-1.5">
+                        <Calendar size={12} className="text-blue-400 shrink-0" />
+                        <span className="text-blue-900 font-bold">{deliveryEstimates.min} - {deliveryEstimates.max}</span>
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="relative shrink-0 flex items-center bg-white border border-slate-200 rounded-xl transition-colors hover:border-blue-300">
+                    <MapPin size={14} className="text-slate-400 ml-2.5" />
+                    <select 
+                      className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer appearance-none py-2 pl-1.5 pr-8 w-full"
+                      value={selectedRegion}
+                      onChange={(e) => setSelectedRegion(e.target.value)}
+                    >
+                      <option value="Dar es Salaam">Dar es Salaam</option>
+                      <option value="Arusha">Arusha</option>
+                      <option value="Mwanza">Mwanza</option>
+                      <option value="Dodoma">Dodoma</option>
+                      <option value="Zanzibar">Zanzibar</option>
+                      <option value="Other Regions">{lang === "sw" ? "Mikoa Mingine" : "Other Regions"}</option>
+                    </select>
+                    <div className="absolute right-2 pointer-events-none flex items-center">
+                      <ChevronDown size={14} className="text-slate-400" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Quantity Selector & Realtime Pricing Tracker */}
               {!isOutOfStock && (
                 <div className="border-t border-slate-100 pt-4 mt-1 space-y-3">
@@ -920,6 +1055,55 @@ export default function ProductDetailPage({
                 </div>
               </div>
             </div>
+
+            {/* Price Drop Alert */}
+            {showPriceDrop ? (
+              <div className="bg-white p-5 rounded-2xl shadow-xs border border-blue-100 space-y-3 mb-6 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="font-bold text-slate-900">
+                      {lang === "sw" ? "Taarifa ya Bei Kushuka" : "Price Drop Alert"}
+                    </h4>
+                    <p className="text-sm text-slate-600">
+                      {lang === "sw" ? "Tutakujulisha bei ikipungua." : "We'll notify you when the price drops."}
+                    </p>
+                  </div>
+                  <button onClick={() => setShowPriceDrop(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer p-1">
+                    <X size={20} />
+                  </button>
+                </div>
+                <input
+                  type="email"
+                  placeholder="Barua pepe (Email)"
+                  value={priceDropEmail}
+                  onChange={(e) => setPriceDropEmail(e.target.value)}
+                  className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
+                />
+                <input
+                  type="tel"
+                  placeholder="Namba ya simu (Phone)"
+                  value={priceDropPhone}
+                  onChange={(e) => setPriceDropPhone(e.target.value)}
+                  className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
+                />
+                <button
+                  onClick={handlePriceDropAlert}
+                  disabled={submittingPriceDrop}
+                  className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 transition shadow-xs cursor-pointer"
+                >
+                  {submittingPriceDrop ? (lang === "sw" ? "Inatuma..." : "Sending...") : (lang === "sw" ? "Nijulishe Bei Ikipungua" : "Notify Me")}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowPriceDrop(true)}
+                className="w-full flex items-center justify-center gap-2 h-11 mb-6 bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-700 border border-slate-200 hover:border-blue-200 rounded-xl font-bold transition-all text-sm cursor-pointer"
+              >
+                <Bell size={16} />
+                <span>{lang === "sw" ? "Nijulishe bei ikishuka" : "Notify me of price drop"}</span>
+              </button>
+            )}
 
             {/* Sharing Block */}
             <div className="flex flex-col sm:flex-row gap-2 mb-8">
@@ -1332,13 +1516,28 @@ export default function ProductDetailPage({
           )}
 
           <div 
-            className="relative w-full max-w-5xl max-h-[85vh] flex items-center justify-center p-4 cursor-zoom-out"
+            className="relative w-full max-w-5xl h-[85vh] flex items-center justify-center p-4 cursor-zoom-out group overflow-hidden"
             onClick={() => setShowFullImage(false)}
+            onMouseMove={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const x = ((e.clientX - rect.left) / rect.width) * 100;
+              const y = ((e.clientY - rect.top) / rect.height) * 100;
+              e.currentTarget.style.setProperty('--zoom-x', `${x}%`);
+              e.currentTarget.style.setProperty('--zoom-y', `${y}%`);
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.setProperty('--zoom-x', '50%');
+              e.currentTarget.style.setProperty('--zoom-y', '50%');
+            }}
+            onTouchStart={(e) => setTouchStartX(e.touches[0].clientX)}
+            onTouchMove={(e) => setTouchEndX(e.touches[0].clientX)}
+            onTouchEnd={handleSwipe}
           >
             <img
               src={product.images[imgIdx]}
               alt={product.name}
-              className="max-w-full max-h-[85vh] object-contain select-none"
+              className="max-w-full max-h-full object-contain select-none transition-transform duration-200 ease-out group-hover:scale-[2.5]"
+              style={{ transformOrigin: 'var(--zoom-x, 50%) var(--zoom-y, 50%)' }}
               onClick={(e) => e.stopPropagation()}
             />
           </div>

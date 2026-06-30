@@ -1,7 +1,7 @@
 import { useClientApp } from "./useClientApp";
 import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from "react";
 import { Helmet } from "react-helmet-async";
-import { supabase, supabaseUrl, supabaseKey } from "../../lib/supabase";
+import { supabase } from "../../lib/supabase";
 import { db } from "../../lib/db";
 import {
   BilingualSearchEngine,

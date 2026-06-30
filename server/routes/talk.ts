@@ -839,6 +839,54 @@ router.post("/send-test-message", async (req, res) => {
   }
 });
 
+// POST /api/talk/send-stock-alert - Dispatch low stock alert via Orbi Talk Gateway
+router.post("/send-stock-alert", async (req, res) => {
+  const reqApiKey = req.headers["x-api-key"] || req.headers["X-API-Key"] || req.query.apiKey;
+  const orbiApiKey = process.env.ORBI_SHOP_TALK_API_KEY;
+  if (orbiApiKey && reqApiKey !== orbiApiKey) {
+    return res.status(401).json({ success: false, error: "Unauthorized: Invalid x-api-key credentials." });
+  }
+
+  const { recipient, productName, currentStock, channel, language } = req.body;
+  if (!recipient || !productName || currentStock === undefined || !channel) {
+    return res.status(400).json({ success: false, error: "Missing required fields: recipient, productName, currentStock, and channel." });
+  }
+
+  const isSwahili = language === "sw";
+  const subject = isSwahili ? "Tahadhari ya Stoki Duni" : "Low Stock Alert";
+  const body = isSwahili 
+    ? `Tahadhari: Bidhaa "${productName}" ina stoki duni (${currentStock} zimebaki). Tafadhali fanya marekebisho.`
+    : `Alert: Product "${productName}" has low stock (${currentStock} remaining). Please replenish soon.`;
+
+  const reqId = `stock-alert-${productName}-${Date.now()}`;
+
+  try {
+    let result;
+    if (channel === "email") {
+      result = await sendOrbiTalkDirectEmail({
+        recipient,
+        subject,
+        body,
+        requestId: reqId,
+        messageType: "transactional"
+      });
+    } else if (channel === "sms") {
+      result = await sendOrbiTalkDirectSMS({
+        recipient,
+        body,
+        requestId: reqId
+      });
+    } else {
+      return res.status(400).json({ success: false, error: "Unsupported channel." });
+    }
+    
+    return res.json({ success: true, ...result });
+  } catch (err: any) {
+    console.error("POST /api/talk/send-stock-alert failed:", err.message);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // GET /api/talk/message - Dynamically retrieve matching message template based on templateName and language
 router.get("/message", (req, res) => {
   const { templateName, language } = req.query;

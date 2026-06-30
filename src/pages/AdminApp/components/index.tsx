@@ -1,4 +1,6 @@
 import { OrderItemRow } from '../index';
+import { SellerDetailView } from './SellerDetailView';
+import { CustomerDetailView } from './CustomerDetailView';
 import { CameraBarcodeScanner } from '../../../components/CameraBarcodeScanner';
 import { getStoragePath, extractMediaFromText, isImage, isVideo } from '../../../lib/media';
 import { getLoyaltyPoints, saveLoyaltyPoints, formatOrderNumber, getOrderNumber } from "../../../lib/helpers";
@@ -15,7 +17,7 @@ import React, {
   useRef,
 } from "react";
 import { motion } from "motion/react";
-import { supabase, supabaseUrl, supabaseKey } from "../../../lib/supabase";
+import { supabase } from "../../../lib/supabase";
 import { formatCurrency } from "../../../lib/storage";
 import { PriceDisplay } from "../../../components/PriceDisplay";
 import { db } from "../../../lib/db";
@@ -559,6 +561,7 @@ export function SellersAdmin({
   const [subTab, setSubTab] = useState<"sellers" | "plans" | "analytics">(
     "analytics",
   );
+  const [selectedSellerId, setSelectedSellerId] = useState<string | null>(null);
 
   // Parse swahili and/or english fields for new vendor requests from customer support chat
   // Parse swahili and/or english fields for new vendor requests from customer support chat
@@ -990,7 +993,16 @@ export function SellersAdmin({
         />
       )}
 
-      {subTab === "sellers" && (
+      {subTab === "sellers" && selectedSellerId && (
+        <SellerDetailView 
+          seller={sellers.find(s => s.id === selectedSellerId)!}
+          products={products}
+          orders={orders}
+          onBack={() => setSelectedSellerId(null)}
+        />
+      )}
+
+      {subTab === "sellers" && !selectedSellerId && (
         <>
           {pendingRequests.length > 0 && (
             <div className="mb-8 bg-gradient-to-br from-amber-500/10 via-yellow-500/5 to-amber-500/5 border border-amber-300/60 rounded-3xl p-6 shadow-xs relative overflow-hidden">
@@ -1112,7 +1124,8 @@ export function SellersAdmin({
               return (
                 <div
                   key={s.id}
-                  className="border border-slate-200 rounded-2xl p-5 flex flex-col relative bg-slate-50 shadow-sm transition-all hover:border-slate-350"
+                  onClick={() => setSelectedSellerId(s.id)}
+                  className="cursor-pointer border border-slate-200 rounded-2xl p-5 flex flex-col relative bg-slate-50 shadow-sm transition-all hover:border-slate-350"
                 >
                   {isCurrentlyPro && (
                     <div className="absolute top-3 right-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-sm">
@@ -1924,6 +1937,20 @@ export function PayoutsAdmin() {
     setLoading(false);
   };
 
+  const exportPayoutsToCSV = () => {
+    const headers = ["Seller ID", "Amount", "Status"];
+    const csvContent = [
+      headers.join(","),
+      ...payouts.map((p) => [p.sellerId, p.amount, p.status].join(","))
+    ].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `payouts_${new Date().toISOString()}.csv`;
+    link.click();
+  };
+
   const updateStatus = async (id: string, status: "paid" | "cancelled") => {
     const payout = payouts.find((p) => p.id === id);
     if (!payout) return;
@@ -1939,7 +1966,15 @@ export function PayoutsAdmin() {
 
   return (
     <div className="bg-white p-6 rounded-2xl border border-slate-200">
-      <h2 className="text-xl font-bold mb-4">Payout Requests</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">Payout Requests</h2>
+        <button
+          onClick={exportPayoutsToCSV}
+          className="bg-primary text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-primary/90"
+        >
+          Export to CSV
+        </button>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[600px] text-left text-sm">
           <thead>
@@ -10384,6 +10419,7 @@ export function CustomersAdmin({
   const [viewOrdersCustomer, setViewOrdersCustomer] = useState<Customer | null>(
     null,
   );
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [resetPwdCustomer, setResetPwdCustomer] = useState<Customer | null>(
     null,
   );
@@ -10586,186 +10622,197 @@ export function CustomersAdmin({
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredCustomers.length === 0 ? (
-            <div className="bg-white p-12 text-center rounded-3xl border border-slate-200/60 shadow-xs text-slate-400 font-bold flex flex-col items-center justify-center">
-              <Users size={48} className="mb-4 text-slate-200" />
-              <p className="text-lg font-medium text-slate-600">
-                {t(lang, "cust.empty")}
-              </p>
-            </div>
+          {selectedCustomerId ? (
+            <CustomerDetailView 
+              customer={customers.find(c => c.id === selectedCustomerId)!}
+              orders={orders}
+              onBack={() => setSelectedCustomerId(null)}
+            />
           ) : (
-            filteredCustomers.map((c) => {
-              const customerOrders = orders.filter(
-                (o) =>
-                  (o.customerId === c.id || o.customer_id === c.id) &&
-                  o.status !== "cancelled",
-              );
-              const totalSpent = customerOrders.reduce(
-                (sum, order) => sum + order.total,
-                0,
-              );
+          <>
+            {filteredCustomers.length === 0 ? (
+              <div className="bg-white p-12 text-center rounded-3xl border border-slate-200/60 shadow-xs text-slate-400 font-bold flex flex-col items-center justify-center">
+                <Users size={48} className="mb-4 text-slate-200" />
+                <p className="text-lg font-medium text-slate-600">
+                  {t(lang, "cust.empty")}
+                </p>
+              </div>
+            ) : (
+              filteredCustomers.map((c) => {
+                const customerOrders = orders.filter(
+                  (o) =>
+                    (o.customerId === c.id || o.customer_id === c.id) &&
+                    o.status !== "cancelled",
+                );
+                const totalSpent = customerOrders.reduce(
+                  (sum, order) => sum + order.total,
+                  0,
+                );
 
-              return (
-                <div
-                  key={c.id}
-                  className="bg-white rounded-3xl border border-slate-200/60 shadow-xs p-5 sm:p-6 space-y-4 hover:border-slate-300 transition duration-150"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-slate-700 text-white flex items-center justify-center font-bold shadow-sm text-lg shrink-0">
-                        {c.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="font-black text-slate-900 flex flex-wrap items-center gap-2 text-[15px]">
-                          {c.name}
-                          <span
-                            className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${c.status === "frozen" ? "bg-red-50 border border-red-100 text-red-600" : "bg-emerald-50 border border-emerald-100 text-emerald-700"}`}
-                          >
-                            {c.status === "frozen" ? "Frozen" : "Active"}
-                          </span>
-                          {c.deleteRequested && (
-                            <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-orange-50 border border-orange-100 text-orange-600">
-                              Delete Requested
+                return (
+                  <div
+                    key={c.id}
+                    onClick={() => setSelectedCustomerId(c.id)}
+                    className="cursor-pointer bg-white rounded-3xl border border-slate-200/60 shadow-xs p-5 sm:p-6 space-y-4 hover:border-slate-300 transition duration-150"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-slate-700 text-white flex items-center justify-center font-bold shadow-sm text-lg shrink-0">
+                          {c.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="font-black text-slate-900 flex flex-wrap items-center gap-2 text-[15px]">
+                            {c.name}
+                            <span
+                              className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${c.status === "frozen" ? "bg-red-50 border border-red-100 text-red-600" : "bg-emerald-50 border border-emerald-100 text-emerald-700"}`}
+                            >
+                              {c.status === "frozen" ? "Frozen" : "Active"}
                             </span>
-                          )}
+                            {c.deleteRequested && (
+                              <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-orange-50 border border-orange-100 text-orange-600">
+                                Delete Requested
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono tracking-tight mt-0.5">
+                            ID: {c.id.substring(0, 12)}
+                          </div>
                         </div>
-                        <div className="text-[10px] text-slate-400 font-mono tracking-tight mt-0.5">
-                          ID: {c.id.substring(0, 12)}
-                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                          Joined:
+                        </span>
+                        <span className="text-[10px] text-slate-600 font-bold bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                          {new Date(c.registeredAt).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                        Joined:
-                      </span>
-                      <span className="text-[10px] text-slate-600 font-bold bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-                        {new Date(c.registeredAt).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2.5">
-                      <h4 className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
-                        CONTACT INFO
-                      </h4>
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2 text-slate-700 font-medium text-sm">
-                          <Phone size={14} className="text-slate-400" />
-                          <span>{c.phone || "N/A"}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-slate-700 font-medium text-sm">
-                          <Mail size={14} className="text-slate-400" />
-                          <span>{c.email || "N/A"}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-50 p-4 rounded-2xl flex flex-col justify-between text-xs space-y-2 font-medium">
-                      <div>
-                        <h4 className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1.5">
-                          ACCOUNT METRICS
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2.5">
+                        <h4 className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
+                          CONTACT INFO
                         </h4>
-                        <div className="flex items-center justify-between text-slate-600 mb-1">
-                          <span>Total Orders Completed:</span>
-                          <span className="font-black text-slate-900">
-                            {customerOrders.length}
-                          </span>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-2 text-slate-700 font-medium text-sm">
+                            <Phone size={14} className="text-slate-400" />
+                            <span>{c.phone || "N/A"}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-slate-700 font-medium text-sm">
+                            <Mail size={14} className="text-slate-400" />
+                            <span>{c.email || "N/A"}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between text-slate-600">
-                          <span>Total Value Spent:</span>
-                          <span className="font-black text-emerald-600">
-                            {formatCurrency(totalSpent)}
-                          </span>
+                      </div>
+
+                      <div className="bg-slate-50 p-4 rounded-2xl flex flex-col justify-between text-xs space-y-2 font-medium">
+                        <div>
+                          <h4 className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1.5">
+                            ACCOUNT METRICS
+                          </h4>
+                          <div className="flex items-center justify-between text-slate-600 mb-1">
+                            <span>Total Orders Completed:</span>
+                            <span className="font-black text-slate-900">
+                              {customerOrders.length}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-slate-600">
+                            <span>Total Value Spent:</span>
+                            <span className="font-black text-emerald-600">
+                              {formatCurrency(totalSpent)}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-end gap-2">
-                    <button
-                      onClick={() => setViewOrdersCustomer(c)}
-                      className="px-3 py-1.5 text-primary bg-primary/10 rounded-xl hover:bg-primary hover:text-white transition font-bold text-[10px] uppercase flex items-center gap-1.5 cursor-pointer"
-                      title={
-                        lang === "sw"
-                          ? "Angalia Oda / View Orders"
-                          : "View Orders"
-                      }
-                    >
-                      <ShoppingBag size={14} strokeWidth={2.5} /> View Orders
-                    </button>
-                    <button
-                      onClick={() => setMsgCustomer(c)}
-                      className="px-3 py-1.5 text-accent bg-accent/10 rounded-xl hover:bg-accent hover:text-white transition font-bold text-[10px] uppercase flex items-center gap-1.5 cursor-pointer"
-                      title={
-                        lang === "sw" ? "Tuma Ujumbe / Message" : "Message"
-                      }
-                    >
-                      <MessageSquare size={14} strokeWidth={2.5} /> Message
-                    </button>
-                    <button
-                      onClick={() => setResetPwdCustomer(c)}
-                      className="px-3 py-1.5 text-amber-600 bg-amber-50 rounded-xl hover:bg-amber-600 hover:text-white transition font-bold text-[10px] uppercase flex items-center gap-1.5 border border-amber-100 cursor-pointer"
-                      title="Reset User Password"
-                    >
-                      <Lock size={14} strokeWidth={2.5} /> Reset Auth
-                    </button>
-
-                    {(currentStaff?.role === "super_admin" ||
-                      currentStaff?.role === "human_resources") && (
+                    <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-end gap-2">
                       <button
-                        onClick={() => handleToggleFreeze(c)}
-                        className={`px-3 py-1.5 rounded-xl transition font-bold text-[10px] uppercase flex items-center gap-1.5 border min-w-0 cursor-pointer ${
-                          c.status === "frozen"
-                            ? "text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white border-emerald-200"
-                            : "text-slate-600 bg-slate-50 hover:bg-slate-600 hover:text-white border-slate-200"
-                        }`}
+                        onClick={(e) => { e.stopPropagation(); setViewOrdersCustomer(c); }}
+                        className="px-3 py-1.5 text-primary bg-primary/10 rounded-xl hover:bg-primary hover:text-white transition font-bold text-[10px] uppercase flex items-center gap-1.5 cursor-pointer"
                         title={
-                          c.status === "frozen"
-                            ? "Activate Customer"
-                            : "Freeze Customer"
+                          lang === "sw"
+                            ? "Angalia Oda / View Orders"
+                            : "View Orders"
                         }
                       >
-                        <Lock size={14} strokeWidth={2.5} />{" "}
-                        {c.status === "frozen" ? "Unfreeze" : "Freeze"}
+                        <ShoppingBag size={14} strokeWidth={2.5} /> View Orders
                       </button>
-                    )}
-
-                    {(currentStaff?.role === "super_admin" ||
-                      currentStaff?.role === "human_resources") && (
                       <button
-                        onClick={() => handleDeleteCustomer(c)}
-                        className={`px-3 py-1.5 rounded-xl transition font-bold text-[10px] uppercase flex items-center gap-1.5 border min-w-0 cursor-pointer ${
-                          c.deleteRequested &&
-                          currentStaff?.role === "human_resources"
-                            ? "bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed"
-                            : currentStaff?.role === "super_admin" &&
-                                c.deleteRequested
-                              ? "bg-red-500 text-white hover:bg-red-600 border-red-600"
-                              : "text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white border-rose-200"
-                        }`}
+                        onClick={(e) => { e.stopPropagation(); setMsgCustomer(c); }}
+                        className="px-3 py-1.5 text-accent bg-accent/10 rounded-xl hover:bg-accent hover:text-white transition font-bold text-[10px] uppercase flex items-center gap-1.5 cursor-pointer"
                         title={
-                          currentStaff?.role === "super_admin"
-                            ? "Delete User"
-                            : "Request Delete User"
-                        }
-                        disabled={
-                          c.deleteRequested &&
-                          currentStaff?.role === "human_resources"
+                          lang === "sw" ? "Tuma Ujumbe / Message" : "Message"
                         }
                       >
-                        <Trash size={14} strokeWidth={2.5} /> Delete
+                        <MessageSquare size={14} strokeWidth={2.5} /> Message
                       </button>
-                    )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setResetPwdCustomer(c); }}
+                        className="px-3 py-1.5 text-amber-600 bg-amber-50 rounded-xl hover:bg-amber-600 hover:text-white transition font-bold text-[10px] uppercase flex items-center gap-1.5 border border-amber-100 cursor-pointer"
+                        title="Reset User Password"
+                      >
+                        <Lock size={14} strokeWidth={2.5} /> Reset Auth
+                      </button>
+
+                      {(currentStaff?.role === "super_admin" ||
+                        currentStaff?.role === "human_resources") && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleToggleFreeze(c); }}
+                          className={`px-3 py-1.5 rounded-xl transition font-bold text-[10px] uppercase flex items-center gap-1.5 border min-w-0 cursor-pointer ${
+                            c.status === "frozen"
+                              ? "text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white border-emerald-200"
+                              : "text-slate-600 bg-slate-50 hover:bg-slate-600 hover:text-white border-slate-200"
+                          }`}
+                          title={
+                            c.status === "frozen"
+                              ? "Activate Customer"
+                              : "Freeze Customer"
+                          }
+                        >
+                          <Lock size={14} strokeWidth={2.5} />{" "}
+                          {c.status === "frozen" ? "Unfreeze" : "Freeze"}
+                        </button>
+                      )}
+
+                      {(currentStaff?.role === "super_admin" ||
+                        currentStaff?.role === "human_resources") && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(c); }}
+                          className={`px-3 py-1.5 rounded-xl transition font-bold text-[10px] uppercase flex items-center gap-1.5 border min-w-0 cursor-pointer ${
+                            c.deleteRequested &&
+                            currentStaff?.role === "human_resources"
+                              ? "bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed"
+                              : currentStaff?.role === "super_admin" &&
+                                  c.deleteRequested
+                                ? "bg-red-500 text-white hover:bg-red-600 border-red-600"
+                                : "text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white border-rose-200"
+                          }`}
+                          title={
+                            currentStaff?.role === "super_admin"
+                              ? "Delete User"
+                              : "Request Delete User"
+                          }
+                          disabled={
+                            c.deleteRequested &&
+                            currentStaff?.role === "human_resources"
+                          }
+                        >
+                          <Trash size={14} strokeWidth={2.5} /> Delete
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })
+                );
+              })
+            )}
+          </>
           )}
         </div>
       )}

@@ -28,6 +28,7 @@ import searchRouter from "./server/routes/search.js";
 import settingsRouter from "./server/routes/settings.js";
 import sitemapRouter from "./server/routes/sitemap.js";
 import stockNotificationsRouter from "./server/routes/stockNotifications.js";
+import priceAlertsRouter from "./server/routes/priceAlerts.js";
 import storageRouter from "./server/routes/storage.js";
 import subscriptionsRouter from "./server/routes/subscriptions.js";
 import talkRouter from "./server/routes/talk.js";
@@ -171,6 +172,7 @@ async function startServer() {
   app.use("/api/sitemap", sitemapRouter);
   app.use("/sitemap.xml", sitemapRouter);
   app.use("/api/v1/stock-notifications", stockNotificationsRouter);
+  app.use("/api/v1/price-alerts", priceAlertsRouter);
   app.use("/api/v1/storage", storageRouter);
   app.use("/api/v1/subscriptions", subscriptionsRouter);
   app.use("/api/talk", talkRouter);
@@ -190,7 +192,9 @@ async function startServer() {
       if (productMatch) {
         try {
           const productId = productMatch[1];
-          if (!process.env.VITE_SUPABASE_URL || !process.env.VITE_SUPABASE_ANON_KEY) throw new Error("Missing required Supabase frontend environment variables.");
+          const supabaseUrl = process.env.SUPABASE_URL;
+          const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+          if (!supabaseUrl || !supabaseKey) throw new Error("Missing Supabase server-side environment variables.");
           
           const { data: product } = await supabase.from("products").select("name, nameSw, description, price, images").eq("id", productId).single();
           
@@ -228,7 +232,9 @@ async function startServer() {
       if (productMatch) {
         try {
           const productId = productMatch[1];
-          if (!process.env.VITE_SUPABASE_URL || !process.env.VITE_SUPABASE_ANON_KEY) throw new Error("Missing required Supabase frontend environment variables.");
+          const supabaseUrl = process.env.SUPABASE_URL;
+          const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+          if (!supabaseUrl || !supabaseKey) throw new Error("Missing Supabase server-side environment variables.");
           
           const { data: product } = await supabase.from("products").select("name, nameSw, description, price, images").eq("id", productId).single();
           

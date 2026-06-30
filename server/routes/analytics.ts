@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { supabase } from "../lib/supabase.js";
+import { decryptObject } from "../lib/supabase.js";
 import ws from "ws";
 import path from "path";
 import fs from "fs";
+import { sendOrbiTalkDirectEmail, sendOrbiTalkDirectSMS } from "./talk.js";
 
 const router = Router();
 
@@ -433,3 +435,110 @@ router.post("/visitors/event", (req, res) => {
 });
 
 export default router;
+
+// GET /api/analytics/rising-stars - Calculate rising stars based on sales velocity increase
+router.get("/rising-stars", async (req, res) => {
+  try {
+    // 1. Fetch recent orders (last 14 days)
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select('*, items:order_items(*)')
+      .gte('created_at', fourteenDaysAgo.toISOString());
+
+    if (error) throw error;
+    
+    const decryptedOrders = decryptObject(orders || []);
+    
+    // 2. Group orders by product and period
+    const now = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(now.getDate() - 7);
+    
+    const velocity: Record<string, { lastWeek: number, prevWeek: number, name: string }> = {};
+    
+    decryptedOrders.forEach((order: any) => {
+      const orderDate = new Date(order.created_at);
+      const isLastWeek = orderDate >= sevenDaysAgo;
+      
+      order.items.forEach((item: any) => {
+        if (!velocity[item.product_id]) {
+          velocity[item.product_id] = { lastWeek: 0, prevWeek: 0, name: item.name };
+        }
+        if (isLastWeek) {
+          velocity[item.product_id].lastWeek += item.quantity;
+        } else {
+          velocity[item.product_id].prevWeek += item.quantity;
+        }
+      });
+    });
+
+    // 3. Identify Rising Stars (highest velocity increase)
+    const risingStars = Object.entries(velocity)
+      .map(([productId, counts]) => {
+        const increase = counts.prevWeek === 0 ? counts.lastWeek * 100 : (counts.lastWeek - counts.prevWeek) / counts.prevWeek * 100;
+        return { productId, ...counts, increase: Number(increase.toFixed(2)) };
+      })
+      .filter(p => p.increase > 0)
+      .sort((a, b) => b.increase - a.increase)
+      .slice(0, 5);
+
+    // 4. Send notification if not already sent this week
+    const { data: reportData } = await supabase
+      .from('promotions')
+      .select('*')
+      .eq('title', 'SYSTEM_RISING_STARS_REPORT')
+      .maybeSingle();
+
+    let shouldNotify = false;
+    if (!reportData || !reportData.description) {
+      shouldNotify = true;
+    } else {
+      const lastSent = new Date(JSON.parse(reportData.description).lastSent);
+      const oneWeek = 7 * 24 * 60 * 60 * 1000;
+      if (now.getTime() - lastSent.getTime() > oneWeek) {
+        shouldNotify = true;
+      }
+    }
+
+    if (shouldNotify && risingStars.length > 0) {
+      // Get all sellers to notify
+      const { data: sellers } = await supabase.from('customers').select('name, email, phone').eq('role', 'seller');
+      
+      const reportText = risingStars.map((p, i) => `${i + 1}. ${p.name} (+${p.increase}%)`).join('\n');
+      
+      if (sellers) {
+        for (const seller of sellers) {
+          if (seller.email) {
+            await sendOrbiTalkDirectEmail({
+              recipient: seller.email,
+              subject: "Weekly Rising Stars Report",
+              body: `Hello ${seller.name},\n\nHere are your rising star products for the week:\n\n${reportText}\n\nKeep up the great work!`,
+              requestId: `rising-stars-${seller.email}-${now.getTime()}`
+            });
+          }
+        }
+      }
+
+      // Update record
+      const payload = {
+        title: 'SYSTEM_RISING_STARS_REPORT',
+        description: JSON.stringify({ lastSent: now.toISOString() }),
+        visible: false
+      };
+      
+      if (reportData && reportData.id) {
+        await supabase.from('promotions').update(payload).eq('id', reportData.id);
+      } else {
+        await supabase.from('promotions').insert([payload]);
+      }
+    }
+
+    res.json({ success: true, data: risingStars });
+  } catch (err: any) {
+    console.error("GET /api/analytics/rising-stars failed:", err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
