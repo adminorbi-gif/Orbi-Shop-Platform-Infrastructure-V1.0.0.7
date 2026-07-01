@@ -474,7 +474,6 @@ router.post("/", requireAuth, requireRole("admin", "staff"), async (req, res) =>
               );
             }
 
-            let notificationDispatchStatus = "";
             const results = await Promise.allSettled(dispatchTasks);
             console.log(`[ORBI-TALK] Dispatched ${results.length} notifications for order ${oId} status ${activeStatus}`);
             
@@ -553,7 +552,7 @@ router.post("/", requireAuth, requireRole("admin", "staff"), async (req, res) =>
                 customer_id: dbOrder.customer_id,
                 name: "SYSTEM ALERT",
                 phone: "SYSTEM",
-                message: `Order #${shortId} Status Update: Your order status changed from ${previousStatus} to ${order.status}.`,
+                message: `Order #${shortId} Status Update: Your order status changed from ${previousStatus} to ${activeStatus}.`,
                 is_read: false,
                 created_at: new Date().toISOString()
              }]));
@@ -566,7 +565,7 @@ router.post("/", requireAuth, requireRole("admin", "staff"), async (req, res) =>
                 customer_id: null,
                 name: "SYSTEM ALERT",
                 phone: "SYSTEM",
-                message: `Order Update #${shortId}: Order moved to ${order.status}.`,
+                message: `Order Update #${shortId}: Order moved to ${activeStatus}.`,
                 is_read: false,
                 created_at: new Date().toISOString()
              }]));

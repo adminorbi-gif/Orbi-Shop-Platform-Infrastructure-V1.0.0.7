@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { supabase, encrypt } from "../lib/supabase.js";
+import { supabase, encrypt, decrypt } from "../lib/supabase.js";
 import { callOrbiPayGateway, getPayServiceKey } from "../lib/orbiPayGateway.js";
 
 const router = Router();
@@ -195,6 +195,99 @@ function mapOrderStateFromGateway(outcome: ReturnType<typeof normalizeGatewayOut
     dbStatus: "pending",
     paymentReference: `ESCROW:${outcome.status.toUpperCase()}:${outcome.rawStatus}||${outcome.paymentIntentId || outcome.reference}`,
   };
+}
+
+function safePlain(value: any) {
+  if (!value || typeof value !== "string") return value || "";
+  try {
+    const decrypted = decrypt(value);
+    return decrypted || value;
+  } catch {
+    return value;
+  }
+}
+
+async function notifyCheckoutParticipants(input: {
+  successfulOrders: Array<{ oId: string; sellerId: string; sellerTotal: number; sellerItems: any[] }>;
+  customer: { name: string; phone: string; email?: string; lang?: "sw" | "en" };
+}) {
+  try {
+    const { sendOrbiTalkTemplate } = await import("./talk.js");
+    const customerLang = input.customer.lang === "en" ? "en" : "sw";
+
+    for (const orderData of input.successfulOrders) {
+      const orderPayload = {
+        customerName: input.customer.name,
+        orderId: orderData.oId,
+        currency: "TZS",
+        amount: String(orderData.sellerTotal),
+        refId: orderData.oId,
+      };
+
+      if (input.customer.phone) {
+        sendOrbiTalkTemplate({
+          templateName: "SHOP_ORDER_CREATED",
+          recipient: input.customer.phone.trim().replace(/\s+/g, ""),
+          channel: "sms",
+          language: customerLang,
+          requestId: `customer-order-created-sms-${orderData.oId}-${Date.now()}`,
+          data: orderPayload,
+        }).catch((err) => console.error("Error sending checkout customer SMS:", err));
+      }
+
+      if (input.customer.email && input.customer.email.includes("@")) {
+        sendOrbiTalkTemplate({
+          templateName: "SHOP_ORDER_CREATED",
+          recipient: input.customer.email.trim(),
+          channel: "email",
+          language: customerLang,
+          requestId: `customer-order-created-email-${orderData.oId}-${Date.now()}`,
+          data: orderPayload,
+        }).catch((err) => console.error("Error sending checkout customer email:", err));
+      }
+
+      if (orderData.sellerId && orderData.sellerId !== "system") {
+        const { data: sellerRow } = await supabase.from("sellers").select("*").eq("id", orderData.sellerId).maybeSingle();
+        if (sellerRow) {
+          const sellerName = sellerRow.name || sellerRow.invoice_company_name || "Merchant";
+          const sellerEmail = safePlain(sellerRow.email || sellerRow.invoice_email || "");
+          const sellerPhone = safePlain(sellerRow.phone || sellerRow.invoice_phone || "");
+          const sellerLang = sellerRow.preferred_language === "en" ? "en" : "sw";
+          const sellerPayload = {
+            sellerName,
+            orderId: orderData.oId,
+            currency: "TZS",
+            amount: String(orderData.sellerTotal),
+            refId: orderData.oId,
+          };
+
+          if (sellerPhone) {
+            sendOrbiTalkTemplate({
+              templateName: "SHOP_SELLER_NEW_ORDER",
+              recipient: sellerPhone.trim().replace(/\s+/g, ""),
+              channel: "sms",
+              language: sellerLang,
+              requestId: `seller-new-order-sms-${orderData.oId}-${Date.now()}`,
+              data: sellerPayload,
+            }).catch((err) => console.error("Error sending checkout seller SMS:", err));
+          }
+
+          if (sellerEmail && sellerEmail.includes("@")) {
+            sendOrbiTalkTemplate({
+              templateName: "SHOP_SELLER_NEW_ORDER",
+              recipient: sellerEmail.trim(),
+              channel: "email",
+              language: sellerLang,
+              requestId: `seller-new-order-email-${orderData.oId}-${Date.now()}`,
+              data: sellerPayload,
+            }).catch((err) => console.error("Error sending checkout seller email:", err));
+          }
+        }
+      }
+    }
+  } catch (err: any) {
+    console.error("[CHECKOUT NOTIFICATIONS] Failed to queue participant notifications:", err.message);
+  }
 }
 
 router.post("/", async (req, res) => {
@@ -396,22 +489,17 @@ router.post("/", async (req, res) => {
       successfulOrders.push({ oId, orderRowId: oRow.id, sellerId, sellerTotal, sellerItems });
     }
 
-    // Fire-and-forget notifications
+    // Fire-and-forget participant notifications after successful order persistence.
     setTimeout(async () => {
-      try {
-        const { sendOrbiTalkTemplate } = await import("./talk.js");
-        for (const orderData of successfulOrders) {
-           // Simplified notification logic
-           await sendOrbiTalkTemplate({
-             templateName: "SHOP_ORDER_CREATED",
-             recipient: phone,
-             channel: "sms",
-             language: "sw",
-             requestId: `customer-checkout-sms-${orderData.oId}`,
-             data: { customerName: name, orderId: orderData.oId, currency: "TZS", amount: String(orderData.sellerTotal) }
-           }).catch(() => {});
-        }
-      } catch (e) {}
+      await notifyCheckoutParticipants({
+        successfulOrders,
+        customer: {
+          name,
+          phone,
+          email: user?.email || "",
+          lang: lang === "en" ? "en" : "sw",
+        },
+      });
     }, 0);
 
     res.json({ 

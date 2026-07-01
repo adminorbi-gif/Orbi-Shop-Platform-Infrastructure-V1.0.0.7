@@ -225,6 +225,146 @@ async function findOrderForWebhook(orderId: string) {
   return byLegacyId.data || null;
 }
 
+function safeDecryptText(value: any) {
+  if (!value || typeof value !== "string") return value || "";
+  try {
+    const decrypted = decrypt(value);
+    return decrypted || value;
+  } catch {
+    return value;
+  }
+}
+
+async function getPrimarySellerForOrder(orderDbId: string) {
+  const { data: items } = await supabase
+    .from("order_items")
+    .select("product_id")
+    .eq("order_id", orderDbId)
+    .limit(1);
+
+  if (!items || items.length === 0) return null;
+
+  const { data: product } = await supabase
+    .from("products")
+    .select("seller_id")
+    .eq("id", items[0].product_id)
+    .maybeSingle();
+
+  if (!product?.seller_id || product.seller_id === "system") return null;
+
+  const { data: seller } = await supabase
+    .from("sellers")
+    .select("*")
+    .eq("id", product.seller_id)
+    .maybeSingle();
+
+  return seller || null;
+}
+
+async function notifyWebhookPaymentState(orderDbId: string, mapped: ReturnType<typeof mapGatewayStatusToOrderState>, reference: string) {
+  try {
+    const { data: order } = await supabase.from("orders").select("*").eq("id", orderDbId).maybeSingle();
+    if (!order) return;
+
+    const orderRef = order.legacy_id || order.id;
+    const customerName = safeDecryptText(order.customer_name) || "Customer";
+    const customerPhone = safeDecryptText(order.customer_phone);
+    const total = Number(order.total || 0);
+    let customerEmail = "";
+    let customerLang: "sw" | "en" = "sw";
+
+    if (order.customer_id) {
+      const { data: customer } = await supabase
+        .from("customers")
+        .select("email,preferred_language")
+        .eq("id", order.customer_id)
+        .maybeSingle();
+      customerEmail = customer?.email || "";
+      customerLang = customer?.preferred_language === "en" ? "en" : "sw";
+    }
+
+    const customerData = {
+      customerName,
+      orderId: orderRef,
+      currency: "TZS",
+      amount: String(total),
+      refId: reference || orderRef,
+    };
+
+    const customerTemplate =
+      mapped.paymentStatus === "held"
+        ? "SHOP_ESCROW_FUNDED"
+        : mapped.paymentStatus === "refunded"
+          ? "SHOP_REFUND_PROCESSED"
+          : mapped.paymentStatus === "disputed"
+            ? "SHOP_DISPUTE_OPENED"
+            : "";
+
+    if (customerTemplate && customerPhone) {
+      sendOrbiTalkTemplate({
+        templateName: customerTemplate,
+        recipient: customerPhone.trim().replace(/\s+/g, ""),
+        channel: "sms",
+        language: customerLang,
+        requestId: `webhook-${customerTemplate.toLowerCase()}-sms-${orderRef}-${Date.now()}`,
+        data: customerData,
+      }).catch((err) => console.error("Webhook customer SMS dispatch failed:", err));
+    }
+
+    if (customerTemplate && customerEmail.includes("@")) {
+      sendOrbiTalkTemplate({
+        templateName: customerTemplate,
+        recipient: customerEmail.trim(),
+        channel: "email",
+        language: customerLang,
+        requestId: `webhook-${customerTemplate.toLowerCase()}-email-${orderRef}-${Date.now()}`,
+        data: customerData,
+      }).catch((err) => console.error("Webhook customer email dispatch failed:", err));
+    }
+
+    if (mapped.paymentStatus === "held") {
+      const seller = await getPrimarySellerForOrder(order.id);
+      if (seller) {
+        const sellerName = seller.name || seller.invoice_company_name || "Merchant";
+        const sellerEmail = safeDecryptText(seller.email || seller.invoice_email || "");
+        const sellerPhone = safeDecryptText(seller.phone || seller.invoice_phone || "");
+        const sellerLang = seller.preferred_language === "en" ? "en" : "sw";
+        const sellerData = {
+          sellerName,
+          orderId: orderRef,
+          currency: "TZS",
+          amount: String(total),
+          refId: reference || orderRef,
+        };
+
+        if (sellerPhone) {
+          sendOrbiTalkTemplate({
+            templateName: "SHOP_SELLER_NEW_ORDER",
+            recipient: sellerPhone.trim().replace(/\s+/g, ""),
+            channel: "sms",
+            language: sellerLang,
+            requestId: `webhook-seller-new-order-sms-${orderRef}-${Date.now()}`,
+            data: sellerData,
+          }).catch((err) => console.error("Webhook seller SMS dispatch failed:", err));
+        }
+
+        if (sellerEmail.includes("@")) {
+          sendOrbiTalkTemplate({
+            templateName: "SHOP_SELLER_NEW_ORDER",
+            recipient: sellerEmail.trim(),
+            channel: "email",
+            language: sellerLang,
+            requestId: `webhook-seller-new-order-email-${orderRef}-${Date.now()}`,
+            data: sellerData,
+          }).catch((err) => console.error("Webhook seller email dispatch failed:", err));
+        }
+      }
+    }
+  } catch (err: any) {
+    console.error("[PAYMENTS WEBHOOK NOTIFY] Failed to queue payment notifications:", err.message);
+  }
+}
+
 async function handleOrbiPayWebhook(req: any, res: any) {
   try {
     verifyOrbiPayWebhook(req);
@@ -273,6 +413,14 @@ async function handleOrbiPayWebhook(req: any, res: any) {
       .maybeSingle();
 
     if (error) throw error;
+
+    if (updated) {
+      setTimeout(() => {
+        notifyWebhookPaymentState(updated.id, mapped, reference).catch((err) =>
+          console.error("[PAYMENTS WEBHOOK NOTIFY] Async dispatch failed:", err.message),
+        );
+      }, 0);
+    }
 
     return res.json({
       received: true,
