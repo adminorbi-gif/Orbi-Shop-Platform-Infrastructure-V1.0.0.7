@@ -249,6 +249,12 @@ import { AdsAdmin } from "../../components/admin/AdsAdmin";
 import { CampaignsAdmin } from "../../components/admin/CampaignsAdmin";
 import { PaymentLogsAdmin } from "../../components/admin/PaymentLogsAdmin";
 const SellerApp = lazyWithRetry(() => import("../SellerApp"));
+
+// Prefetch function to load the chunk in background
+const prefetchSellerApp = () => {
+  const p = import("../SellerApp");
+  p.catch(() => {}); // Ignore prefetch errors
+};
 import VisitorsAnalyticsView from "../../components/VisitorsAnalytics";
 import { ApplySellerModal } from "../../components/client/ClientSubcomponents";
 import { LoadingOverlay } from "../../components/LoadingOverlay";
@@ -687,6 +693,10 @@ import { CameraBarcodeScanner } from "../../components/CameraBarcodeScanner";
 import { ErrorBoundary } from "../../ErrorBoundary";
 
 export default function AdminApp() {
+  useEffect(() => {
+    prefetchSellerApp();
+  }, []);
+
   const {
     showAlert,
     isLogged,
@@ -1990,7 +2000,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         <div className="min-h-screen w-full bg-slate-50 flex items-center justify-center p-4 md:p-8 overflow-y-auto">
           <div className="max-w-2xl w-full bg-white rounded-[2rem] shadow-2xl border border-slate-150 overflow-hidden animate-in fade-in duration-200">
             {/* Header banner */}
-            <div className="bg-gradient-to-r from-emerald-600 to-teal-700 p-8 text-white relative">
+            <div className="bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 p-8 text-white relative">
               <div className="absolute right-6 top-6 opacity-10">
                 <ShieldCheck size={120} />
               </div>
@@ -2009,7 +2019,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   ? "Uhakiki wa Taarifa za Biashara"
                   : "Merchant Business Verification"}
               </h2>
-              <p className="text-emerald-100 text-xs mt-1.5 max-w-lg leading-relaxed font-bold">
+              <p className="text-orange-100 text-xs mt-1.5 max-w-lg leading-relaxed font-bold">
                 {lang === "sw"
                   ? "Kulingana na sera ya usalama ya Orbi, wauzaji wote wanapaswa kuhakiki taarifa zao za biashara kabla ya kufikia dashibodi ya duka lao."
                   : "To fulfill Orbi trust and compliance standards, please complete your merchant profile with verified contact details, business location, and tax registers."}
@@ -2027,7 +2037,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 <span
                   className={
                     completionScore === 100
-                      ? "text-emerald-600"
+                      ? "text-orange-600"
                       : "text-amber-500"
                   }
                 >
@@ -2041,7 +2051,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               </div>
               <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-300"
+                  className="h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-300"
                   style={{ width: `${completionScore}%` }}
                 />
               </div>
@@ -2065,7 +2075,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       type="text"
                       value={verifyFullName}
                       onChange={(e) => setVerifyFullName(e.target.value)}
-                      className="w-full border border-slate-200 focus:border-emerald-500 p-3.5 pl-10 rounded-xl outline-none font-medium text-sm transition bg-slate-50/50"
+                      className="w-full border border-slate-200 focus:border-orange-500 p-3.5 pl-10 rounded-xl outline-none font-medium text-sm transition bg-slate-50/50"
                       placeholder="e.g. Salim Said Hamad"
                     />
                     <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
@@ -2087,7 +2097,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       type="text"
                       value={verifyBusinessName}
                       onChange={(e) => setVerifyBusinessName(e.target.value)}
-                      className="w-full border border-slate-200 focus:border-emerald-500 p-3.5 pl-10 rounded-xl outline-none font-medium text-sm transition bg-slate-50/50"
+                      className="w-full border border-slate-200 focus:border-orange-500 p-3.5 pl-10 rounded-xl outline-none font-medium text-sm transition bg-slate-50/50"
                       placeholder="e.g. Kariakoo Electronics"
                     />
                     <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
@@ -2109,7 +2119,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       type="text"
                       value={verifyLocation}
                       onChange={(e) => setVerifyLocation(e.target.value)}
-                      className="w-full border border-slate-200 focus:border-emerald-500 p-3.5 pl-10 rounded-xl outline-none font-medium text-sm transition bg-slate-50/50"
+                      className="w-full border border-slate-200 focus:border-orange-500 p-3.5 pl-10 rounded-xl outline-none font-medium text-sm transition bg-slate-50/50"
                       placeholder="e.g. Mtaa wa Msimbazi, Dar es Salaam"
                     />
                     <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
@@ -2133,7 +2143,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       maxLength={11}
                       value={verifyTin}
                       onChange={(e) => setVerifyTin(e.target.value)}
-                      className="w-full border border-slate-200 focus:border-emerald-500 p-3.5 pl-10 rounded-xl outline-none font-mono text-sm transition bg-slate-50/50"
+                      className="w-full border border-slate-200 focus:border-orange-500 p-3.5 pl-10 rounded-xl outline-none font-mono text-sm transition bg-slate-50/50"
                       placeholder="e.g. 123456789"
                     />
                     <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
@@ -2148,7 +2158,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 <div className="flex items-start justify-between flex-row">
                   <div>
                     <h4 className="text-sm font-black text-slate-800 flex items-center gap-2">
-                      <Smartphone size={18} className="text-emerald-600" />
+                      <Smartphone size={18} className="text-orange-500" />
                       {lang === "sw"
                         ? "Uhakiki wa Nambari ya Simu"
                         : "Phone Verification Engine"}
@@ -2160,7 +2170,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     </p>
                   </div>
                   {phoneVerified && (
-                    <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
+                    <span className="bg-orange-100 text-orange-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
                       <Check size={12} strokeWidth={3} />
                       {lang === "sw" ? "Imethibitishwa" : "Verified"}
                     </span>
@@ -2174,7 +2184,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       type="tel"
                       value={verifyPhone}
                       onChange={(e) => setVerifyPhone(e.target.value)}
-                      className="w-full border border-slate-200 focus:border-emerald-500 p-3.5 pl-10 rounded-xl outline-none font-bold text-sm bg-white disabled:bg-slate-100 disabled:text-slate-500"
+                      className="w-full border border-slate-200 focus:border-orange-500 p-3.5 pl-10 rounded-xl outline-none font-bold text-sm bg-white disabled:bg-slate-100 disabled:text-slate-500"
                       placeholder="e.g. +255 712 345 678"
                     />
                     <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
@@ -2213,7 +2223,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                           ? "Weka Msimbo wa OTP"
                           : "Enter Verification OTP"}
                       </label>
-                      <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 animate-pulse">
+                      <span className="text-[10px] text-orange-600 font-bold bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 animate-pulse">
                         {lang === "sw" ? "Msimbo umetumwa" : "OTP simulated!"}
                       </span>
                     </div>
@@ -2223,13 +2233,13 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         maxLength={6}
                         value={enteredOtp}
                         onChange={(e) => setEnteredOtp(e.target.value)}
-                        className="flex-1 border border-slate-250 focus:border-emerald-500 p-3 rounded-xl outline-none font-mono text-center tracking-[0.25em] text-lg font-bold bg-slate-50"
+                        className="flex-1 border border-slate-250 focus:border-orange-500 p-3 rounded-xl outline-none font-mono text-center tracking-[0.25em] text-lg font-bold bg-slate-50"
                         placeholder="••••"
                       />
                       <button
                         type="button"
                         onClick={handleVerifyEnteredOtp}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-6 rounded-xl transition text-xs uppercase cursor-pointer"
+                        className="bg-orange-600 hover:bg-orange-700 text-white font-black px-6 rounded-xl transition text-xs uppercase cursor-pointer"
                       >
                         {lang === "sw" ? "Thibitisha" : "Confirm Code"}
                       </button>
@@ -2250,7 +2260,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 <button
                   type="submit"
                   disabled={savingVerification}
-                  className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black py-4 rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-[0.98] disabled:opacity-50 text-xs uppercase tracking-wider cursor-pointer font-bold"
+                  className="flex-1 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-700 hover:to-amber-600 text-white font-black py-4 rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-[0.98] disabled:opacity-50 text-xs uppercase tracking-wider cursor-pointer font-bold"
                 >
                   {savingVerification
                     ? lang === "sw"

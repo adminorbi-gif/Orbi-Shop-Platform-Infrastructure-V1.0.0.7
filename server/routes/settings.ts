@@ -491,29 +491,56 @@ router.post("/staff", async (req, res) => {
 // 4. SELLERS
 router.get("/sellers", async (req, res) => {
   try {
+    let backupSellers: any[] = [];
+    try {
+      const { data: bData } = await getSupabase(req).from('promotions').select('description').eq('title', 'SYSTEM_SELLERS').maybeSingle();
+      if (bData && bData.description) {
+        try {
+          const parsed = JSON.parse(bData.description);
+          if (Array.isArray(parsed)) {
+            backupSellers = parsed;
+          }
+        } catch (pe) {}
+      }
+    } catch (be) {
+      console.warn("Failed to load SYSTEM_SELLERS backup for enrichment:", be);
+    }
+
     try {
       const { data, error } = await getSupabase(req).from('sellers').select('*').order('name', { ascending: true });
       if (!error && data && data.length > 0) {
         const decryptedData = decryptObject(data);
-        const mapped = decryptedData.map((s: any) => ({
-          id: s.id,
-          name: s.name,
-          description: s.description || "",
-          avatar: s.avatar || undefined,
-          banner: s.banner || undefined,
-          isPro: s.is_pro || false,
-          proUntil: s.pro_until ? new Date(s.pro_until).getTime() : undefined,
-          email: s.email || undefined,
-          activePlanId: s.active_plan_id || undefined,
-          subscriptionPaidAt: s.subscription_paid_at ? new Date(s.subscription_paid_at).getTime() : undefined,
-          status: s.status || "active",
-          deleteRequested: s.delete_requested || false,
-          invoiceCompanyName: s.invoice_company_name || undefined,
-          invoiceAddress: s.invoice_address || undefined,
-          invoicePhone: s.invoice_phone || undefined,
-          invoiceEmail: s.invoice_email || undefined,
-          invoiceTerms: s.invoice_terms || undefined
-        }));
+        const mapped = decryptedData.map((s: any) => {
+          const bSeller = backupSellers.find((b: any) => b.id === s.id);
+          return {
+            id: s.id,
+            name: s.name,
+            description: s.description || "",
+            avatar: s.avatar || undefined,
+            banner: s.banner || undefined,
+            isPro: s.is_pro || false,
+            proUntil: s.pro_until ? new Date(s.pro_until).getTime() : undefined,
+            email: s.email || undefined,
+            activePlanId: s.active_plan_id || undefined,
+            subscriptionPaidAt: s.subscription_paid_at ? new Date(s.subscription_paid_at).getTime() : undefined,
+            status: s.status || "active",
+            deleteRequested: s.delete_requested || false,
+            invoiceCompanyName: s.invoice_company_name || undefined,
+            invoiceAddress: s.invoice_address || undefined,
+            invoicePhone: s.invoice_phone || undefined,
+            invoiceEmail: s.invoice_email || undefined,
+            invoiceTerms: s.invoice_terms || undefined,
+            // Rich verification attributes merged from JSON backup
+            isVerifiedSeller: bSeller ? bSeller.isVerifiedSeller || false : false,
+            fullName: bSeller ? bSeller.fullName || "" : "",
+            phone: bSeller ? bSeller.phone || "" : "",
+            location: bSeller ? bSeller.location || "" : "",
+            tin: bSeller ? bSeller.tin || "" : "",
+            isApproved: bSeller ? bSeller.isApproved !== false : true,
+            mustChangePassword: bSeller ? bSeller.mustChangePassword || false : false,
+            password: bSeller ? bSeller.password || "" : ""
+          };
+        });
         return res.json({ success: true, data: mapped });
       }
     } catch (e) {}

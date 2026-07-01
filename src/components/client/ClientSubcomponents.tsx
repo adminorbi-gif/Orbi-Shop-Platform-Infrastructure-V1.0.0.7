@@ -101,6 +101,12 @@ export function ApplySellerModal({
   lang: any;
   onClose: () => void;
 }) {
+  useEffect(() => {
+    // Prefetch the SellerApp chunk so it's ready if they navigate after applying
+    const p = import("../../pages/SellerApp");
+    p.catch(() => {});
+  }, []);
+
   const [loading, setLoading] = useState(false);
   const { showAlert } = useDialog();
 
