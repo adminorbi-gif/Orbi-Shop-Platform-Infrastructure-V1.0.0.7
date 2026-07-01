@@ -7036,6 +7036,7 @@ export function PromosAdmin({
   setPromos: any;
   products?: Product[];
 }) {
+  const { lang } = useI18n();
   const { showAlert, showConfirm } = useDialog();
   const [showModal, setShowModal] = useState(false);
   const [title, setTitle] = useState("");
@@ -7049,6 +7050,7 @@ export function PromosAdmin({
   const [visible, setVisible] = useState(true);
   const [editId, setEditId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState<
     { id: string; name: string; progress: number }[]
   >([]);
@@ -7327,67 +7329,86 @@ export function PromosAdmin({
       return;
     }
 
-    // Ensure we have a valid cover
-    const validCoverIndex = coverIndex < allImages.length ? coverIndex : 0;
-    const image = allImages[validCoverIndex];
-    const images = allImages.filter((_, i) => i !== validCoverIndex);
+    try {
+      setIsSaving(true);
 
-    const actualTitle = promoType === "hero" ? `[HERO] ${title}` : title;
+      // Ensure we have a valid cover
+      const validCoverIndex = coverIndex < allImages.length ? coverIndex : 0;
+      const image = allImages[validCoverIndex];
+      const images = allImages.filter((_, i) => i !== validCoverIndex);
 
-    let finalLink = link;
-    if (linkType === "product" && linkProduct) {
-      finalLink = `/#/products?product=${linkProduct}`;
-    }
+      const actualTitle = promoType === "hero" ? `[HERO] ${title}` : title;
 
-    const p: Promotion = {
-      id: editId || "PRM-" + Date.now(),
-      title: actualTitle,
-      description: desc,
-      link: finalLink,
-      image,
-      images,
-      visible,
-      createdAt: editId
-        ? promos.find((x) => x.id === editId)?.createdAt || Date.now()
-        : Date.now(),
-      cardBgColor: cardBgColor || undefined,
-      cardBgGradient: cardBgGradient || undefined,
-      cardTextColor: cardTextColor || undefined,
-      cardButtonBg: cardButtonBg || undefined,
-      cardButtonText: cardButtonText || undefined,
-      cardOverlayOpacity:
-        cardOverlayOpacity !== undefined ? cardOverlayOpacity / 100 : undefined,
-      badgeText: badgeText || undefined,
-    };
+      let finalLink = link;
+      if (linkType === "product" && linkProduct) {
+        finalLink = `/#/products?product=${linkProduct}`;
+      }
 
-    // Clean up edited promo images that are replaced/deleted
-    if (editId) {
-      const oldPromo = promos.find((x) => x.id === editId);
-      if (oldPromo) {
-        const oldPromoImages = [
-          oldPromo.image,
-          ...(oldPromo.images || []),
-        ].filter(Boolean);
-        const newPromoImages = [p.image, ...(p.images || [])].filter(Boolean);
-        const removedPromoImages = oldPromoImages.filter(
-          (img) => !newPromoImages.includes(img),
-        );
-        for (const imgUrl of removedPromoImages) {
-          const storagePath = getStoragePath(imgUrl);
-          if (storagePath) {
-            await deleteFileFromSupabase(storagePath);
+      const p: Promotion = {
+        id: editId || "PRM-" + Date.now(),
+        title: actualTitle,
+        description: desc,
+        link: finalLink,
+        image,
+        images,
+        visible,
+        createdAt: editId
+          ? promos.find((x) => x.id === editId)?.createdAt || Date.now()
+          : Date.now(),
+        cardBgColor: cardBgColor || undefined,
+        cardBgGradient: cardBgGradient || undefined,
+        cardTextColor: cardTextColor || undefined,
+        cardButtonBg: cardButtonBg || undefined,
+        cardButtonText: cardButtonText || undefined,
+        cardOverlayOpacity:
+          cardOverlayOpacity !== undefined ? cardOverlayOpacity / 100 : undefined,
+        badgeText: badgeText || undefined,
+      };
+
+      // Clean up edited promo images that are replaced/deleted
+      if (editId) {
+        const oldPromo = promos.find((x) => x.id === editId);
+        if (oldPromo) {
+          const oldPromoImages = [
+            oldPromo.image,
+            ...(oldPromo.images || []),
+          ].filter(Boolean);
+          const newPromoImages = [p.image, ...(p.images || [])].filter(Boolean);
+          const removedPromoImages = oldPromoImages.filter(
+            (img) => !newPromoImages.includes(img),
+          );
+          for (const imgUrl of removedPromoImages) {
+            const storagePath = getStoragePath(imgUrl);
+            if (storagePath) {
+              await deleteFileFromSupabase(storagePath);
+            }
           }
         }
       }
+
+      let updated = promos;
+      if (editId) updated = promos.map((x) => (x.id === editId ? p : x));
+      else updated = [p, ...promos];
+
+      setPromos(updated);
+      await db.savePromo(p);
+      setShowModal(false);
+      showAlert(
+        lang === "sw"
+          ? "Mabadiliko ya bango yamehifadhiwa kikamilifu!"
+          : "Promo changes saved successfully!",
+        "success"
+      );
+    } catch (error: any) {
+      showAlert(
+        lang === "sw"
+          ? "Imeshindwa kuhifadhi mabadiliko: " + error.message
+          : "Failed to save changes: " + error.message,
+        "error"
+      );
+    } finally {
+      setIsSaving(false);
     }
-
-    let updated = promos;
-    if (editId) updated = promos.map((x) => (x.id === editId ? p : x));
-    else updated = [p, ...promos];
-
-    setPromos(updated);
-    await db.savePromo(p);
-    setShowModal(false);
   };
 
   const deletePromo = async (id: string) => {
@@ -8210,17 +8231,27 @@ export function PromosAdmin({
             <div className="flex gap-3 border-t pt-4 border-slate-100 mt-auto">
               <button
                 type="button"
+                disabled={isSaving}
                 onClick={() => setShowModal(false)}
-                className="flex-1 bg-slate-100 py-3 rounded-xl font-bold text-slate-700 hover:bg-slate-200 transition"
+                className="flex-1 bg-slate-100 py-3 rounded-xl font-bold text-slate-700 hover:bg-slate-200 transition disabled:opacity-50"
               >
                 Ghairi
               </button>
               <button
                 type="submit"
-                disabled={isUploading}
-                className="flex-1 bg-primary text-white py-3 rounded-xl font-bold disabled:opacity-50 hover:bg-primary-dark shadow-md hover:scale-[1.01] transition"
+                disabled={isUploading || isSaving}
+                className="flex-1 bg-primary text-white py-3 rounded-xl font-bold disabled:opacity-50 hover:bg-primary-dark shadow-md hover:scale-[1.01] transition flex items-center justify-center gap-2"
               >
-                {isUploading ? "Inajaza Picha..." : "Hifadhi Mabadiliko"}
+                {isSaving ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    {lang === "sw" ? "Inahifadhi..." : "Saving..."}
+                  </>
+                ) : isUploading ? (
+                  lang === "sw" ? "Inajaza Picha..." : "Uploading images..."
+                ) : (
+                  lang === "sw" ? "Hifadhi Mabadiliko" : "Save Changes"
+                )}
               </button>
             </div>
           </form>
