@@ -686,14 +686,14 @@ export default function ClientApp() {
       </div>
 
       <div
-        className={`min-h-screen flex flex-col font-sans bg-slate-50 ${viewInvoice ? "print:hidden" : ""}`}
+        className={`orbi-commerce-shell min-h-screen flex flex-col font-sans bg-slate-50 ${viewInvoice ? "print:hidden" : ""}`}
       >
         {/* Header */}
         <header
           style={{
             backgroundColor: globalSettings?.appBarColor || undefined,
           }}
-          className="bg-slate-900 shrink-0 shadow-md sticky top-0 z-[120] transition-all relative"
+          className="orbi-commerce-header bg-slate-950 shrink-0 sticky top-0 z-[120] transition-all relative"
         >
           <AppBarBackgroundSlider settings={globalSettings} />
           <div className="h-[60px] flex items-center justify-between px-4 sm:px-6 lg:px-8 relative z-10">
@@ -723,7 +723,7 @@ export default function ClientApp() {
                     setTimeout(() => setShowSuggestions(false), 200)
                   }
                   onFocus={() => setShowSuggestions(true)}
-                  className="w-full bg-slate-800/80 text-slate-100 placeholder-slate-450 rounded-full py-2 px-5 pl-10 pr-12 outline-none border border-slate-700/80 focus:border-amber-500 focus:bg-white focus:text-slate-800 focus:placeholder-slate-400 focus:ring-4 focus:ring-amber-500/10 transition-all backdrop-blur-sm font-medium shadow-inner"
+                  className="orbi-search-field w-full bg-slate-800/80 text-slate-100 placeholder-slate-450 rounded-full py-2 px-5 pl-10 pr-12 outline-none border border-slate-700/80 focus:border-amber-500 focus:bg-white focus:text-slate-800 focus:placeholder-slate-400 focus:ring-4 focus:ring-amber-500/10 transition-all backdrop-blur-sm font-medium shadow-inner"
                 />
                 <Search
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-amber-500 transition-colors"
@@ -1074,7 +1074,7 @@ export default function ClientApp() {
                 }}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                 onFocus={() => setShowSuggestions(true)}
-                className="w-full bg-white/10 text-white placeholder-orange-100 rounded-full py-2 px-5 pl-10 pr-12 outline-none border border-white/20 focus:border-white focus:bg-white focus:text-slate-800 focus:placeholder-slate-400 focus:ring-4 focus:ring-white/30 transition-all text-sm backdrop-blur-sm shadow-inner"
+                className="orbi-search-field w-full bg-white/10 text-white placeholder-orange-100 rounded-full py-2 px-5 pl-10 pr-12 outline-none border border-white/20 focus:border-white focus:bg-white focus:text-slate-800 focus:placeholder-slate-400 focus:ring-4 focus:ring-white/30 transition-all text-sm backdrop-blur-sm shadow-inner"
               />
               <Search
                 className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-200 group-focus-within:text-orange-500 transition-colors"
@@ -1113,7 +1113,7 @@ export default function ClientApp() {
 
           {/* Quick Niche Sub Menu Horizontal Scroll */}
           <div
-            className="relative z-0 w-full bg-white text-slate-800"
+            className="orbi-nav-strip relative z-0 w-full bg-white/95 backdrop-blur-xl text-slate-800"
             onMouseLeave={() => {
               setHoveredNiche(null);
               setHoveredCategory(null);
@@ -1300,7 +1300,7 @@ export default function ClientApp() {
             </div>
           </main>
         ) : (
-          <main className="flex-1 w-full bg-slate-50 pb-12 overflow-hidden flex flex-col pt-0 md:pt-4">
+          <main className="orbi-market-main flex-1 w-full bg-slate-50 pb-12 overflow-hidden flex flex-col pt-0 md:pt-4">
             <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8">
               {!viewSeller ? (
                 <>
@@ -1329,7 +1329,7 @@ export default function ClientApp() {
 
                 </>
               ) : (
-                <div className="mb-10 bg-white rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 shadow-sm border border-slate-200">
+                  <div className="orbi-section-card mb-10 bg-white rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 shadow-sm border border-slate-200">
                   <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden shrink-0 border-4 border-slate-50 shadow-md">
                     {viewSeller.avatar ? (
                       <img
@@ -3014,7 +3014,7 @@ export default function ClientApp() {
         {/* Cart Sidebar */}
         {showCart && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99999] flex justify-end">
-            <div className="w-full max-w-md bg-white h-full flex flex-col shadow-2xl animate-in slide-in-from-right duration-300">
+            <div className="orbi-cart-panel w-full max-w-md bg-white h-full flex flex-col shadow-2xl animate-in slide-in-from-right duration-300">
               <div className="relative overflow-hidden p-6 border-b border-slate-800 flex justify-between items-start bg-slate-950 sticky top-0 z-10 text-white">
                 <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-500/20 blur-2xl" />
                 <div className="relative z-10">
@@ -3156,7 +3156,7 @@ export default function ClientApp() {
                         setShowCheckout(true);
                       }
                     }}
-                    className="w-full bg-slate-950 text-white py-4 rounded-2xl font-black hover:bg-[#ff4c00] shadow-xl shadow-slate-900/20 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 text-lg cursor-pointer"
+                    className="orbi-primary-button w-full bg-slate-950 text-white py-4 rounded-2xl font-black hover:bg-[#ff4c00] shadow-xl shadow-slate-900/20 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 text-lg cursor-pointer"
                   >
                     <ShieldCheck size={20} /> {t(lang, "cart.checkout")}
                   </button>
@@ -3589,11 +3589,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
   return (
     <>
       <div
-        className="flex flex-col group transition-all duration-300 hover:-translate-y-1 cursor-pointer h-full bg-white rounded-2xl sm:rounded-[1.6rem] shadow-sm hover:shadow-2xl hover:shadow-slate-900/10 border border-slate-200/70 hover:border-slate-300 p-1.5 sm:p-2 ring-1 ring-transparent hover:ring-orange-500/10"
+        className="orbi-product-card flex flex-col group transition-all duration-300 hover:-translate-y-1 cursor-pointer h-full bg-white rounded-2xl sm:rounded-[1.6rem] shadow-sm hover:shadow-2xl hover:shadow-slate-900/10 border border-slate-200/70 hover:border-slate-300 p-1.5 sm:p-2 ring-1 ring-transparent hover:ring-orange-500/10"
         onClick={() => onSelect(p)}
       >
         <div
-          className="relative aspect-square bg-gradient-to-br from-slate-100 via-white to-slate-100 rounded-xl sm:rounded-[1.2rem] overflow-hidden mb-2 sm:mb-2.5 cursor-pointer"
+          className="orbi-product-media relative aspect-square bg-gradient-to-br from-slate-100 via-white to-slate-100 rounded-xl sm:rounded-[1.2rem] overflow-hidden mb-2 sm:mb-2.5 cursor-pointer"
           onClick={(e) => {
             e.stopPropagation();
             if (onInteract) onInteract();
@@ -3780,7 +3780,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     e.stopPropagation();
                     onAdd(true);
                   }}
-                  className="flex-1 min-w-0 bg-slate-950 hover:bg-[#ff4c00] text-white text-[10px] sm:text-[11px] font-black py-1.5 sm:py-2 px-0.5 sm:px-1 rounded-xl transition-colors flex items-center justify-center gap-0.5 cursor-pointer shadow-lg shadow-slate-900/10"
+                  className="orbi-primary-button flex-1 min-w-0 bg-slate-950 hover:bg-[#ff4c00] text-white text-[10px] sm:text-[11px] font-black py-1.5 sm:py-2 px-0.5 sm:px-1 rounded-xl transition-colors flex items-center justify-center gap-0.5 cursor-pointer shadow-lg shadow-slate-900/10"
                   title={lang === "sw" ? "Nunua Sasa" : "Buy Now"}
                 >
                   <Zap
