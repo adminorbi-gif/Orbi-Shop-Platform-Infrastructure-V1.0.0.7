@@ -13,6 +13,7 @@ import React, {
   Suspense,
   lazy,
 } from "react";
+import { lazyWithRetry } from "../../utils/lazyWithRetry";
 import { motion } from "motion/react";
 import { supabase } from "../../lib/supabase";
 import { formatCurrency } from "../../lib/storage";
@@ -247,7 +248,7 @@ import { StaffAdmin } from "../../components/admin/StaffAdmin";
 import { AdsAdmin } from "../../components/admin/AdsAdmin";
 import { CampaignsAdmin } from "../../components/admin/CampaignsAdmin";
 import { PaymentLogsAdmin } from "../../components/admin/PaymentLogsAdmin";
-const SellerApp = lazy(() => import("../SellerApp"));
+const SellerApp = lazyWithRetry(() => import("../SellerApp"));
 import VisitorsAnalyticsView from "../../components/VisitorsAnalytics";
 import { ApplySellerModal } from "../../components/client/ClientSubcomponents";
 import { LoadingOverlay } from "../../components/LoadingOverlay";

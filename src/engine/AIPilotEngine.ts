@@ -84,7 +84,17 @@ export class AIPilotEngine {
       execute: async () => {
         console.log("[AI Pilot] Inakagua oda zilizochelewa (Peding > 24h)...");
         try {
-          const { db } = await import("../lib/db");
+          let dbModule;
+          try {
+            dbModule = await import("../lib/db");
+          } catch (e: any) {
+             if (e.message?.includes('Failed to fetch dynamically imported module') || e.message?.includes('Importing a module script failed')) {
+               window.location.reload();
+               return;
+             }
+             throw e;
+          }
+          const { db } = dbModule;
           
           let settings;
           try {

@@ -1,5 +1,6 @@
 import { useClientApp } from "./useClientApp";
 import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from "react";
+import { lazyWithRetry } from "../../utils/lazyWithRetry";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "../../lib/supabase";
 import { db } from "../../lib/db";
@@ -228,13 +229,13 @@ import {
   ApplySellerModal,
 } from "../../components/client/ClientSubcomponents";
 import { useDialog } from "../../components/CustomDialogContext";
-const ProductDetailPage = lazy(() => import("../ProductDetailPage"));
+const ProductDetailPage = lazyWithRetry(() => import("../ProductDetailPage"));
 import { AppBarBackgroundSlider } from "../../components/AppBarBackgroundSlider";
-const TrackOrderModal = lazy(() => import("../../components/TrackOrderModal"));
-const ReviewModal = lazy(() => import("../../components/ReviewModal"));
+const TrackOrderModal = lazyWithRetry(() => import("../../components/TrackOrderModal"));
+const ReviewModal = lazyWithRetry(() => import("../../components/ReviewModal"));
 import ScratchCardChallenge from "../../components/ScratchCardChallenge";
 import CookieConsent from "../../components/CookieConsent";
-const AboutUsPage = lazy(() => import("../AboutUsPage"));
+const AboutUsPage = lazyWithRetry(() => import("../AboutUsPage"));
 import { LoadingOverlay } from "../../components/LoadingOverlay";
 import { motion, AnimatePresence } from "motion/react";
 

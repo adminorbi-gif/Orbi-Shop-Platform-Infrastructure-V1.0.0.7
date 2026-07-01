@@ -1,10 +1,11 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { ToastProvider } from './components/Toast';
+import { lazyWithRetry } from './utils/lazyWithRetry';
 
-const ClientApp = lazy(() => import('./pages/ClientApp'));
-const AdminApp = lazy(() => import('./pages/AdminApp'));
+const ClientApp = lazyWithRetry(() => import('./pages/ClientApp'));
+const AdminApp = lazyWithRetry(() => import('./pages/AdminApp'));
 
 function ProtectedRoute({ children, fallbackPath }: { children: React.ReactNode, fallbackPath: string }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
