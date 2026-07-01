@@ -890,6 +890,38 @@ export function SellersAdmin({
     }
   };
 
+  const handleToggleSellerStatus = async (seller: SellerProfile) => {
+    if (
+      currentStaff?.role !== "super_admin" &&
+      currentStaff?.role !== "human_resources"
+    )
+      return;
+
+    const newStatus = seller.status === "frozen" ? "active" : "frozen";
+    if (!confirm(`Change seller ${seller.name} to ${newStatus}?`)) return;
+    const updated = sellers.map((s) =>
+      s.id === seller.id ? { ...s, status: newStatus as "active" | "frozen" } : s,
+    );
+    setSellers(updated);
+    await db.saveSellers(updated);
+    showAlert(`Seller status changed to ${newStatus}.`, "success");
+  };
+
+  const handleApproveExistingSeller = async (seller: SellerProfile) => {
+    if (
+      currentStaff?.role !== "super_admin" &&
+      currentStaff?.role !== "human_resources"
+    )
+      return;
+
+    const updated = sellers.map((s) =>
+      s.id === seller.id ? { ...s, isApproved: true, status: "active" as const } : s,
+    );
+    setSellers(updated);
+    await db.saveSellers(updated);
+    showAlert("Seller approved and activated.", "success");
+  };
+
   const handleOpenPlan = (p?: SubscriptionPlan) => {
     if (p) {
       setEditPlanId(p.id);
@@ -1000,6 +1032,26 @@ export function SellersAdmin({
           products={products}
           orders={orders}
           onBack={() => setSelectedSellerId(null)}
+          onEdit={() => {
+            const selected = sellers.find(s => s.id === selectedSellerId);
+            if (selected) handleOpen(selected);
+          }}
+          onToggleStatus={() => {
+            const selected = sellers.find(s => s.id === selectedSellerId);
+            if (selected) handleToggleSellerStatus(selected);
+          }}
+          onApprove={() => {
+            const selected = sellers.find(s => s.id === selectedSellerId);
+            if (selected) handleApproveExistingSeller(selected);
+          }}
+          onDelete={async () => {
+            const selected = sellers.find(s => s.id === selectedSellerId);
+            if (!selected) return;
+            await handleRemove(selected.id, selected.name);
+            if (currentStaff?.role === "super_admin") setSelectedSellerId(null);
+          }}
+          canAdministrate={currentStaff?.role === "super_admin" || currentStaff?.role === "human_resources"}
+          currentStaffRole={currentStaff?.role}
         />
       )}
 
@@ -1117,7 +1169,7 @@ export function SellersAdmin({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-3">
             {sellers.map((s: SellerProfile) => {
               const isCurrentlyPro =
                 s.isPro && s.proUntil && s.proUntil > Date.now();
@@ -1131,45 +1183,30 @@ export function SellersAdmin({
                 <div
                   key={s.id}
                   onClick={() => setSelectedSellerId(s.id)}
-                  className="cursor-pointer bg-white/70 backdrop-blur-xl rounded-3xl border border-slate-200/60 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)] p-5 md:p-6 flex flex-col relative hover:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.12)] hover:border-slate-300 hover:-translate-y-1 transition-all duration-300 group overflow-hidden"
+                  className="cursor-pointer bg-white rounded-2xl border border-slate-200/80 shadow-sm p-3 flex flex-col sm:flex-row sm:items-center gap-3 relative hover:shadow-md hover:border-slate-300 transition-all duration-200 group overflow-hidden"
                 >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none transition-opacity group-hover:opacity-100 opacity-50"></div>
-                  
-                  <div className="flex items-start gap-4 mb-4 relative z-10">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-100 to-white border border-slate-200 text-slate-600 flex items-center justify-center font-bold text-lg shadow-sm shrink-0 group-hover:from-primary group-hover:to-primary group-hover:text-white transition-all duration-300">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-slate-100 to-white border border-slate-200 text-slate-600 flex items-center justify-center font-black text-sm shadow-sm shrink-0 group-hover:from-primary group-hover:to-primary group-hover:text-white transition-all duration-300">
                       {s.name.charAt(0).toUpperCase()}
                     </div>
-                    <div className="flex flex-col min-w-0 pt-1">
-                      <h3 className="font-extrabold text-slate-900 text-sm md:text-base truncate">
-                        {s.name}
+                    <div className="flex flex-col min-w-0">
+                      <h3 className="font-extrabold text-slate-900 text-sm truncate">
+                        {s.storeName || s.name}
                       </h3>
-                      {s.email && (
-                        <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
-                          {s.email}
-                        </p>
-                      )}
+                      <p className="text-[11px] text-slate-500 font-medium truncate">
+                        {s.email || s.phone || "No contact"} • {s.businessType || "Seller"}
+                      </p>
                     </div>
                   </div>
 
-                  {isCurrentlyPro && (
-                    <div className="absolute top-5 right-5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[9px] font-black px-2.5 py-1 rounded-lg shadow-sm z-10 flex items-center gap-1">
-                      <Shield size={10} />
-                      {matchedPlan ? matchedPlan.name.toUpperCase() : "PRO"} (
-                      {Math.ceil(
-                        ((s.proUntil || 0) - Date.now()) /
-                          (1000 * 60 * 60 * 24),
-                      )}d)
-                    </div>
-                  )}
-
-                  <div className="flex flex-wrap gap-2 mb-4 relative z-10">
+                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                     <span
-                      className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${s.status === "frozen" ? "bg-red-50 text-red-600 border border-red-100" : "bg-emerald-50 text-emerald-600 border border-emerald-100"}`}
+                      className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${s.status === "frozen" ? "bg-red-50 text-red-600 border border-red-100" : "bg-emerald-50 text-emerald-600 border border-emerald-100"}`}
                     >
                       {s.status === "frozen" ? "Frozen" : "Active"}
                     </span>
                     <span
-                      className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${s.isApproved === false ? "bg-amber-50 text-amber-700 animate-pulse border border-amber-100" : "bg-teal-50 text-teal-700 border border-teal-100"}`}
+                      className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${s.isApproved === false ? "bg-amber-50 text-amber-700 animate-pulse border border-amber-100" : "bg-teal-50 text-teal-700 border border-teal-100"}`}
                     >
                       {s.isApproved === false
                         ? lang === "sw"
@@ -1180,59 +1217,85 @@ export function SellersAdmin({
                           : "Approved"}
                     </span>
                     {s.deleteRequested && (
-                      <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-orange-50 text-orange-600 border border-orange-100">
-                        Del Req
+                      <span className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-orange-50 text-orange-600 border border-orange-100">
+                        Delete requested
+                      </span>
+                    )}
+                    {isCurrentlyPro && (
+                      <span className="bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[9px] font-black px-2 py-1 rounded-lg shadow-sm flex items-center gap-1">
+                        <Shield size={10} />
+                        {matchedPlan ? matchedPlan.name.toUpperCase() : "PRO"}
                       </span>
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-3 gap-3 mb-4 relative z-10">
-                    <div className="bg-white/60 backdrop-blur-md border border-slate-100 rounded-2xl p-3 flex flex-col justify-center shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] group-hover:bg-white transition-colors">
-                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1 truncate w-full">Products</span>
-                      <span className="font-black text-slate-800 text-sm truncate w-full">{sellerProducts.length}</span>
+                  <div className="grid grid-cols-3 gap-2 sm:w-60 shrink-0">
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl px-2.5 py-2">
+                      <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest block">Products</span>
+                      <span className="font-black text-slate-800 text-xs">{sellerProducts.length}</span>
                     </div>
-                    <div className="bg-white/60 backdrop-blur-md border border-slate-100 rounded-2xl p-3 flex flex-col justify-center shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] group-hover:bg-white transition-colors">
-                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1 truncate w-full">Orders</span>
-                      <span className="font-black text-slate-800 text-sm truncate w-full">{sellerOrders.length}</span>
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl px-2.5 py-2">
+                      <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest block">Orders</span>
+                      <span className="font-black text-slate-800 text-xs">{sellerOrders.length}</span>
                     </div>
-                    <div className="bg-white/60 backdrop-blur-md border border-slate-100 rounded-2xl p-3 flex flex-col justify-center shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] group-hover:bg-white transition-colors">
-                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1 truncate w-full">Sales</span>
-                      <span className="font-black text-emerald-600 text-sm truncate w-full">{formatCurrency(totalSales)}</span>
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl px-2.5 py-2">
+                      <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest block">Sales</span>
+                      <span className="font-black text-emerald-600 text-xs truncate block">{formatCurrency(totalSales)}</span>
                     </div>
                   </div>
 
-                  <p className="text-slate-500 text-xs leading-relaxed flex-grow line-clamp-2 bg-slate-50/50 rounded-xl p-3 mb-4 relative z-10 border border-slate-100/50">
-                    {s.description || "No description provided."}
-                  </p>
-
-                  <div className="mt-auto pt-4 border-t border-slate-100/60 flex gap-2 relative z-10">
+                  <div className="flex items-center justify-end gap-1 sm:border-l sm:border-slate-100 sm:pl-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setSelectedSellerId(s.id); }}
+                      className="px-2.5 py-2 text-[10px] font-black text-primary bg-primary/5 hover:bg-primary hover:text-white rounded-lg transition flex items-center gap-1"
+                    >
+                      <Store size={13} /> Open
+                    </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleOpen(s); }}
-                      className="bg-white border border-slate-200 text-slate-600 hover:text-primary hover:border-primary/30 hover:bg-primary/5 px-4 py-2 rounded-xl text-xs font-bold flex-1 transition-all shadow-sm"
+                      className="px-2.5 py-2 text-[10px] font-black text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-lg transition"
                     >
                       {lang === "sw" ? "Hariri" : "Edit"}
                     </button>
+                    {s.isApproved === false && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleApproveExistingSeller(s); }}
+                        className="px-2.5 py-2 rounded-lg transition text-[10px] font-black text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
+                      >
+                        Approve
+                      </button>
+                    )}
+                    {(currentStaff?.role === "super_admin" || currentStaff?.role === "human_resources") && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleToggleSellerStatus(s); }}
+                        className={`px-2.5 py-2 rounded-lg transition text-[10px] font-black ${
+                          s.status === "frozen"
+                            ? "text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
+                            : "text-rose-600 bg-rose-50 hover:bg-rose-100"
+                        }`}
+                      >
+                        {s.status === "frozen" ? "Activate" : "Freeze"}
+                      </button>
+                    )}
                     {(currentStaff?.role === "super_admin" ||
                       currentStaff?.role === "human_resources") && (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleRemove(s.id, s.name); }}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                        className={`px-2.5 py-2 rounded-lg text-[10px] font-black transition-all ${
                           s.deleteRequested &&
                           currentStaff?.role === "human_resources"
-                            ? "bg-slate-50 text-slate-400 cursor-not-allowed border border-slate-100"
+                            ? "bg-slate-50 text-slate-400 cursor-not-allowed"
                             : currentStaff?.role === "super_admin" &&
                                 s.deleteRequested
-                              ? "bg-red-50 text-red-600 border border-red-100 hover:bg-red-500 hover:text-white hover:border-red-500"
-                              : "bg-rose-50 text-rose-500 border border-rose-100 hover:bg-rose-100"
+                              ? "bg-red-50 text-red-600 hover:bg-red-100"
+                              : "bg-rose-50 text-rose-600 hover:bg-rose-100"
                         }`}
                         disabled={
                           s.deleteRequested &&
                           currentStaff?.role === "human_resources"
                         }
                       >
-                        {currentStaff?.role === "super_admin"
-                          ? "Delete"
-                          : "Req Del"}
+                        {currentStaff?.role === "super_admin" ? "Delete" : s.deleteRequested ? "Requested" : "Request"}
                       </button>
                     )}
                   </div>
@@ -10741,12 +10804,32 @@ export function CustomersAdmin({
           )}
         </div>
       ) : (
-        <div className={selectedCustomerId ? "space-y-4" : "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"}>
+        <div className={selectedCustomerId ? "space-y-4" : "grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-3"}>
           {selectedCustomerId ? (
             <CustomerDetailView 
               customer={customers.find(c => c.id === selectedCustomerId)!}
               orders={orders}
               onBack={() => setSelectedCustomerId(null)}
+              onMessage={() => {
+                const selected = customers.find(c => c.id === selectedCustomerId);
+                if (selected) setMsgCustomer(selected);
+              }}
+              onResetPassword={() => {
+                const selected = customers.find(c => c.id === selectedCustomerId);
+                if (selected) setResetPwdCustomer(selected);
+              }}
+              onToggleFreeze={() => {
+                const selected = customers.find(c => c.id === selectedCustomerId);
+                if (selected) handleToggleFreeze(selected);
+              }}
+              onDelete={async () => {
+                const selected = customers.find(c => c.id === selectedCustomerId);
+                if (!selected) return;
+                await handleDeleteCustomer(selected);
+                if (currentStaff?.role === "super_admin") setSelectedCustomerId(null);
+              }}
+              canAdministrate={currentStaff?.role === "super_admin" || currentStaff?.role === "human_resources"}
+              currentStaffRole={currentStaff?.role}
             />
           ) : (
           <>
@@ -10773,78 +10856,71 @@ export function CustomersAdmin({
                   <div
                     key={c.id}
                     onClick={() => setSelectedCustomerId(c.id)}
-                    className="cursor-pointer bg-white/70 backdrop-blur-xl rounded-3xl border border-slate-200/60 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)] p-5 md:p-6 flex flex-col gap-4 relative hover:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.12)] hover:border-slate-300 hover:-translate-y-1 transition-all duration-300 group overflow-hidden"
+                    className="cursor-pointer bg-white rounded-2xl border border-slate-200/80 shadow-sm p-3 flex flex-col sm:flex-row sm:items-center gap-3 relative hover:shadow-md hover:border-slate-300 transition-all duration-200 group overflow-hidden"
                   >
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none transition-opacity group-hover:opacity-100 opacity-50"></div>
-                    
-                    <div className="flex items-start justify-between gap-3 relative z-10">
-                      <div className="flex items-center gap-4 min-w-0">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-100 to-white border border-slate-200 text-slate-600 flex items-center justify-center font-bold text-lg shadow-sm shrink-0 group-hover:from-primary group-hover:to-primary group-hover:text-white transition-all duration-300">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-slate-100 to-white border border-slate-200 text-slate-600 flex items-center justify-center font-black text-sm shadow-sm shrink-0 group-hover:from-primary group-hover:to-primary group-hover:text-white transition-all duration-300">
                           {c.name.charAt(0).toUpperCase()}
                         </div>
-                        <div className="flex flex-col min-w-0 pt-0.5">
-                          <h3 className="font-extrabold text-slate-900 text-sm md:text-base truncate">
+                        <div className="flex flex-col min-w-0">
+                          <h3 className="font-extrabold text-slate-900 text-sm truncate">
                             {c.name}
                           </h3>
-                          <span className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
-                            Joined {new Date(c.registeredAt).toLocaleDateString()}
+                          <span className="text-[11px] text-slate-500 font-medium truncate">
+                            {c.phone || c.email || "No contact"} • Joined {new Date(c.registeredAt).toLocaleDateString()}
                           </span>
                         </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-2 shrink-0">
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                         <span
-                          className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${c.status === "frozen" ? "bg-red-50 text-red-600 border border-red-100" : "bg-emerald-50 text-emerald-600 border border-emerald-100"}`}
+                          className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${c.status === "frozen" ? "bg-red-50 text-red-600 border border-red-100" : "bg-emerald-50 text-emerald-600 border border-emerald-100"}`}
                         >
                           {c.status === "frozen" ? "Frozen" : "Active"}
                         </span>
                         {c.deleteRequested && (
-                          <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-orange-50 text-orange-600 border border-orange-100">
-                            Del Req
+                          <span className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-orange-50 text-orange-600 border border-orange-100">
+                            Delete requested
                           </span>
                         )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 sm:w-40 shrink-0">
+                      <div className="bg-slate-50 border border-slate-100 rounded-xl px-2.5 py-2">
+                        <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest block">Orders</span>
+                        <span className="font-black text-slate-800 text-xs">{customerOrders.length}</span>
+                      </div>
+                      <div className="bg-slate-50 border border-slate-100 rounded-xl px-2.5 py-2">
+                        <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest block">Spent</span>
+                        <span className="font-black text-emerald-600 text-xs truncate block">{formatCurrency(totalSpent)}</span>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 relative z-10">
-                      <div className="bg-white/60 backdrop-blur-md border border-slate-100 rounded-2xl p-3 flex flex-col justify-center shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] group-hover:bg-white transition-colors">
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1 truncate w-full">Orders</span>
-                        <span className="font-black text-slate-800 text-sm truncate w-full">{customerOrders.length}</span>
-                      </div>
-                      <div className="bg-white/60 backdrop-blur-md border border-slate-100 rounded-2xl p-3 flex flex-col justify-center shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] group-hover:bg-white transition-colors">
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1 truncate w-full">Spent</span>
-                        <span className="font-black text-emerald-600 text-sm truncate w-full">{formatCurrency(totalSpent)}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2 text-xs text-slate-500 font-medium bg-slate-50/50 rounded-xl p-3 relative z-10 border border-slate-100/50">
-                      <div className="flex items-center gap-2 truncate">
-                        <Phone size={14} className="text-slate-400 shrink-0" />
-                        <span className="truncate">{c.phone || "N/A"}</span>
-                      </div>
-                      <div className="flex items-center gap-2 truncate">
-                        <Mail size={14} className="text-slate-400 shrink-0" />
-                        <span className="truncate">{c.email || "N/A"}</span>
-                      </div>
-                    </div>
-
-                    <div className="pt-4 mt-auto border-t border-slate-100/60 flex items-center justify-end gap-1 relative z-10">
+                    <div className="flex items-center justify-end gap-1 sm:border-l sm:border-slate-100 sm:pl-2">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setSelectedCustomerId(c.id); }}
+                        className="px-2.5 py-2 text-[10px] font-black text-primary bg-primary/5 hover:bg-primary hover:text-white rounded-lg transition flex items-center gap-1"
+                        title={lang === "sw" ? "Fungua ukurasa" : "Open profile"}
+                      >
+                        <User size={13} /> Open
+                      </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); setViewOrdersCustomer(c); }}
-                        className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition"
+                        className="p-2 text-slate-500 hover:text-primary hover:bg-primary/5 rounded-lg transition"
                         title={lang === "sw" ? "Angalia Oda" : "View Orders"}
                       >
                         <ShoppingBag size={16} />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); setMsgCustomer(c); }}
-                        className="p-2 text-slate-400 hover:text-accent hover:bg-accent/5 rounded-lg transition"
+                        className="p-2 text-slate-500 hover:text-accent hover:bg-accent/5 rounded-lg transition"
                         title={lang === "sw" ? "Tuma Ujumbe" : "Message"}
                       >
                         <MessageSquare size={16} />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); setResetPwdCustomer(c); }}
-                        className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition"
+                        className="p-2 text-slate-500 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition"
                         title="Reset Auth"
                       >
                         <Lock size={16} />
@@ -10854,26 +10930,26 @@ export function CustomersAdmin({
                         <>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleToggleFreeze(c); }}
-                            className={`p-2 rounded-lg transition ${
+                            className={`px-2.5 py-2 rounded-lg transition text-[10px] font-black ${
                               c.status === "frozen"
-                                ? "text-emerald-500 hover:bg-emerald-50"
-                                : "text-slate-400 hover:text-rose-500 hover:bg-rose-50"
+                                ? "text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
+                                : "text-rose-600 bg-rose-50 hover:bg-rose-100"
                             }`}
                             title={c.status === "frozen" ? "Activate Customer" : "Freeze Customer"}
                           >
-                            <Lock size={16} />
+                            {c.status === "frozen" ? "Activate" : "Freeze"}
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(c); }}
-                            className={`p-2 rounded-lg transition ${
+                            className={`px-2.5 py-2 rounded-lg transition text-[10px] font-black ${
                               c.deleteRequested && currentStaff?.role === "human_resources"
-                                ? "text-slate-300 cursor-not-allowed"
-                                : "text-slate-400 hover:text-red-500 hover:bg-red-50"
+                                ? "text-slate-300 bg-slate-50 cursor-not-allowed"
+                                : "text-red-600 bg-red-50 hover:bg-red-100"
                             }`}
                             title={currentStaff?.role === "super_admin" ? "Delete User" : "Request Delete"}
                             disabled={c.deleteRequested && currentStaff?.role === "human_resources"}
                           >
-                            <Trash size={16} />
+                            {currentStaff?.role === "super_admin" ? "Delete" : c.deleteRequested ? "Requested" : "Request"}
                           </button>
                         </>
                       )}

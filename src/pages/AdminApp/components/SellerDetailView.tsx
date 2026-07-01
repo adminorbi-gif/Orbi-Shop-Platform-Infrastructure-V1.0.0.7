@@ -1,15 +1,32 @@
 import React from 'react';
 import { SellerProfile, Product, Order } from '../../../types';
-import { ArrowLeft, Package, ShoppingCart, DollarSign, Store, Mail, Phone, MapPin, User, Shield, CreditCard, Calendar, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Package, ShoppingCart, DollarSign, Store, Mail, Phone, MapPin, Shield, CreditCard, Calendar, ChevronRight, Settings, CheckCircle2, Lock, Trash } from 'lucide-react';
 
 interface SellerDetailViewProps {
   seller: SellerProfile;
   products: Product[];
   orders: Order[];
   onBack: () => void;
+  onEdit?: () => void;
+  onToggleStatus?: () => void;
+  onApprove?: () => void;
+  onDelete?: () => void;
+  canAdministrate?: boolean;
+  currentStaffRole?: string;
 }
 
-export const SellerDetailView: React.FC<SellerDetailViewProps> = ({ seller, products, orders, onBack }) => {
+export const SellerDetailView: React.FC<SellerDetailViewProps> = ({
+  seller,
+  products,
+  orders,
+  onBack,
+  onEdit,
+  onToggleStatus,
+  onApprove,
+  onDelete,
+  canAdministrate,
+  currentStaffRole,
+}) => {
   const sellerProducts = products.filter(p => p.sellerId === seller.id);
   const sellerOrders = orders.filter(o => o.items.some(item => sellerProducts.some(p => p.id === item.productId)));
   const totalSales = sellerOrders.reduce((sum, o) => sum + o.total, 0);
@@ -53,13 +70,40 @@ export const SellerDetailView: React.FC<SellerDetailViewProps> = ({ seller, prod
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3 relative z-10 w-full md:w-auto">
-            <button className="flex-1 md:flex-none px-5 py-2.5 bg-slate-950 text-white rounded-xl text-sm font-semibold hover:bg-slate-800 transition-all shadow-sm">
-              Message
+        <div className="flex flex-wrap gap-2 relative z-10 w-full md:w-auto">
+            <button onClick={onEdit} className="flex-1 md:flex-none px-4 py-2.5 bg-slate-950 text-white rounded-xl text-xs font-black hover:bg-slate-800 transition-all shadow-sm flex items-center justify-center gap-1.5">
+              <Settings size={14} /> Edit
             </button>
-            <button className="flex-1 md:flex-none px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-all shadow-sm">
-              Edit Settings
-            </button>
+            {seller.isApproved === false && (
+              <button onClick={onApprove} className="flex-1 md:flex-none px-4 py-2.5 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-xl text-xs font-black hover:bg-emerald-100 transition-all shadow-sm flex items-center justify-center gap-1.5">
+                <CheckCircle2 size={14} /> Approve
+              </button>
+            )}
+            {canAdministrate && (
+              <>
+                <button
+                  onClick={onToggleStatus}
+                  className={`flex-1 md:flex-none px-4 py-2.5 rounded-xl text-xs font-black transition-all shadow-sm flex items-center justify-center gap-1.5 ${
+                    seller.status === 'frozen'
+                      ? 'bg-emerald-50 border border-emerald-100 text-emerald-700 hover:bg-emerald-100'
+                      : 'bg-rose-50 border border-rose-100 text-rose-700 hover:bg-rose-100'
+                  }`}
+                >
+                  <Lock size={14} /> {seller.status === 'frozen' ? 'Activate' : 'Freeze'}
+                </button>
+                <button
+                  onClick={onDelete}
+                  disabled={seller.deleteRequested && currentStaffRole === 'human_resources'}
+                  className={`flex-1 md:flex-none px-4 py-2.5 rounded-xl text-xs font-black transition-all shadow-sm flex items-center justify-center gap-1.5 ${
+                    seller.deleteRequested && currentStaffRole === 'human_resources'
+                      ? 'bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed'
+                      : 'bg-red-50 border border-red-100 text-red-700 hover:bg-red-100'
+                  }`}
+                >
+                  <Trash size={14} /> {currentStaffRole === 'super_admin' ? 'Delete' : seller.deleteRequested ? 'Requested' : 'Request'}
+                </button>
+              </>
+            )}
         </div>
       </div>
 

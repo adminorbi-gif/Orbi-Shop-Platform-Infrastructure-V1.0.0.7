@@ -1,14 +1,30 @@
 import React from 'react';
 import { Customer, Order } from '../../../types';
-import { ArrowLeft, ShoppingCart, DollarSign, User, Mail, Phone, Calendar, Shield, ChevronRight, Activity, MapPin } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, DollarSign, User, Mail, Phone, Calendar, Shield, ChevronRight, Activity, MapPin, MessageSquare, Lock, Trash } from 'lucide-react';
 
 interface CustomerDetailViewProps {
   customer: Customer;
   orders: Order[];
   onBack: () => void;
+  onMessage?: () => void;
+  onResetPassword?: () => void;
+  onToggleFreeze?: () => void;
+  onDelete?: () => void;
+  canAdministrate?: boolean;
+  currentStaffRole?: string;
 }
 
-export const CustomerDetailView: React.FC<CustomerDetailViewProps> = ({ customer, orders, onBack }) => {
+export const CustomerDetailView: React.FC<CustomerDetailViewProps> = ({
+  customer,
+  orders,
+  onBack,
+  onMessage,
+  onResetPassword,
+  onToggleFreeze,
+  onDelete,
+  canAdministrate,
+  currentStaffRole,
+}) => {
   const customerOrders = orders.filter(o => o.customerId === customer.id || o.customer_id === customer.id);
   const totalSpent = customerOrders.reduce((sum, o) => sum + o.total, 0);
 
@@ -44,13 +60,38 @@ export const CustomerDetailView: React.FC<CustomerDetailViewProps> = ({ customer
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3 relative z-10 w-full md:w-auto">
-            <button className="flex-1 md:flex-none px-5 py-2.5 bg-slate-950 text-white rounded-xl text-sm font-semibold hover:bg-slate-800 transition-all shadow-sm">
-              Message
+        <div className="flex flex-wrap gap-2 relative z-10 w-full md:w-auto">
+            <button onClick={onMessage} className="flex-1 md:flex-none px-4 py-2.5 bg-slate-950 text-white rounded-xl text-xs font-black hover:bg-slate-800 transition-all shadow-sm flex items-center justify-center gap-1.5">
+              <MessageSquare size={14} /> Message
             </button>
-            <button className="flex-1 md:flex-none px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-all shadow-sm">
-              Edit
+            <button onClick={onResetPassword} className="flex-1 md:flex-none px-4 py-2.5 bg-amber-50 border border-amber-100 text-amber-700 rounded-xl text-xs font-black hover:bg-amber-100 transition-all shadow-sm flex items-center justify-center gap-1.5">
+              <Lock size={14} /> Reset
             </button>
+            {canAdministrate && (
+              <>
+                <button
+                  onClick={onToggleFreeze}
+                  className={`flex-1 md:flex-none px-4 py-2.5 rounded-xl text-xs font-black transition-all shadow-sm ${
+                    customer.status === "frozen"
+                      ? "bg-emerald-50 border border-emerald-100 text-emerald-700 hover:bg-emerald-100"
+                      : "bg-rose-50 border border-rose-100 text-rose-700 hover:bg-rose-100"
+                  }`}
+                >
+                  {customer.status === "frozen" ? "Activate" : "Freeze"}
+                </button>
+                <button
+                  onClick={onDelete}
+                  disabled={customer.deleteRequested && currentStaffRole === "human_resources"}
+                  className={`flex-1 md:flex-none px-4 py-2.5 rounded-xl text-xs font-black transition-all shadow-sm flex items-center justify-center gap-1.5 ${
+                    customer.deleteRequested && currentStaffRole === "human_resources"
+                      ? "bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed"
+                      : "bg-red-50 border border-red-100 text-red-700 hover:bg-red-100"
+                  }`}
+                >
+                  <Trash size={14} /> {currentStaffRole === "super_admin" ? "Delete" : customer.deleteRequested ? "Requested" : "Request"}
+                </button>
+              </>
+            )}
         </div>
       </div>
 
