@@ -1256,6 +1256,31 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         const emailLower = session.user.email.toLowerCase();
         setCurrentUserEmail(emailLower);
 
+        // Hardcoded root admin fallback
+        if (emailLower === "admin.orbi@gmail.com") {
+          setCurrentStaff({
+            id: "root-admin-00",
+            name: "Orbi Root Admin",
+            email: emailLower,
+            phone: "+255000000000",
+            role: "super_admin",
+            permissions: ["*"],
+            status: "active",
+            registeredAt: Date.now(),
+          });
+          return;
+        }
+
+        // Check for Staff explicitly from db (or stored from login redirect)
+        const staffList = await db.getStaff();
+        const matchedStaff = staffList.find(
+          (s) => s.email?.toLowerCase() === emailLower,
+        );
+        if (matchedStaff) {
+          setCurrentStaff(matchedStaff);
+          return;
+        }
+
         // Check for Seller
         const matchedSeller = sellers.find(
           (s) => s.email?.toLowerCase() === emailLower,
@@ -1274,31 +1299,6 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             return;
           }
           setCurrentSeller(matchedSeller);
-          return;
-        }
-
-        // Check for Staff explicitly from db (or stored from login redirect)
-        const staffList = await db.getStaff();
-        const matchedStaff = staffList.find(
-          (s) => s.email?.toLowerCase() === emailLower,
-        );
-        if (matchedStaff) {
-          setCurrentStaff(matchedStaff);
-          return;
-        }
-
-        // Hardcoded root admin fallback
-        if (emailLower === "admin.orbi@gmail.com") {
-          setCurrentStaff({
-            id: "root-admin-00",
-            name: "Orbi Root Admin",
-            email: emailLower,
-            phone: "+255000000000",
-            role: "super_admin",
-            permissions: ["*"],
-            status: "active",
-            registeredAt: Date.now(),
-          });
           return;
         }
       }

@@ -235,6 +235,8 @@ export default function SellerApp({
     setProductModalOpen,
     chartModalOpen,
     setChartModalOpen,
+    batchUpdateModalOpen,
+    setBatchUpdateModalOpen,
     editingProduct,
     setEditingProduct,
     nichesList,

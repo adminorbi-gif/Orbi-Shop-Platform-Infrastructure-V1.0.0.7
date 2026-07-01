@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { supabase } from './supabase';
 import { Product, Promotion, Order, Customer, Message, Niche, SellerProfile, SubscriptionPlan, MarketplaceAd, Review, PromotionalBanner, OrderStatusLog } from '../types';
 
