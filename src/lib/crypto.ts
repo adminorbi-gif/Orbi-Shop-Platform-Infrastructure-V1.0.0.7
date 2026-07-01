@@ -49,8 +49,31 @@ export const decrypt = (encryptedText: string): string => {
     decrypted += decipher.final('utf8');
     return decrypted;
   } catch (e) {
-    // Silently fall back to returning raw text if not encrypted or key mismatch
-    return encryptedText;
+    // If decryption fails, try with the hardcoded fallback key just in case it was encrypted before the environment variable was set
+    try {
+      let cleanText = encryptedText;
+      if (encryptedText.startsWith('$2a$encrypted:')) {
+        cleanText = encryptedText.substring('$2a$encrypted:'.length);
+      }
+      const [ivHex, tagHex, encrypted] = cleanText.split(':');
+      if (!ivHex || !tagHex || !encrypted) return encryptedText;
+
+      const fallbackKey = crypto.scryptSync("orbi_paysafe_secure_encryption_key_2026_v1_fallback", "orbi-shop-v1", KEY_LENGTH);
+      
+      const decipher = crypto.createDecipheriv(
+        ALGORITHM,
+        fallbackKey,
+        Buffer.from(ivHex, 'hex')
+      );
+      decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
+      
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      return decrypted;
+    } catch (fallbackError) {
+      // Silently fall back to returning raw text if not encrypted or key mismatch
+      return encryptedText;
+    }
   }
 };
 

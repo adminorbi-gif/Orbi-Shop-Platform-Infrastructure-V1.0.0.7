@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { supabase, getSupabase, encrypt, decrypt } from "../lib/supabase.js";
+import { supabase, getSupabase, encrypt, decrypt, decryptObject } from "../lib/supabase.js";
 import { GoogleGenAI, Type } from "@google/genai";
 
 const router = Router();
@@ -494,7 +494,8 @@ router.get("/sellers", async (req, res) => {
     try {
       const { data, error } = await getSupabase(req).from('sellers').select('*').order('name', { ascending: true });
       if (!error && data && data.length > 0) {
-        const mapped = data.map(s => ({
+        const decryptedData = decryptObject(data);
+        const mapped = decryptedData.map((s: any) => ({
           id: s.id,
           name: s.name,
           description: s.description || "",
