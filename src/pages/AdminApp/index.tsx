@@ -1026,7 +1026,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         setPhoneVerified(false);
       }
     }
-  }, [currentSeller]);
+  }, [currentSeller?.id]);
 
   // Keep track of which SYSTEM messages have been visually shown as a Toast Alert
   const notifiedSysMsgsRef = useRef<Set<string>>(new Set());
@@ -2185,10 +2185,20 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     <button
                       type="button"
                       onClick={handleSendSimulatedOtp}
-                      className="whitespace-nowrap bg-slate-800 hover:bg-slate-900 text-white font-bold px-5 py-3.5 rounded-xl transition text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer"
+                      disabled={isVerifyingPhoneState}
+                      className="whitespace-nowrap bg-slate-800 hover:bg-slate-900 text-white font-bold px-5 py-3.5 rounded-xl transition text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Zap size={14} />
-                      {lang === "sw" ? "Tuma OTP" : "Send OTP"}
+                      {isVerifyingPhoneState ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          {lang === "sw" ? "Inatuma..." : "Sending..."}
+                        </>
+                      ) : (
+                        <>
+                          <Zap size={14} />
+                          {lang === "sw" ? "Tuma OTP" : "Send OTP"}
+                        </>
+                      )}
                     </button>
                   )}
                 </div>

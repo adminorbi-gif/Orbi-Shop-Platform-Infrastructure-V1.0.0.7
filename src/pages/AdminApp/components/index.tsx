@@ -1121,22 +1121,29 @@ export function SellersAdmin({
               const isCurrentlyPro =
                 s.isPro && s.proUntil && s.proUntil > Date.now();
               const matchedPlan = plans.find((p) => p.id === s.activePlanId);
+              
+              const sellerProducts = products.filter(p => p.sellerId === s.id);
+              const sellerOrders = orders.filter(o => o.items.some(item => sellerProducts.some(p => p.id === item.productId)));
+              const totalSales = sellerOrders.reduce((sum, o) => sum + o.total, 0);
+
               return (
                 <div
                   key={s.id}
                   onClick={() => setSelectedSellerId(s.id)}
-                  className="cursor-pointer bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 flex flex-col relative hover:border-slate-300 hover:shadow-md transition-all group"
+                  className="cursor-pointer bg-white/70 backdrop-blur-xl rounded-3xl border border-slate-200/60 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)] p-5 md:p-6 flex flex-col relative hover:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.12)] hover:border-slate-300 hover:-translate-y-1 transition-all duration-300 group overflow-hidden"
                 >
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none transition-opacity group-hover:opacity-100 opacity-50"></div>
+                  
+                  <div className="flex items-start gap-4 mb-4 relative z-10">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-100 to-white border border-slate-200 text-slate-600 flex items-center justify-center font-bold text-lg shadow-sm shrink-0 group-hover:from-primary group-hover:to-primary group-hover:text-white transition-all duration-300">
                       {s.name.charAt(0).toUpperCase()}
                     </div>
-                    <div className="flex flex-col min-w-0 pr-16">
-                      <h3 className="font-semibold text-slate-900 text-sm truncate">
+                    <div className="flex flex-col min-w-0 pt-1">
+                      <h3 className="font-extrabold text-slate-900 text-sm md:text-base truncate">
                         {s.name}
                       </h3>
                       {s.email && (
-                        <p className="text-[11px] text-slate-400 truncate">
+                        <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
                           {s.email}
                         </p>
                       )}
@@ -1144,24 +1151,24 @@ export function SellersAdmin({
                   </div>
 
                   {isCurrentlyPro && (
-                    <div className="absolute top-4 right-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-sm">
+                    <div className="absolute top-5 right-5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[9px] font-black px-2.5 py-1 rounded-lg shadow-sm z-10 flex items-center gap-1">
+                      <Shield size={10} />
                       {matchedPlan ? matchedPlan.name.toUpperCase() : "PRO"} (
                       {Math.ceil(
                         ((s.proUntil || 0) - Date.now()) /
                           (1000 * 60 * 60 * 24),
-                      )}{" "}
-                      d)
+                      )}d)
                     </div>
                   )}
 
-                  <div className="flex flex-wrap gap-1.5 mb-3">
+                  <div className="flex flex-wrap gap-2 mb-4 relative z-10">
                     <span
-                      className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${s.status === "frozen" ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"}`}
+                      className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${s.status === "frozen" ? "bg-red-50 text-red-600 border border-red-100" : "bg-emerald-50 text-emerald-600 border border-emerald-100"}`}
                     >
                       {s.status === "frozen" ? "Frozen" : "Active"}
                     </span>
                     <span
-                      className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${s.isApproved === false ? "bg-amber-50 text-amber-700 animate-pulse font-black" : "bg-teal-50 text-teal-700"}`}
+                      className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${s.isApproved === false ? "bg-amber-50 text-amber-700 animate-pulse border border-amber-100" : "bg-teal-50 text-teal-700 border border-teal-100"}`}
                     >
                       {s.isApproved === false
                         ? lang === "sw"
@@ -1172,20 +1179,35 @@ export function SellersAdmin({
                           : "Approved"}
                     </span>
                     {s.deleteRequested && (
-                      <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest bg-orange-50 text-orange-600">
+                      <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-orange-50 text-orange-600 border border-orange-100">
                         Del Req
                       </span>
                     )}
                   </div>
+                  
+                  <div className="grid grid-cols-3 gap-3 mb-4 relative z-10">
+                    <div className="bg-white/60 backdrop-blur-md border border-slate-100 rounded-2xl p-3 flex flex-col justify-center shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] group-hover:bg-white transition-colors">
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1 truncate w-full">Products</span>
+                      <span className="font-black text-slate-800 text-sm truncate w-full">{sellerProducts.length}</span>
+                    </div>
+                    <div className="bg-white/60 backdrop-blur-md border border-slate-100 rounded-2xl p-3 flex flex-col justify-center shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] group-hover:bg-white transition-colors">
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1 truncate w-full">Orders</span>
+                      <span className="font-black text-slate-800 text-sm truncate w-full">{sellerOrders.length}</span>
+                    </div>
+                    <div className="bg-white/60 backdrop-blur-md border border-slate-100 rounded-2xl p-3 flex flex-col justify-center shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] group-hover:bg-white transition-colors">
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1 truncate w-full">Sales</span>
+                      <span className="font-black text-emerald-600 text-sm truncate w-full">{formatCurrency(totalSales)}</span>
+                    </div>
+                  </div>
 
-                  <p className="text-slate-500 text-xs leading-relaxed flex-grow line-clamp-2 bg-slate-50/50 rounded-lg p-2.5">
+                  <p className="text-slate-500 text-xs leading-relaxed flex-grow line-clamp-2 bg-slate-50/50 rounded-xl p-3 mb-4 relative z-10 border border-slate-100/50">
                     {s.description || "No description provided."}
                   </p>
 
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex gap-2">
+                  <div className="mt-auto pt-4 border-t border-slate-100/60 flex gap-2 relative z-10">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleOpen(s); }}
-                      className="bg-slate-50 text-slate-600 hover:text-primary hover:bg-primary/5 px-3 py-1.5 rounded-lg text-[11px] font-bold flex-1 transition"
+                      className="bg-white border border-slate-200 text-slate-600 hover:text-primary hover:border-primary/30 hover:bg-primary/5 px-4 py-2 rounded-xl text-xs font-bold flex-1 transition-all shadow-sm"
                     >
                       {lang === "sw" ? "Hariri" : "Edit"}
                     </button>
@@ -1193,14 +1215,14 @@ export function SellersAdmin({
                       currentStaff?.role === "human_resources") && (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleRemove(s.id, s.name); }}
-                        className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition ${
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
                           s.deleteRequested &&
                           currentStaff?.role === "human_resources"
-                            ? "bg-slate-50 text-slate-400 cursor-not-allowed"
+                            ? "bg-slate-50 text-slate-400 cursor-not-allowed border border-slate-100"
                             : currentStaff?.role === "super_admin" &&
                                 s.deleteRequested
-                              ? "bg-red-50 text-red-600 hover:bg-red-500 hover:text-white"
-                              : "bg-rose-50 text-rose-500 hover:bg-rose-100"
+                              ? "bg-red-50 text-red-600 border border-red-100 hover:bg-red-500 hover:text-white hover:border-red-500"
+                              : "bg-rose-50 text-rose-500 border border-rose-100 hover:bg-rose-100"
                         }`}
                         disabled={
                           s.deleteRequested &&
@@ -10658,48 +10680,50 @@ export function CustomersAdmin({
                   <div
                     key={c.id}
                     onClick={() => setSelectedCustomerId(c.id)}
-                    className="cursor-pointer bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 flex flex-col gap-4 hover:border-slate-300 hover:shadow-md transition-all duration-200 group"
+                    className="cursor-pointer bg-white/70 backdrop-blur-xl rounded-3xl border border-slate-200/60 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)] p-5 md:p-6 flex flex-col gap-4 relative hover:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.12)] hover:border-slate-300 hover:-translate-y-1 transition-all duration-300 group overflow-hidden"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none transition-opacity group-hover:opacity-100 opacity-50"></div>
+                    
+                    <div className="flex items-start justify-between gap-3 relative z-10">
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-100 to-white border border-slate-200 text-slate-600 flex items-center justify-center font-bold text-lg shadow-sm shrink-0 group-hover:from-primary group-hover:to-primary group-hover:text-white transition-all duration-300">
                           {c.name.charAt(0).toUpperCase()}
                         </div>
-                        <div className="flex flex-col min-w-0">
-                          <h3 className="font-semibold text-slate-900 text-sm truncate">
+                        <div className="flex flex-col min-w-0 pt-0.5">
+                          <h3 className="font-extrabold text-slate-900 text-sm md:text-base truncate">
                             {c.name}
                           </h3>
-                          <span className="text-[11px] text-slate-400 font-medium">
+                          <span className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
                             Joined {new Date(c.registeredAt).toLocaleDateString()}
                           </span>
                         </div>
                       </div>
-                      <div className="flex flex-col items-end gap-1 shrink-0">
+                      <div className="flex flex-col items-end gap-2 shrink-0">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${c.status === "frozen" ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"}`}
+                          className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${c.status === "frozen" ? "bg-red-50 text-red-600 border border-red-100" : "bg-emerald-50 text-emerald-600 border border-emerald-100"}`}
                         >
                           {c.status === "frozen" ? "Frozen" : "Active"}
                         </span>
                         {c.deleteRequested && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest bg-orange-50 text-orange-600">
+                          <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-orange-50 text-orange-600 border border-orange-100">
                             Del Req
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-slate-50/80 border border-slate-100 rounded-xl p-3 flex flex-col">
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase mb-0.5">Orders</span>
-                        <span className="font-semibold text-slate-700 text-sm">{customerOrders.length}</span>
+                    <div className="grid grid-cols-2 gap-3 relative z-10">
+                      <div className="bg-white/60 backdrop-blur-md border border-slate-100 rounded-2xl p-3 flex flex-col justify-center shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] group-hover:bg-white transition-colors">
+                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1 truncate w-full">Orders</span>
+                        <span className="font-black text-slate-800 text-sm truncate w-full">{customerOrders.length}</span>
                       </div>
-                      <div className="bg-slate-50/80 border border-slate-100 rounded-xl p-3 flex flex-col">
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase mb-0.5">Spent</span>
-                        <span className="font-semibold text-emerald-600 text-sm truncate">{formatCurrency(totalSpent)}</span>
+                      <div className="bg-white/60 backdrop-blur-md border border-slate-100 rounded-2xl p-3 flex flex-col justify-center shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] group-hover:bg-white transition-colors">
+                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1 truncate w-full">Spent</span>
+                        <span className="font-black text-emerald-600 text-sm truncate w-full">{formatCurrency(totalSpent)}</span>
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-1.5 text-[11px] text-slate-500 font-medium">
+                    <div className="flex flex-col gap-2 text-xs text-slate-500 font-medium bg-slate-50/50 rounded-xl p-3 relative z-10 border border-slate-100/50">
                       <div className="flex items-center gap-2 truncate">
                         <Phone size={14} className="text-slate-400 shrink-0" />
                         <span className="truncate">{c.phone || "N/A"}</span>
@@ -10710,7 +10734,7 @@ export function CustomersAdmin({
                       </div>
                     </div>
 
-                    <div className="pt-3 mt-auto border-t border-slate-100 flex items-center justify-end gap-1">
+                    <div className="pt-4 mt-auto border-t border-slate-100/60 flex items-center justify-end gap-1 relative z-10">
                       <button
                         onClick={(e) => { e.stopPropagation(); setViewOrdersCustomer(c); }}
                         className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition"
