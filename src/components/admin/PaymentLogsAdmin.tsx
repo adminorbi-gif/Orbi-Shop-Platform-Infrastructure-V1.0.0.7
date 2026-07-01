@@ -197,14 +197,14 @@ export function PaymentLogsAdmin({ lang = "en" }: PaymentLogsAdminProps) {
       </div>
 
       {/* Metrics Dashboard Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="orbi-admin-auto-grid">
         {/* Metric 1: Total Volume */}
-        <div className="bg-white p-5 rounded-[1.75rem] border border-slate-100 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+        <div className="orbi-admin-card p-5 rounded-[1.75rem] border border-slate-100 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <span className="orbi-admin-label text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
               {lang === "sw" ? "Jumla ya Thamani ya Escrow" : "Total Escrow Volume"}
             </span>
-            <span className="text-xl font-black text-slate-900 block mt-1.5">
+            <span className="orbi-admin-compact-value font-black text-slate-900 block mt-1.5">
               TZS {formatCurrency(totalVolume)}
             </span>
             <span className="text-[10px] text-emerald-500 font-bold flex items-center gap-0.5 mt-1">
@@ -217,12 +217,12 @@ export function PaymentLogsAdmin({ lang = "en" }: PaymentLogsAdminProps) {
         </div>
 
         {/* Metric 2: Transactions Count */}
-        <div className="bg-white p-5 rounded-[1.75rem] border border-slate-100 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+        <div className="orbi-admin-card p-5 rounded-[1.75rem] border border-slate-100 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <span className="orbi-admin-label text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
               {lang === "sw" ? "Idadi ya Miamala" : "Total Logged Miamala"}
             </span>
-            <span className="text-xl font-black text-slate-900 block mt-1.5">
+            <span className="orbi-admin-compact-value font-black text-slate-900 block mt-1.5">
               {logs.length}
             </span>
             <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1 mt-1">
@@ -236,12 +236,12 @@ export function PaymentLogsAdmin({ lang = "en" }: PaymentLogsAdminProps) {
         </div>
 
         {/* Metric 3: Success Rate */}
-        <div className="bg-white p-5 rounded-[1.75rem] border border-slate-100 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+        <div className="orbi-admin-card p-5 rounded-[1.75rem] border border-slate-100 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <span className="orbi-admin-label text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
               {lang === "sw" ? "Kiwango cha Mafanikio" : "Verification Rate"}
             </span>
-            <span className="text-xl font-black text-slate-900 block mt-1.5">
+            <span className="orbi-admin-compact-value font-black text-slate-900 block mt-1.5">
               {successRate}%
             </span>
             <span className="text-[10px] text-rose-500 font-bold flex items-center gap-1 mt-1">
@@ -254,12 +254,12 @@ export function PaymentLogsAdmin({ lang = "en" }: PaymentLogsAdminProps) {
         </div>
 
         {/* Metric 4: Pending Verification */}
-        <div className="bg-white p-5 rounded-[1.75rem] border border-slate-100 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+        <div className="orbi-admin-card p-5 rounded-[1.75rem] border border-slate-100 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <span className="orbi-admin-label text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
               {lang === "sw" ? "Zinazosubiri Uhakiki" : "Pending Verification"}
             </span>
-            <span className="text-xl font-black text-slate-900 block mt-1.5">
+            <span className="orbi-admin-compact-value font-black text-slate-900 block mt-1.5">
               {pendingLogs.length}
             </span>
             <span className="text-[10px] text-amber-500 font-bold block mt-1">

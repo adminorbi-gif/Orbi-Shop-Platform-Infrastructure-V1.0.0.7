@@ -114,16 +114,16 @@ export function FinancesAdmin({ orders }: { orders: Order[] }) {
         </div>
 
         {/* Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200 relative overflow-hidden group">
+        <div className="orbi-admin-auto-grid">
+          <div className="orbi-admin-card p-6 rounded-[2rem] border border-slate-200 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
             <div className="text-emerald-500 mb-4 relative">
               <CheckCircle2 size={32} />
             </div>
-            <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 relative">
+            <div className="orbi-admin-label text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 relative">
               Released Payouts
             </div>
-            <div className="text-3xl font-black text-slate-900 relative">
+            <div className="orbi-admin-metric-value font-black text-slate-900 relative">
               TZS {formatCurrency(totalPaid)}
             </div>
             <p className="text-xs text-emerald-600 mt-2 font-medium relative flex items-center gap-1">
@@ -131,15 +131,15 @@ export function FinancesAdmin({ orders }: { orders: Order[] }) {
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200 relative overflow-hidden group">
+          <div className="orbi-admin-card p-6 rounded-[2rem] border border-slate-200 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
             <div className="text-orange-500 mb-4 relative">
               <Lock size={32} />
             </div>
-            <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 relative">
+            <div className="orbi-admin-label text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 relative">
               In PaySafe (Pending)
             </div>
-            <div className="text-3xl font-black text-slate-900 relative">
+            <div className="orbi-admin-metric-value font-black text-slate-900 relative">
               TZS {formatCurrency(totalPending)}
             </div>
             <p className="text-xs text-orange-600 mt-2 font-medium relative flex items-center gap-1">
@@ -147,15 +147,15 @@ export function FinancesAdmin({ orders }: { orders: Order[] }) {
             </p>
           </div>
 
-          <div className="bg-slate-900 p-6 rounded-[2rem] shadow-sm text-white relative overflow-hidden group">
+          <div className="orbi-admin-card bg-slate-900 p-6 rounded-[2rem] text-white relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
             <div className="text-white/60 mb-4 relative">
               <ShieldCheck size={32} />
             </div>
-            <div className="text-xs font-bold text-white/60 uppercase tracking-widest mb-1 relative">
+            <div className="orbi-admin-label text-xs font-bold text-white/60 uppercase tracking-widest mb-1 relative">
               ORBI PaySafe Protect
             </div>
-            <div className="text-2xl font-black relative drop-shadow">
+            <div className="orbi-admin-compact-value font-black relative drop-shadow">
               Active & Verified
             </div>
             <p className="text-xs text-white/50 mt-2 relative">

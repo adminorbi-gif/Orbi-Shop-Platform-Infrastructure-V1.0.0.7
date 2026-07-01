@@ -2827,7 +2827,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4 lg:gap-5">
+                <div className="orbi-admin-auto-grid">
                   <StatCard
                     onClick={() => setTab("products")}
                     title={t(lang, "dash.tot_prod")}

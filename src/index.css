@@ -21,6 +21,55 @@ body {
   word-break: break-word;
 }
 
+.orbi-admin-auto-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16.5rem), 1fr));
+  gap: clamp(0.9rem, 1.7vw, 1.35rem);
+}
+
+.orbi-admin-card {
+  min-width: 0;
+  min-height: 9.5rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94)),
+    radial-gradient(circle at 100% 0%, rgba(249, 115, 22, 0.08), transparent 11rem);
+  box-shadow:
+    0 18px 42px rgba(15, 23, 42, 0.06),
+    0 1px 0 rgba(255, 255, 255, 0.82) inset;
+}
+
+.orbi-admin-label {
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.orbi-admin-metric-value {
+  font-size: clamp(1.35rem, 3.4vw, 2.35rem);
+  line-height: 1.04;
+  letter-spacing: -0.045em;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+.orbi-admin-compact-value {
+  font-size: clamp(1.18rem, 2.4vw, 1.85rem);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 420px) {
+  .orbi-admin-auto-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .orbi-admin-card {
+    min-height: 8.5rem;
+  }
+}
 /* Eliminate native tap overlay and selection issues to feel like standard compiled mobile apps */
 button,
 a,

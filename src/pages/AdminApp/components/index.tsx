@@ -2078,21 +2078,21 @@ export function StatCard({
   return (
     <div
       onClick={onClick}
-      className={`bg-white p-6 rounded-2xl border border-slate-200/80 shadow-[0_4px_25px_rgba(0,0,0,0.02)] flex items-center justify-between overflow-hidden @container ${onClick ? "cursor-pointer hover:border-slate-400 hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all duration-300 transform hover:-translate-y-0.5 group" : ""}`}
+      className={`orbi-admin-card p-5 sm:p-6 rounded-[1.75rem] border border-slate-200/80 flex items-start justify-between gap-4 overflow-visible @container ${onClick ? "cursor-pointer hover:border-slate-400 hover:shadow-[0_20px_45px_rgba(15,23,42,0.10)] transition-all duration-300 transform hover:-translate-y-0.5 group" : ""}`}
     >
-      <div className="space-y-1.5 min-w-0 flex-1 pr-4">
-        <p className="text-[11px] text-zinc-500 font-extrabold uppercase tracking-widest transition truncate max-w-full">
+      <div className="space-y-2 min-w-0 flex-1">
+        <p className="orbi-admin-label text-[10px] sm:text-[11px] text-zinc-500 font-extrabold uppercase tracking-[0.16em] transition leading-snug max-w-full">
           {title}
         </p>
         <div
-          className="text-2xl lg:text-xl xl:text-2xl 2xl:text-3xl font-black text-slate-900 tracking-tight leading-none truncate max-w-full"
-          style={{ fontSize: "clamp(1rem, 15cqw, 1.875rem)" }}
+          className="orbi-admin-metric-value font-black text-slate-900 max-w-full"
+          title={typeof value === "string" || typeof value === "number" ? String(value) : undefined}
         >
           {value}
         </div>
       </div>
       {icon && (
-        <div className="shrink-0 w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100 group-hover:bg-slate-100 transition duration-300">
+        <div className="shrink-0 w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100 group-hover:bg-slate-100 transition duration-300">
           {icon}
         </div>
       )}

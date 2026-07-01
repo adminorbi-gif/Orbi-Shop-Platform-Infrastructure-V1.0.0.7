@@ -408,16 +408,16 @@ export function AdsAdmin({ lang, products, currentStaff }: AdsAdminProps) {
       )}
 
       {/* KPI Performance Dashboard */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+      <div className="orbi-admin-auto-grid">
+        <div className="orbi-admin-card p-5 rounded-2xl border border-slate-100 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[10px] font-black uppercase tracking-wider">
+            <span className="orbi-admin-label text-[10px] font-black uppercase tracking-wider">
               {lang === "sw" ? "Mionekano / Impressions" : "Total Impressions"}
             </span>
             <Eye size={16} />
           </div>
           <div className="mt-2.5">
-            <p className="text-2xl font-black text-slate-900 font-mono">
+            <p className="orbi-admin-compact-value font-black text-slate-900 font-mono">
               {stats.totalImpressions.toLocaleString()}
             </p>
             <p className="text-[10px] text-slate-500 font-medium">
@@ -426,15 +426,15 @@ export function AdsAdmin({ lang, products, currentStaff }: AdsAdminProps) {
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+        <div className="orbi-admin-card p-5 rounded-2xl border border-slate-100 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[10px] font-black uppercase tracking-wider">
+            <span className="orbi-admin-label text-[10px] font-black uppercase tracking-wider">
               {lang === "sw" ? "Bofya za Kulipia / Clicks" : "Ad Click Events"}
             </span>
             <MousePointerClick size={16} />
           </div>
           <div className="mt-2.5">
-            <p className="text-2xl font-black text-slate-900 font-mono">
+            <p className="orbi-admin-compact-value font-black text-slate-900 font-mono">
               {stats.totalClicks.toLocaleString()}
             </p>
             <p className="text-[10px] text-slate-500 font-medium">
@@ -443,30 +443,30 @@ export function AdsAdmin({ lang, products, currentStaff }: AdsAdminProps) {
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+        <div className="orbi-admin-card p-5 rounded-2xl border border-slate-100 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[10px] font-black uppercase tracking-wider">
+            <span className="orbi-admin-label text-[10px] font-black uppercase tracking-wider">
               {lang === "sw" ? "Kiwango cha Uvutio (CTR)" : "Average CTR Ratio"}
             </span>
             <Percent size={16} />
           </div>
           <div className="mt-2.5">
-            <p className="text-2xl font-black text-emerald-600 font-mono">{avgCtr}%</p>
+            <p className="orbi-admin-compact-value font-black text-emerald-600 font-mono">{avgCtr}%</p>
             <p className="text-[10px] text-slate-500 font-medium">
               {lang === "sw" ? "Uhai na ufanisi wa matangazo" : "Click-through effectiveness ratio"}
             </p>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+        <div className="orbi-admin-card p-5 rounded-2xl border border-slate-100 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[10px] font-black uppercase tracking-wider">
+            <span className="orbi-admin-label text-[10px] font-black uppercase tracking-wider">
               {lang === "sw" ? "Dola za Matangazo / Spent" : "Total Ad Revenue Saved"}
             </span>
             <DollarSign size={16} />
           </div>
           <div className="mt-2.5">
-            <p className="text-2xl font-black text-indigo-600 font-mono">
+            <p className="orbi-admin-compact-value font-black text-indigo-600 font-mono">
               {formatCurrency(stats.totalSpent)}
             </p>
             <p className="text-[10px] text-slate-500 font-medium">

@@ -64,20 +64,20 @@ export const SellerDetailView: React.FC<SellerDetailViewProps> = ({ seller, prod
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="orbi-admin-auto-grid">
         {[
           { label: 'Total Products', value: sellerProducts.length, icon: Package, color: 'text-indigo-600', bg: 'bg-indigo-50' },
           { label: 'Total Orders', value: sellerOrders.length, icon: ShoppingCart, color: 'text-emerald-600', bg: 'bg-emerald-50' },
           { label: 'Total Revenue', value: `Tsh ${totalSales.toLocaleString()}`, icon: DollarSign, color: 'text-blue-600', bg: 'bg-blue-50' },
           { label: 'Member Since', value: new Date(seller.createdAt || Date.now()).getFullYear(), icon: Calendar, color: 'text-amber-600', bg: 'bg-amber-50' },
         ].map((stat, i) => (
-          <div key={i} className="bg-white p-5 rounded-3xl border border-slate-200/60 shadow-sm flex flex-col gap-3 group hover:border-slate-300 transition-colors">
+          <div key={i} className="orbi-admin-card p-5 rounded-3xl border border-slate-200/60 flex flex-col gap-3 group hover:border-slate-300 transition-colors">
             <div className={`w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform`}>
                 <stat.icon size={20} className="md:w-6 md:h-6" />
             </div>
             <div>
-                <div className="text-[10px] md:text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1">{stat.label}</div>
-                <div className="text-xl md:text-2xl font-black text-slate-900 truncate">{stat.value}</div>
+                <div className="orbi-admin-label text-[10px] md:text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1">{stat.label}</div>
+                <div className="orbi-admin-compact-value font-black text-slate-900">{stat.value}</div>
             </div>
           </div>
         ))}
