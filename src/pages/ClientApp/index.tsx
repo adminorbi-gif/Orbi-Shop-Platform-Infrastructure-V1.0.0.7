@@ -3661,12 +3661,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
             </button>
           )}
 
-          <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-slate-600 shadow-sm ring-1 ring-slate-200/70 backdrop-blur">
+          <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-slate-600 shadow-sm ring-1 ring-slate-200/70">
             <Eye size={10} />
             {lang === "sw" ? "Tazama" : "Quick view"}
           </div>
-
-          <div className="absolute inset-x-0 bottom-0 z-10 h-20 bg-gradient-to-t from-slate-950/18 to-transparent pointer-events-none" />
 
           {p.images.length > 0 ? (
             <>

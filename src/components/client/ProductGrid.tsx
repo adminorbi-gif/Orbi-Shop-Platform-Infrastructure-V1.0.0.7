@@ -116,8 +116,8 @@ export function ProductGrid({
               </div>
 
               {/* Hover Actions */}
-              <div className="absolute inset-x-0 bottom-0 flex justify-center gap-2 bg-gradient-to-t from-slate-950/28 to-transparent p-3 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
-                <div className="rounded-full bg-white/95 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-xl backdrop-blur-md">
+              <div className="absolute inset-x-0 bottom-0 flex justify-center gap-2 p-3 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                <div className="rounded-full bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-lg ring-1 ring-slate-200">
                   {lang === "sw" ? "Tazama" : "Quick view"}
                 </div>
               </div>
