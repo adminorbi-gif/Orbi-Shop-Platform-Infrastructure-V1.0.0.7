@@ -1112,9 +1112,6 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         ].includes(String(o.status || "").toLowerCase()) &&
         o.date < thirtyDaysAgo
       ) {
-        saveOrderWithValidation({ ...o, status: "archived" as const }, o).catch(
-          console.error,
-        );
         return { ...o, status: "archived" as const };
       }
       return o;
@@ -1194,10 +1191,6 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             ].includes(String(o.status || "").toLowerCase()) &&
             o.date < thirtyDaysAgo
           ) {
-            saveOrderWithValidation(
-              { ...o, status: "archived" as const },
-              o,
-            ).catch(console.error);
             return { ...o, status: "archived" as const };
           }
           return o;
