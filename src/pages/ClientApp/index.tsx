@@ -1326,41 +1326,6 @@ export default function ClientApp() {
                     lang={lang}
                   />
 
-                  <section className="mb-8 grid grid-cols-1 gap-3 md:grid-cols-3">
-                    {[
-                      {
-                        icon: ShieldCheck,
-                        title: lang === "sw" ? "PaySafe Escrow Live" : "Live PaySafe Escrow",
-                        body: lang === "sw" ? "Malipo hupitia Gateway na hushikiliwa mpaka uthibitisho wa kupokea mzigo." : "Payments route through Gateway and stay protected until delivery confirmation.",
-                      },
-                      {
-                        icon: Store,
-                        title: lang === "sw" ? "Wauzaji Waliothibitishwa" : "Verified Merchant Network",
-                        body: lang === "sw" ? "Kila duka linafuatiliwa kwa historia, oda na ubora wa huduma." : "Merchants are tracked by order history, fulfillment quality, and service health.",
-                      },
-                      {
-                        icon: Truck,
-                        title: lang === "sw" ? "Ufuatiliaji wa Oda" : "Order Lifecycle Tracking",
-                        body: lang === "sw" ? "Mteja anaona hali ya malipo, usafirishaji na uthibitisho wa mwisho." : "Customers see payment, delivery, and final confirmation states clearly.",
-                      },
-                    ].map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <div key={item.title} className="group relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-900/5">
-                          <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-orange-500/5 blur-2xl transition group-hover:bg-orange-500/10" />
-                          <div className="relative flex items-start gap-4">
-                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-amber-300 shadow-lg shadow-slate-900/10">
-                              <Icon size={22} />
-                            </div>
-                            <div>
-                              <h3 className="text-sm font-black text-slate-950">{item.title}</h3>
-                              <p className="mt-1.5 text-xs font-semibold leading-relaxed text-slate-500">{item.body}</p>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </section>
                 </>
               ) : (
                 <div className="mb-10 bg-white rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 shadow-sm border border-slate-200">
