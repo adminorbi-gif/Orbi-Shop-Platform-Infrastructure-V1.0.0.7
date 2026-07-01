@@ -1566,6 +1566,35 @@ export function CheckoutModal({
   const [step, setStep] = useState(1);
   const [loadingMsg, setLoadingMsg] = useState("");
   const [gatewayResponse, setGatewayResponse] = useState<any>(null);
+  const [touched, setTouched] = useState({ name: false, phone: false, address: false });
+
+  const getErrors = () => {
+    const errs: any = {};
+    if (!name.trim()) {
+      errs.name = lang === "sw" ? "Jina linahitajika" : "Name is required";
+    } else if (name.trim().length < 3) {
+      errs.name = lang === "sw" ? "Jina lazima liwe na herufi 3 au zaidi" : "Name must be at least 3 characters";
+    }
+
+    if (!phone.trim()) {
+      errs.phone = lang === "sw" ? "Namba ya simu inahitajika" : "Phone number is required";
+    } else if (!/^(\+?\d{9,15})$/.test(phone.trim().replace(/\s/g, ''))) {
+      errs.phone = lang === "sw" ? "Weka namba ya simu iliyo sahihi" : "Enter a valid phone number";
+    }
+
+    if (!address.trim()) {
+      errs.address = lang === "sw" ? "Anwani inahitajika" : "Address is required";
+    } else if (address.trim().length < 5) {
+      errs.address = lang === "sw" ? "Tafadhali weka anwani kamili" : "Please enter a complete address";
+    }
+    return errs;
+  };
+  const currentErrors = getErrors();
+  const isValid = Object.keys(currentErrors).length === 0;
+
+  const handleBlur = (field: keyof typeof touched) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+  };
 
   // Card Payment States
   const [cardNumber, setCardNumber] = useState("");
@@ -2350,9 +2379,13 @@ export function CheckoutModal({
                   required
                   type="text"
                   value={name}
+                  onBlur={() => handleBlur('name')}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full border p-2.5 rounded-lg outline-none"
+                  className={`w-full border p-2.5 rounded-lg outline-none transition-all ${touched.name && currentErrors.name ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/10' : 'focus:border-primary focus:ring-2 focus:ring-primary/10'}`}
                 />
+                {touched.name && currentErrors.name && (
+                  <p className="text-[11px] text-red-500 font-medium mt-1 ml-1 flex items-center gap-1"><Info size={12}/> {currentErrors.name}</p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1 text-slate-500">
@@ -2364,9 +2397,13 @@ export function CheckoutModal({
                   name="seller_phone"
                   autoComplete="tel"
                   value={phone}
+                  onBlur={() => handleBlur('phone')}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full border p-2.5 rounded-lg outline-none"
+                  className={`w-full border p-2.5 rounded-lg outline-none transition-all ${touched.phone && currentErrors.phone ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/10' : 'focus:border-primary focus:ring-2 focus:ring-primary/10'}`}
                 />
+                {touched.phone && currentErrors.phone && (
+                  <p className="text-[11px] text-red-500 font-medium mt-1 ml-1 flex items-center gap-1"><Info size={12}/> {currentErrors.phone}</p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1 text-slate-500">
@@ -2389,8 +2426,9 @@ export function CheckoutModal({
                 <textarea
                   required
                   value={address}
+                  onBlur={() => handleBlur('address')}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="w-full border p-2.5 rounded-lg outline-none"
+                  className={`w-full border p-2.5 rounded-lg outline-none transition-all ${touched.address && currentErrors.address ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/10' : 'focus:border-primary focus:ring-2 focus:ring-primary/10'}`}
                   rows={2}
                   placeholder={
                     lang === "sw"
@@ -2398,6 +2436,9 @@ export function CheckoutModal({
                       : "Enter your physical delivery address..."
                   }
                 ></textarea>
+                {touched.address && currentErrors.address && (
+                  <p className="text-[11px] text-red-500 font-medium mt-1 ml-1 flex items-center gap-1"><Info size={12}/> {currentErrors.address}</p>
+                )}
 
                 {/* Interactive Store Locator & Carrier Map */}
                 <div className="mt-2 bg-slate-900 text-white p-3 rounded-xl border border-slate-750 flex flex-col gap-2 shadow-inner">
@@ -2580,13 +2621,13 @@ export function CheckoutModal({
                 type="button"
                 onClick={(e) => {
                   e.preventDefault();
-                  if (!name.trim() || !phone.trim() || !address.trim()) {
-                    showAlert(lang === "sw" ? "Tafadhali jaza jina, namba ya simu na chagua kituo" : "Please fill name, phone number and select a delivery hub", "error");
-                    return;
+                  setTouched({ name: true, phone: true, address: true });
+                  if (isValid) {
+                    setStep(2);
                   }
-                  setStep(2);
                 }}
-                className="w-full bg-primary text-white py-3 rounded-lg font-bold mt-2"
+                disabled={!isValid && (touched.name && touched.phone && touched.address)}
+                className="w-full bg-primary text-white py-3 rounded-lg font-bold mt-2 disabled:opacity-50 transition-all hover:opacity-90"
               >
                 {lang === "sw" ? "Endelea kwenye Malipo" : "Continue to Payment"}
               </button>

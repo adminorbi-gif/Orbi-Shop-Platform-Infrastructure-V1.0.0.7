@@ -38,8 +38,37 @@ export function CheckoutView({
     paymentMethod: "escrow",
     couponCode: ""
   });
+  const [touched, setTouched] = useState({ name: false, phone: false, address: false });
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [isOrdering, setIsOrdering] = useState(false);
+
+  const getErrors = () => {
+    const errs: any = {};
+    if (!details.name.trim()) {
+      errs.name = lang === "sw" ? "Jina linahitajika" : "Name is required";
+    } else if (details.name.trim().length < 3) {
+      errs.name = lang === "sw" ? "Jina lazima liwe na herufi 3 au zaidi" : "Name must be at least 3 characters";
+    }
+
+    if (!details.phone.trim()) {
+      errs.phone = lang === "sw" ? "Namba ya simu inahitajika" : "Phone number is required";
+    } else if (!/^(\+?\d{9,15})$/.test(details.phone.trim().replace(/\s/g, ''))) {
+      errs.phone = lang === "sw" ? "Weka namba ya simu iliyo sahihi" : "Enter a valid phone number";
+    }
+
+    if (!details.address.trim()) {
+      errs.address = lang === "sw" ? "Anwani inahitajika" : "Address is required";
+    } else if (details.address.trim().length < 5) {
+      errs.address = lang === "sw" ? "Tafadhali weka anwani kamili" : "Please enter a complete address";
+    }
+    return errs;
+  };
+  const currentErrors = getErrors();
+  const isValid = Object.keys(currentErrors).length === 0;
+
+  const handleBlur = (field: keyof typeof touched) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+  };
 
   const subtotal = cart.reduce((sum, item) => {
     const actualPrice = getProductPriceForQty(item.product, item.quantity);
@@ -203,54 +232,69 @@ export function CheckoutView({
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{lang === "sw" ? "Jina Kamili" : "Full Name"}</label>
                       <div className="relative">
-                        <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                        <UserIcon className={`absolute left-4 top-1/2 -translate-y-1/2 ${touched.name && currentErrors.name ? 'text-red-400' : 'text-slate-400'}`} size={16} />
                         <input
                           type="text"
                           name="checkout_name"
                           autoComplete="name"
                           value={details.name}
+                          onBlur={() => handleBlur('name')}
                           onChange={(e) => setDetails({ ...details, name: e.target.value })}
                           placeholder="John Doe"
-                          className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
+                          className={`w-full bg-slate-50 border rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold focus:bg-white transition-all outline-none ${touched.name && currentErrors.name ? 'border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-500/10' : 'border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10'}`}
                         />
                       </div>
+                      {touched.name && currentErrors.name && (
+                        <p className="text-[11px] text-red-500 font-medium mt-1 ml-1 flex items-center gap-1"><Info size={12}/> {currentErrors.name}</p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{lang === "sw" ? "Namba ya Simu" : "Phone Number"}</label>
                       <div className="relative">
-                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                        <Phone className={`absolute left-4 top-1/2 -translate-y-1/2 ${touched.phone && currentErrors.phone ? 'text-red-400' : 'text-slate-400'}`} size={16} />
                         <input
                           type="tel"
                           name="checkout_phone"
                           autoComplete="tel"
                           value={details.phone}
+                          onBlur={() => handleBlur('phone')}
                           onChange={(e) => setDetails({ ...details, phone: e.target.value })}
                           placeholder="+255 000 000 000"
-                          className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
+                          className={`w-full bg-slate-50 border rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold focus:bg-white transition-all outline-none ${touched.phone && currentErrors.phone ? 'border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-500/10' : 'border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10'}`}
                         />
                       </div>
+                      {touched.phone && currentErrors.phone && (
+                        <p className="text-[11px] text-red-500 font-medium mt-1 ml-1 flex items-center gap-1"><Info size={12}/> {currentErrors.phone}</p>
+                      )}
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{lang === "sw" ? "Anwani ya Makazi/Ofisi" : "Delivery Address"}</label>
                     <div className="relative">
-                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <MapPin className={`absolute left-4 top-1/2 -translate-y-1/2 ${touched.address && currentErrors.address ? 'text-red-400' : 'text-slate-400'}`} size={16} />
                       <input
                         type="text"
                         name="checkout_address"
                         autoComplete="street-address"
                         value={details.address}
+                        onBlur={() => handleBlur('address')}
                         onChange={(e) => setDetails({ ...details, address: e.target.value })}
                         placeholder="e.g. Mwanza, Rock City, Mtaa wa Pamba"
-                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
+                        className={`w-full bg-slate-50 border rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold focus:bg-white transition-all outline-none ${touched.address && currentErrors.address ? 'border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-500/10' : 'border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10'}`}
                       />
                     </div>
+                    {touched.address && currentErrors.address && (
+                      <p className="text-[11px] text-red-500 font-medium mt-1 ml-1 flex items-center gap-1"><Info size={12}/> {currentErrors.address}</p>
+                    )}
                   </div>
 
                   <button 
-                    onClick={() => setStep(2)}
-                    disabled={!details.name || !details.phone || !details.address}
+                    onClick={() => {
+                      setTouched({ name: true, phone: true, address: true });
+                      if (isValid) setStep(2);
+                    }}
+                    disabled={!isValid && (touched.name && touched.phone && touched.address)}
                     className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-3 hover:bg-primary transition-all active:scale-95 disabled:opacity-50"
                   >
                     <span>{lang === "sw" ? "Endelea na Malipo" : "Continue to Payment"}</span>
