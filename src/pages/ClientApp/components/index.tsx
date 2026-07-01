@@ -1727,6 +1727,14 @@ export function CheckoutModal({
   }, [address]);
 
   const finalTotal = Math.max(0, total - discountAmount - pointsDiscount) + deliveryCost;
+  const normalizePaymentMethod = (value: any) => {
+    const raw = String(value || "").trim().toLowerCase();
+    if (["orbi", "orbi_wallet", "wallet", "paysafe", "orbi_paysafe"].includes(raw)) return "orbi_wallet";
+    if (["card", "credit_card", "debit_card", "card_gateway", "tz_bank"].includes(raw)) return "tz_bank";
+    if (["mobile", "mobile_money", "mno", "mno_tz", "mpesa", "m-pesa", "tigopesa", "tigo_pesa", "airtel_money", "halopesa"].includes(raw)) return "mno_tz";
+    if (["bank", "bank_transfer", "bank_transfer_tz"].includes(raw)) return "tz_bank";
+    return "mno_tz";
+  };
   const paymentRoutes = [
     {
       id: "orbi_wallet",
@@ -1762,7 +1770,8 @@ export function CheckoutModal({
       assurance: lang === "sw" ? "Hakuna taarifa za kadi zinazohifadhiwa na duka" : "Card details are not stored by the shop",
     },
   ];
-  const selectedPaymentRoute = paymentRoutes.find((route) => route.id === paymentMethod) || paymentRoutes[1];
+  const effectivePaymentMethod = normalizePaymentMethod(paymentMethod);
+  const selectedPaymentRoute = paymentRoutes.find((route) => route.id === effectivePaymentMethod) || paymentRoutes[1];
   const isPaying = Boolean(loadingMsg);
   const gatewayStatus = String(gatewayResponse?.status || "").toLowerCase();
   const gatewayIsHeld = gatewayStatus === "held";
@@ -1774,7 +1783,7 @@ export function CheckoutModal({
     db.getInvoiceSettings().then((res) => {
       setInvSettings(res);
       if (res.paymentOptions && res.paymentOptions.length > 0) {
-        setPaymentMethod(res.paymentOptions[0].id);
+        setPaymentMethod(normalizePaymentMethod(res.paymentOptions[0].id || res.paymentOptions[0].name));
       } else {
         setPaymentMethod("mno_tz");
       }
@@ -1783,13 +1792,14 @@ export function CheckoutModal({
 
   const confirm = async (e: React.FormEvent) => {
     e.preventDefault();
+    const normalizedMethod = normalizePaymentMethod(paymentMethod);
 
-    if (paymentMethod === "tz_bank" && (!cardNumber || !cardExpiry || !cardCvv)) {
+    if (normalizedMethod === "tz_bank" && (!cardNumber || !cardExpiry || !cardCvv)) {
       showAlert(lang === "sw" ? "Tafadhali jaza taarifa zote za kadi" : "Please fill all card details", "error");
       return;
     }
     
-    if (paymentMethod !== "tz_bank" && !ussdPhone) {
+    if (normalizedMethod !== "tz_bank" && !ussdPhone) {
       showAlert(lang === "sw" ? "Tafadhali jaza namba ya simu au kumbukumbu kwa usahihi" : "Please enter phone number or reference correctly", "error");
       return;
     }
@@ -1803,11 +1813,11 @@ export function CheckoutModal({
         body: JSON.stringify({
           cart,
           user,
-          paymentMethod,
+          paymentMethod: normalizedMethod,
           paymentCategory: selectedPaymentRoute.category,
           paymentRail: selectedPaymentRoute.rail,
           providerCode: selectedPaymentRoute.providerCode,
-          paymentAccount: paymentMethod === 'tz_bank' ? cardNumber : (ussdPhone || phone),
+          paymentAccount: normalizedMethod === 'tz_bank' ? cardNumber : (ussdPhone || phone),
           operation: "paysafe",
           appliedCoupon,
           finalTotal,
@@ -2796,7 +2806,7 @@ export function CheckoutModal({
               <div className="grid gap-3">
                 {paymentRoutes.map((route) => {
                   const RouteIcon = route.icon;
-                  const active = paymentMethod === route.id;
+                  const active = effectivePaymentMethod === route.id;
                   return (
                     <button
                       key={route.id}
@@ -2846,7 +2856,7 @@ export function CheckoutModal({
             </div>
             
             <div className="mt-4">
-              {paymentMethod === 'tz_bank' ? (
+              {effectivePaymentMethod === 'tz_bank' ? (
                 <div className="space-y-3">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1 flex justify-between">
@@ -2923,24 +2933,24 @@ export function CheckoutModal({
               ) : (
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    {paymentMethod === 'orbi_wallet' ? (lang === "sw" ? "PaySafe ID au Namba ya Simu" : "PaySafe ID or Account Phone Number") : (lang === "sw" ? "Namba ya Simu au Kumbukumbu" : "Mobile Number or Reference")}
+                    {effectivePaymentMethod === 'orbi_wallet' ? (lang === "sw" ? "PaySafe ID au Namba ya Simu" : "PaySafe ID or Account Phone Number") : (lang === "sw" ? "Namba ya Simu au Kumbukumbu" : "Mobile Number or Reference")}
                   </label>
                   <input
-                    type={paymentMethod === 'orbi_wallet' ? 'text' : 'tel'}
+                    type={effectivePaymentMethod === 'orbi_wallet' ? 'text' : 'tel'}
                     id="tx_ref_input"
                     name="tx_ref_input"
-                    autoComplete={paymentMethod === 'orbi_wallet' ? 'off' : 'tel'}
+                    autoComplete={effectivePaymentMethod === 'orbi_wallet' ? 'off' : 'tel'}
                     autoCorrect="off"
                     autoCapitalize="none"
                     spellCheck="false"
                     data-form-type="other"
-                    inputMode={paymentMethod === 'orbi_wallet' ? 'text' : 'numeric'}
-                    placeholder={paymentMethod === 'orbi_wallet' ? (lang === "sw" ? "Namba au mfano: ORB123" : "Number or e.g. ORB123") : (lang === "sw" ? "Mfano: 0712345678" : "e.g. 0712345678")}
+                    inputMode={effectivePaymentMethod === 'orbi_wallet' ? 'text' : 'numeric'}
+                    placeholder={effectivePaymentMethod === 'orbi_wallet' ? (lang === "sw" ? "Namba au mfano: ORB123" : "Number or e.g. ORB123") : (lang === "sw" ? "Mfano: 0712345678" : "e.g. 0712345678")}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:border-amber-500 outline-none"
                     value={ussdPhone}
                     onChange={(e) => {
                       const val = e.target.value;
-                      if (paymentMethod === 'mno_tz') {
+                      if (effectivePaymentMethod === 'mno_tz') {
                         setUssdPhone(val.replace(/\D/g, ''));
                       } else {
                         const upperVal = val.toUpperCase();
