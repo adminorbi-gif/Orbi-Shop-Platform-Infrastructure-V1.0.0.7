@@ -66,6 +66,7 @@ const isValidUUID = (id: any): boolean => {
 
 type GatewayPaymentCategory = "orbi" | "mobile_money" | "bank" | "card";
 type GatewayPaymentRail = "orbi_wallet" | "mno_tz" | "bank_transfer_tz" | "card_gateway";
+type ShopPaymentOutcome = "held" | "requires_action" | "processing" | "failed";
 
 const routeByMethod: Record<string, { paymentCategory: GatewayPaymentCategory; paymentRail: GatewayPaymentRail; providerCode?: string }> = {
   orbi_wallet: { paymentCategory: "orbi", paymentRail: "orbi_wallet" },
@@ -122,6 +123,57 @@ function normalizeGatewayPaySafeRoute(input: {
   };
 }
 
+function normalizeGatewayOutcome(result: any, fallbackReference: string, route: ReturnType<typeof normalizeGatewayPaySafeRoute>) {
+  const intent = result?.data || result?.paymentIntent || result?.intent || {};
+  const coreData = result?.core?.data || result?.core || intent?.coreResult || {};
+  const rawStatus = String(coreData?.status || intent?.status || result?.status || "processing").trim().toLowerCase();
+  const failed = result?.success === false || ["failed", "declined", "cancelled", "rejected"].includes(rawStatus);
+  const held = ["held", "completed", "settled", "authorized", "payment_held"].includes(rawStatus);
+  const requiresAction = ["requires_action", "challenge_required", "requires_confirmation"].includes(rawStatus);
+  const status: ShopPaymentOutcome = failed ? "failed" : held ? "held" : requiresAction ? "requires_action" : "processing";
+
+  const defaultMessage: Record<ShopPaymentOutcome, string> = {
+    held: "Payment accepted and funds are protected in ORBI PaySafe.",
+    requires_action: "Customer authorization is required before ORBI Core can complete the hold.",
+    processing: "Payment request accepted. ORBI PaySafe is processing the funding route.",
+    failed: "Payment was declined or could not be completed.",
+  };
+
+  return {
+    status,
+    rawStatus,
+    message: String(coreData?.message || intent?.coreResult?.message || result?.message || defaultMessage[status]),
+    paymentIntentId: intent?.id || coreData?.intentId || null,
+    reference: intent?.reference || coreData?.reference || fallbackReference,
+    transactionId: coreData?.transactionId || intent?.coreResult?.transactionId || null,
+    challenge: coreData?.challenge || intent?.coreResult?.challenge || null,
+    paymentCategory: route.paymentCategory,
+    paymentRail: route.paymentRail,
+    providerCode: route.providerCode || null,
+  };
+}
+
+function mapOrderStateFromGateway(outcome: ReturnType<typeof normalizeGatewayOutcome>) {
+  if (outcome.status === "held") {
+    return {
+      dbStatus: "confirmed",
+      paymentReference: `ESCROW:PAYMENT_HELD:held||${outcome.transactionId || outcome.paymentIntentId || outcome.reference}`,
+    };
+  }
+
+  if (outcome.status === "failed") {
+    return {
+      dbStatus: "cancelled",
+      paymentReference: `ESCROW:PAYMENT_FAILED:${outcome.rawStatus}||${outcome.paymentIntentId || outcome.reference}`,
+    };
+  }
+
+  return {
+    dbStatus: "pending",
+    paymentReference: `ESCROW:${outcome.status.toUpperCase()}:${outcome.rawStatus}||${outcome.paymentIntentId || outcome.reference}`,
+  };
+}
+
 router.post("/", async (req, res) => {
   try {
     const { cart, user, paymentMethod, paymentCategory, paymentRail, providerCode, paymentAccount, operation, appliedCoupon, finalTotal, name, phone, address, options, tin, lang } = req.body;
@@ -143,8 +195,7 @@ router.post("/", async (req, res) => {
       paymentAccount,
     });
 
-    let gatewayStatus = "pending";
-    let gatewayMessage = "Processing transaction...";
+    const gatewayResults: ReturnType<typeof normalizeGatewayOutcome>[] = [];
 
     if (!cart || !Array.isArray(cart) || cart.length === 0) {
       return res.status(400).json({ success: false, error: "Cart is empty." });
@@ -263,10 +314,7 @@ router.post("/", async (req, res) => {
             }
           });
           console.log(`[PAYSAFE_GATEWAY] Live Escrow Created for ${oId} ->`, result);
-          if (result && result.status) {
-            gatewayStatus = (result.status === 'held' || result.status === 'completed') ? 'success' : result.status;
-            gatewayMessage = result.message || "Payment processed via live Orbi Pay Gateway.";
-          }
+          gatewayResults.push(normalizeGatewayOutcome(result, oId, paymentRoute));
         } catch (e: any) {
           console.error(`[PAYSAFE_GATEWAY] Live Orbi Pay Error for ${oId}:`, e.message);
           // If the gateway hard fails, we must abort the transaction safely
@@ -276,6 +324,9 @@ router.post("/", async (req, res) => {
         console.error("[PAYSAFE_GATEWAY] ORBI_SHOP_PAY_API_KEY is not configured in the environment.");
         return res.status(500).json({ success: false, error: "Payment Gateway configuration error. Please contact support." });
       }
+
+      const gatewayOutcome = gatewayResults[gatewayResults.length - 1] || normalizeGatewayOutcome(null, oId, paymentRoute);
+      const orderState = mapOrderStateFromGateway(gatewayOutcome);
 
       const { data: oRow, error: oError } = await supabase
         .from("orders")
@@ -289,8 +340,8 @@ router.post("/", async (req, res) => {
           payment_method: paymentRoute.paymentRail,
           payment_method_name: paymentRoute.paymentCategory,
           total: sellerTotal,
-          status: "pending",
-          payment_reference: encrypt(`ESCROW:HELD:${paymentRoute.paymentRail}||`) // Ensures money is marked as held safely initially
+          status: orderState.dbStatus,
+          payment_reference: encrypt(orderState.paymentReference)
         }])
         .select("id")
         .single();
@@ -338,10 +389,16 @@ router.post("/", async (req, res) => {
       success: true, 
       baseOrderId: oIdBase, 
       successfulOrders: oIds,
-      gatewayResponse: {
-        status: gatewayStatus,
-        message: gatewayMessage
-      }
+      gatewayResponse: gatewayResults.length === 1 ? gatewayResults[0] : {
+        status: gatewayResults.every((item) => item.status === "held") ? "held" : gatewayResults.some((item) => item.status === "failed") ? "failed" : "processing",
+        rawStatus: "multi_seller_checkout",
+        message: "Checkout was routed across multiple seller PaySafe holds. Review each order reference below.",
+        reference: oIdBase,
+        paymentCategory: paymentRoute.paymentCategory,
+        paymentRail: paymentRoute.paymentRail,
+        providerCode: paymentRoute.providerCode || null,
+      },
+      gatewayResults
     });
   } catch (err: any) {
     res.status(400).json({ success: false, error: err.message });

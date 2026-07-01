@@ -1727,6 +1727,48 @@ export function CheckoutModal({
   }, [address]);
 
   const finalTotal = Math.max(0, total - discountAmount - pointsDiscount) + deliveryCost;
+  const paymentRoutes = [
+    {
+      id: "orbi_wallet",
+      category: "orbi",
+      rail: "orbi_wallet",
+      providerCode: "",
+      icon: Wallet,
+      title: lang === "sw" ? "ORBI Wallet" : "ORBI Wallet",
+      subtitle: lang === "sw" ? "Idhini ya ndani ya ORBI Core" : "Native ORBI Core authorization",
+      eta: lang === "sw" ? "Dakika 0-3" : "0-3 min",
+      assurance: lang === "sw" ? "Mtumiaji wa ORBI anathibitisha ndani ya app" : "ORBI user approves inside the app",
+    },
+    {
+      id: "mno_tz",
+      category: "mobile_money",
+      rail: "mno_tz",
+      providerCode: "orbi_shop_mno_tz",
+      icon: Phone,
+      title: lang === "sw" ? "Mobile Money" : "Mobile Money",
+      subtitle: lang === "sw" ? "M-Pesa, Tigo Pesa na mitandao inayoungwa mkono" : "M-Pesa, Tigo Pesa and supported MNO rails",
+      eta: lang === "sw" ? "Sekunde 30-180" : "30-180 sec",
+      assurance: lang === "sw" ? "Fedha huingia PaySafe baada ya uthibitisho wa mtandao" : "Funds enter PaySafe after network confirmation",
+    },
+    {
+      id: "tz_bank",
+      category: "card",
+      rail: "card_gateway",
+      providerCode: "orbi_shop_card_gateway",
+      icon: CreditCard,
+      title: lang === "sw" ? "Kadi ya Benki" : "Bank Card",
+      subtitle: lang === "sw" ? "Visa, Mastercard, Amex kupitia njia salama" : "Visa, Mastercard, Amex through secure card rail",
+      eta: lang === "sw" ? "Sekunde 15-90" : "15-90 sec",
+      assurance: lang === "sw" ? "Hakuna taarifa za kadi zinazohifadhiwa na duka" : "Card details are not stored by the shop",
+    },
+  ];
+  const selectedPaymentRoute = paymentRoutes.find((route) => route.id === paymentMethod) || paymentRoutes[1];
+  const isPaying = Boolean(loadingMsg);
+  const gatewayStatus = String(gatewayResponse?.status || "").toLowerCase();
+  const gatewayIsHeld = gatewayStatus === "held";
+  const gatewayIsFailed = gatewayStatus === "failed";
+  const gatewayNeedsAction = gatewayStatus === "requires_action";
+  const gatewayIsProcessing = !gatewayIsHeld && !gatewayIsFailed && !gatewayNeedsAction;
 
   useEffect(() => {
     db.getInvoiceSettings().then((res) => {
@@ -1754,20 +1796,6 @@ export function CheckoutModal({
 
     setLoadingMsg(t(lang, "checkout.loading"));
 
-    let paymentCategory = "mobile_money";
-    let paymentRail = "mno_tz";
-    let providerCode = "orbi_shop_mno_tz";
-
-    if (paymentMethod === "orbi_wallet") {
-      paymentCategory = "orbi";
-      paymentRail = "orbi_wallet";
-      providerCode = "";
-    } else if (paymentMethod === "tz_bank") {
-      paymentCategory = "card";
-      paymentRail = "card_gateway";
-      providerCode = "orbi_shop_card_gateway";
-    }
-
     try {
       const resp = await fetch("/api/checkout", {
         method: "POST",
@@ -1776,9 +1804,9 @@ export function CheckoutModal({
           cart,
           user,
           paymentMethod,
-          paymentCategory,
-          paymentRail,
-          providerCode,
+          paymentCategory: selectedPaymentRoute.category,
+          paymentRail: selectedPaymentRoute.rail,
+          providerCode: selectedPaymentRoute.providerCode,
           paymentAccount: paymentMethod === 'tz_bank' ? cardNumber : (ussdPhone || phone),
           operation: "paysafe",
           appliedCoupon,
@@ -1830,17 +1858,35 @@ export function CheckoutModal({
         );
 
         setLastCreatedOrderId(data.baseOrderId);
-        setGatewayResponse(data.gatewayResponse || { status: 'success', message: 'Payment confirmed.' });
+        setGatewayResponse({
+          ...(data.gatewayResponse || { status: "processing", message: "Payment request accepted." }),
+          gatewayResults: data.gatewayResults || [],
+          successfulOrders: data.successfulOrders || [],
+        });
         setLoadingMsg("");
         setStep(3);
       } else {
-        setGatewayResponse({ status: "failed", message: data?.error || "Failed to process order securely." });
+        setGatewayResponse({
+          status: "failed",
+          rawStatus: `http_${resp.status}`,
+          message: data?.error || "Failed to process order securely.",
+          paymentCategory: selectedPaymentRoute.category,
+          paymentRail: selectedPaymentRoute.rail,
+          providerCode: selectedPaymentRoute.providerCode || null,
+        });
         setLoadingMsg("");
         setStep(3);
       }
     } catch (e: any) {
       console.error(e);
-      setGatewayResponse({ status: "failed", message: `Error processing checkout: ${e.message || e}` });
+      setGatewayResponse({
+        status: "failed",
+        rawStatus: "client_error",
+        message: `Error processing checkout: ${e.message || e}`,
+        paymentCategory: selectedPaymentRoute.category,
+        paymentRail: selectedPaymentRoute.rail,
+        providerCode: selectedPaymentRoute.providerCode || null,
+      });
       setLoadingMsg("");
       setStep(3);
     }
@@ -2671,12 +2717,45 @@ export function CheckoutModal({
             </form>
           </div>
         ) : step === 2 ? (
-          <div className="p-6 space-y-4 max-h-[85vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">
-              {lang === "sw" ? "Malipo" : "Payment"}
-            </h2>
+          <div className="p-5 sm:p-6 space-y-5 max-h-[85vh] overflow-y-auto bg-slate-50">
+            <div className="relative overflow-hidden rounded-[2rem] bg-slate-950 text-white p-5 shadow-2xl">
+              <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-amber-400/20 blur-2xl" />
+              <div className="absolute -left-16 bottom-0 h-36 w-36 rounded-full bg-emerald-400/10 blur-2xl" />
+              <div className="relative z-10 flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.28em] text-amber-300">
+                    ORBI PaySafe Settlement
+                  </p>
+                  <h2 className="mt-2 text-2xl font-black tracking-tight">
+                    {lang === "sw" ? "Malipo Salama ya Kiwango cha Taasisi" : "Institutional Secure Checkout"}
+                  </h2>
+                  <p className="mt-2 max-w-md text-xs font-medium leading-relaxed text-slate-300">
+                    {lang === "sw"
+                      ? "Duka linatuma ombi halisi kwenda Gateway. ORBI Core huthibitisha njia ya fedha, ada na hali ya PaySafe kabla oda haijakamilika."
+                      : "The shop sends a live request to the Gateway. ORBI Core validates the funding rail, fees, and PaySafe state before the order is finalized."}
+                  </p>
+                </div>
+                <div className="hidden sm:flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/10">
+                  <ShieldCheck size={24} className="text-emerald-300" />
+                </div>
+              </div>
+              <div className="relative z-10 mt-5 grid grid-cols-3 gap-2 text-[10px] font-black uppercase tracking-wider text-slate-300">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <div className="text-emerald-300">01</div>
+                  <div>{lang === "sw" ? "Route" : "Route"}</div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <div className="text-amber-300">02</div>
+                  <div>{lang === "sw" ? "Hold" : "Hold"}</div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <div className="text-sky-300">03</div>
+                  <div>{lang === "sw" ? "Result" : "Result"}</div>
+                </div>
+              </div>
+            </div>
 
-            <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl space-y-2 text-sm text-slate-700">
+            <div className="bg-white border border-slate-200 p-4 rounded-3xl space-y-2 text-sm text-slate-700 shadow-sm">
               <div className="flex justify-between">
                 <span>{lang === "sw" ? "Jumla ya Bidhaa:" : "Items Total:"}</span>
                 <span className="font-bold"><PriceDisplay amount={total} size="sm" /></span>
@@ -2706,48 +2785,63 @@ export function CheckoutModal({
             </div>
 
             <div className="space-y-4 mt-4">
-              <label className="block text-xs font-black mb-3 text-slate-800 uppercase tracking-widest">
-                {lang === "sw" ? "Chagua Njia ya Malipo" : "Choose Payment Option"}
-              </label>
-              <div className="space-y-2.5">
-                <label className={`block w-full p-4 border-2 rounded-2xl transition-all cursor-pointer shadow-sm ${paymentMethod === 'orbi_wallet' ? 'border-amber-500 bg-amber-50 shadow-amber-100' : 'border-slate-100 bg-white hover:border-slate-200'}`}>
-                  <input type="radio" className="hidden" checked={paymentMethod === 'orbi_wallet'} onChange={() => setPaymentMethod('orbi_wallet')} />
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === 'orbi_wallet' ? 'bg-amber-500 text-white' : 'bg-slate-50 text-slate-400'}`}>
-                      <Wallet size={20} />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <h4 className="text-sm font-black text-slate-800">{lang === "sw" ? "Lipa na ORBI Wallet" : "Pay with ORBI Wallet"}</h4>
-                      <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-tight">{lang === "sw" ? "Malipo ya haraka ndani ya mfumo." : "Fast internal payment."}</p>
-                    </div>
-                  </div>
+              <div className="flex items-center justify-between gap-3">
+                <label className="block text-xs font-black text-slate-800 uppercase tracking-widest">
+                  {lang === "sw" ? "Chagua Njia ya Malipo" : "Choose Payment Route"}
                 </label>
-
-                <label className={`block w-full p-4 border-2 rounded-2xl transition-all cursor-pointer shadow-sm ${paymentMethod === 'mno_tz' ? 'border-amber-500 bg-amber-50 shadow-amber-100' : 'border-slate-100 bg-white hover:border-slate-200'}`}>
-                  <input type="radio" className="hidden" checked={paymentMethod === 'mno_tz'} onChange={() => setPaymentMethod('mno_tz')} />
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === 'mno_tz' ? 'bg-amber-500 text-white' : 'bg-slate-50 text-slate-400'}`}>
-                      <Phone size={20} />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <h4 className="text-sm font-black text-slate-800">{lang === "sw" ? "Lipa kwa Simu" : "Pay with Mobile Money"}</h4>
-                      <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-tight">{lang === "sw" ? "M-Pesa, Tigo Pesa, nk." : "M-Pesa, Tigo Pesa, etc."}</p>
-                    </div>
-                  </div>
-                </label>
-
-                <label className={`block w-full p-4 border-2 rounded-2xl transition-all cursor-pointer shadow-sm ${paymentMethod === 'tz_bank' ? 'border-amber-500 bg-amber-50 shadow-amber-100' : 'border-slate-100 bg-white hover:border-slate-200'}`}>
-                  <input type="radio" className="hidden" checked={paymentMethod === 'tz_bank'} onChange={() => setPaymentMethod('tz_bank')} />
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === 'tz_bank' ? 'bg-amber-500 text-white' : 'bg-slate-50 text-slate-400'}`}>
-                      <CreditCard size={20} />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <h4 className="text-sm font-black text-slate-800">{lang === "sw" ? "Lipa kwa Kadi" : "Pay with Card"}</h4>
-                      <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-tight">{lang === "sw" ? "Visa, Mastercard, Amex" : "Visa, Mastercard, Amex"}</p>
-                    </div>
-                  </div>
-                </label>
+                <span className="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-700 ring-1 ring-emerald-100">
+                  Live Gateway
+                </span>
+              </div>
+              <div className="grid gap-3">
+                {paymentRoutes.map((route) => {
+                  const RouteIcon = route.icon;
+                  const active = paymentMethod === route.id;
+                  return (
+                    <button
+                      key={route.id}
+                      type="button"
+                      onClick={() => setPaymentMethod(route.id)}
+                      className={`w-full rounded-3xl border p-4 text-left transition-all ${
+                        active
+                          ? "border-slate-950 bg-white shadow-xl shadow-slate-900/10 ring-2 ring-amber-300/60"
+                          : "border-slate-200 bg-white/80 hover:border-slate-300 hover:bg-white"
+                      }`}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
+                          active ? "bg-slate-950 text-amber-300" : "bg-slate-100 text-slate-500"
+                        }`}>
+                          <RouteIcon size={22} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <h4 className="text-sm font-black text-slate-900">{route.title}</h4>
+                            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600">
+                              {route.eta}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">{route.subtitle}</p>
+                          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                            <span className="rounded-xl bg-slate-50 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-500">
+                              {route.category}
+                            </span>
+                            <span className="rounded-xl bg-slate-50 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-500">
+                              {route.rail}
+                            </span>
+                            <span className="rounded-xl bg-slate-50 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-500">
+                              {route.providerCode || "ORBI_CORE"}
+                            </span>
+                          </div>
+                          <p className="mt-3 flex items-center gap-2 text-[11px] font-bold text-slate-600">
+                            <ShieldCheck size={14} className="text-emerald-500" />
+                            {route.assurance}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
             
@@ -2862,10 +2956,11 @@ export function CheckoutModal({
 
             <button
               onClick={confirm}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-bold mt-6 shadow-md transition-all flex items-center justify-center gap-2"
+              disabled={isPaying}
+              className="w-full bg-slate-950 hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-70 text-white py-4 rounded-2xl font-black mt-6 shadow-xl shadow-slate-900/20 transition-all flex items-center justify-center gap-2"
             >
-              <ShieldCheck size={18} />
-              {lang === "sw" ? "Thibitisha & Lipa Sasa" : "Confirm & Pay Now"}
+              {isPaying ? <RefreshCw size={18} className="animate-spin" /> : <ShieldCheck size={18} />}
+              {isPaying ? (lang === "sw" ? "Inatuma kwa Gateway..." : "Submitting to Gateway...") : (lang === "sw" ? "Thibitisha & Lipa Sasa" : "Confirm & Pay Now")}
             </button>
 
             <button
@@ -2876,76 +2971,107 @@ export function CheckoutModal({
             </button>
           </div>
         ) : step === 3 ? (
-          <div className="p-6 text-center space-y-4 max-h-[85vh] overflow-y-auto">
-            <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-2 ${
-              gatewayResponse?.status === "success" 
-                ? "bg-emerald-500/20 text-emerald-500" 
-                : gatewayResponse?.status === "failed" 
-                  ? "bg-red-500/20 text-red-500" 
-                  : "bg-amber-500/20 text-amber-500 animate-pulse"
+          <div className="p-5 sm:p-6 text-center space-y-5 max-h-[85vh] overflow-y-auto bg-slate-50">
+            <div className={`relative mx-auto flex h-20 w-20 items-center justify-center rounded-[2rem] shadow-xl ${
+              gatewayIsHeld
+                ? "bg-emerald-500 text-white shadow-emerald-500/25"
+                : gatewayIsFailed
+                  ? "bg-red-500 text-white shadow-red-500/25"
+                  : gatewayNeedsAction
+                    ? "bg-amber-500 text-white shadow-amber-500/25"
+                    : "bg-sky-500 text-white shadow-sky-500/25"
             }`}>
-              {gatewayResponse?.status === "success" ? <CheckCircle2 size={28} /> : gatewayResponse?.status === "failed" ? <X size={28} /> : <ShieldCheck size={28} />}
+              {gatewayIsHeld ? <CheckCircle2 size={34} /> : gatewayIsFailed ? <X size={34} /> : gatewayNeedsAction ? <Lock size={34} /> : <RefreshCw size={34} className="animate-spin" />}
             </div>
 
             <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">
-              {gatewayResponse?.status === "success" 
-                ? (lang === "sw" ? "Malipo Yamefanikiwa" : "Payment Successful")
-                : gatewayResponse?.status === "failed"
-                  ? (lang === "sw" ? "Malipo Yameshindikana" : "Payment Failed")
-                  : (lang === "sw" ? "Agizo Limepokelewa" : "Order Received")}
+              {gatewayIsHeld
+                ? (lang === "sw" ? "Fedha Zimeshikiliwa Salama" : "Funds Held Securely")
+                : gatewayIsFailed
+                  ? (lang === "sw" ? "Malipo Yamekataliwa" : "Payment Declined")
+                  : gatewayNeedsAction
+                    ? (lang === "sw" ? "Idhini ya Mnunuzi Inahitajika" : "Buyer Authorization Required")
+                    : (lang === "sw" ? "Malipo Yanachakatwa" : "Payment Processing")}
             </h2>
-            <p className="text-slate-500 text-xs px-2 leading-relaxed">
-              {gatewayResponse?.message || (lang === "sw" ? "Tunasubiri uthibitisho wa malipo yako kupitia njia uliyochagua. Fedha zako zinashikiliwa kwa usalama na Orbi PaySafe." : "Awaiting payment confirmation via your selected method. Your funds are held securely by Orbi PaySafe.")}
+            <p className="mx-auto max-w-md text-slate-500 text-xs px-2 leading-relaxed">
+              {gatewayResponse?.message || (lang === "sw" ? "Tunasubiri uthibitisho wa malipo yako kupitia njia uliyochagua." : "Awaiting confirmation through your selected payment route.")}
             </p>
 
-            {gatewayResponse?.status !== "failed" && (
-              <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl text-left text-xs space-y-2">
-                <p className="font-extrabold text-slate-700 tracking-wide border-b pb-1.5 flex items-center justify-between uppercase">
+            <div className="bg-white border border-slate-200 p-4 rounded-3xl text-left text-xs space-y-3 shadow-sm">
+                <p className="font-extrabold text-slate-700 tracking-wide border-b border-slate-100 pb-2 flex items-center justify-between uppercase">
                   <span>{lang === "sw" ? "Maelezo ya Malipo" : "Payment Details"}</span>
-                  <span className="text-[10px] text-orange-600 font-mono">
-                    ID: {lastCreatedOrderId}
+                  <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${
+                    gatewayIsHeld ? "bg-emerald-50 text-emerald-700" : gatewayIsFailed ? "bg-red-50 text-red-700" : gatewayNeedsAction ? "bg-amber-50 text-amber-700" : "bg-sky-50 text-sky-700"
+                  }`}>
+                    {(gatewayResponse?.rawStatus || gatewayResponse?.status || "processing").toString().replace(/_/g, " ").toUpperCase()}
                   </span>
                 </p>
 
-                <div className="space-y-1 text-slate-600 font-medium">
+                <div className="space-y-2 text-slate-600 font-medium">
                   <p className="flex justify-between">
                     <span>{lang === "sw" ? "Jumla ya Agizo:" : "Order Total:"}</span>
                     <strong className="text-sm text-slate-800 font-black">
                       <PriceDisplay amount={finalTotal} size="sm" colorClass="text-slate-800" />
                     </strong>
                   </p>
+                  <p className="flex justify-between gap-4">
+                    <span>{lang === "sw" ? "Order Ref:" : "Order Ref:"}</span>
+                    <strong className="font-mono text-[11px] text-slate-800 text-right">{lastCreatedOrderId || gatewayResponse?.reference || "N/A"}</strong>
+                  </p>
+                  <p className="flex justify-between gap-4">
+                    <span>{lang === "sw" ? "Payment Intent:" : "Payment Intent:"}</span>
+                    <strong className="font-mono text-[11px] text-slate-800 text-right">{gatewayResponse?.paymentIntentId || "Pending"}</strong>
+                  </p>
+                  <p className="flex justify-between gap-4">
+                    <span>{lang === "sw" ? "Core Tx:" : "Core Tx:"}</span>
+                    <strong className="font-mono text-[11px] text-slate-800 text-right">{gatewayResponse?.transactionId || (gatewayNeedsAction ? "Awaiting approval" : "Not issued yet")}</strong>
+                  </p>
+                  <div className="grid grid-cols-1 gap-2 pt-2 sm:grid-cols-3">
+                    <span className="rounded-xl bg-slate-50 px-3 py-2 font-black uppercase tracking-wide text-slate-500">
+                      {gatewayResponse?.paymentCategory || selectedPaymentRoute.category}
+                    </span>
+                    <span className="rounded-xl bg-slate-50 px-3 py-2 font-black uppercase tracking-wide text-slate-500">
+                      {gatewayResponse?.paymentRail || selectedPaymentRoute.rail}
+                    </span>
+                    <span className="rounded-xl bg-slate-50 px-3 py-2 font-black uppercase tracking-wide text-slate-500">
+                      {gatewayResponse?.providerCode || selectedPaymentRoute.providerCode || "ORBI_CORE"}
+                    </span>
+                  </div>
                 </div>
               </div>
-            )}
 
-            {gatewayResponse?.status === "failed" ? (
+            {gatewayIsFailed ? (
                <button
                  onClick={() => setStep(2)}
-                 className="w-full bg-slate-900 text-white py-3 rounded-lg font-bold mt-4 shadow-md transition-all"
+                 className="w-full bg-slate-950 text-white py-4 rounded-2xl font-black mt-4 shadow-xl shadow-slate-900/20 transition-all"
                >
                  {lang === "sw" ? "Jaribu Tena" : "Try Again"}
                </button>
             ) : (
               <>
                 <div className={`border p-4 rounded-2xl text-left space-y-3 relative overflow-hidden mt-4 ${
-                  gatewayResponse?.status === "success" 
+                  gatewayIsHeld
                     ? "bg-emerald-50/50 border-emerald-500/20" 
-                    : "bg-gradient-to-tr from-sky-500/10 to-blue-500/5 border-sky-500/20"
+                    : gatewayNeedsAction
+                      ? "bg-gradient-to-tr from-amber-500/10 to-orange-500/5 border-amber-500/20"
+                      : "bg-gradient-to-tr from-sky-500/10 to-blue-500/5 border-sky-500/20"
                 }`}>
                   <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
                     <ShieldCheck size={80} />
                   </div>
                   <div className="flex items-center gap-2">
                     <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs text-white ${
-                      gatewayResponse?.status === "success" ? "bg-emerald-500" : "bg-sky-500"
+                      gatewayIsHeld ? "bg-emerald-500" : gatewayNeedsAction ? "bg-amber-500" : "bg-sky-500"
                     }`}>
-                      {gatewayResponse?.status === "success" ? <ShieldCheck size={16} /> : <Clock size={16} />}
+                      {gatewayIsHeld ? <ShieldCheck size={16} /> : gatewayNeedsAction ? <Lock size={16} /> : <Clock size={16} />}
                     </div>
                     <div>
                       <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
-                        {gatewayResponse?.status === "success"
-                          ? (lang === "sw" ? "Imelipwa kwa Usalama" : "Paid Securely")
-                          : (lang === "sw" ? "Inasubiri Malipo Yako" : "Awaiting Your Payment")}
+                        {gatewayIsHeld
+                          ? (lang === "sw" ? "PaySafe Hold Imethibitishwa" : "PaySafe Hold Confirmed")
+                          : gatewayNeedsAction
+                            ? (lang === "sw" ? "Fungua ORBI App Kuthibitisha" : "Open ORBI App to Approve")
+                            : (lang === "sw" ? "Inasubiri Mtandao/Gateway" : "Awaiting Network/Gateway")}
                       </h4>
                       <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight mt-0.5">
                         Secure PaySafe Checkout
@@ -2954,13 +3080,21 @@ export function CheckoutModal({
                   </div>
                   
                   <p className="text-xs text-slate-600 font-medium leading-relaxed relative z-10">
-                    {lang === "sw" 
-                      ? "Fedha zako zinashikiliwa kwa usalama na Orbi PaySafe. Zitatolewa kwa muuzaji mara utakapothibitisha kupokea mzigo."
-                      : "Your funds are held securely by Orbi PaySafe. They will be released to the merchant once you confirm receipt."}
+                    {gatewayIsHeld
+                      ? (lang === "sw"
+                        ? "Fedha zako zinashikiliwa kwa usalama na Orbi PaySafe. Zitatolewa kwa muuzaji mara utakapothibitisha kupokea mzigo."
+                        : "Your funds are held securely by Orbi PaySafe. They will be released to the merchant once you confirm receipt.")
+                      : gatewayNeedsAction
+                        ? (lang === "sw"
+                          ? "Ombi limefika ORBI Core lakini linahitaji idhini ya mnunuzi kabla fedha hazijashikiliwa."
+                          : "The request reached ORBI Core but needs buyer authorization before funds can be held.")
+                        : (lang === "sw"
+                          ? "Ombi limepokelewa na linaendelea kuchakatwa. Tutaboresha hali ya oda baada ya webhook ya Gateway."
+                          : "The request was accepted and is still processing. The order state will update after the Gateway webhook.")}
                   </p>
                 </div>
 
-                {pointsToRedeem > 0 && gatewayResponse?.status !== "failed" && (
+                {pointsToRedeem > 0 && !gatewayIsFailed && (
                   <div className="bg-amber-50/50 border border-amber-100 p-3 rounded-xl mt-4 text-left flex items-start gap-2">
                     <Star size={16} className="text-amber-500 shrink-0 mt-0.5 fill-amber-500/20" />
                     <div>
@@ -2981,9 +3115,11 @@ export function CheckoutModal({
                     onClose();
                     onSuccess();
                   }}
-                  className="mt-4 w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-2xl font-bold transition text-sm cursor-pointer"
+                  className="mt-4 w-full bg-slate-950 hover:bg-slate-900 text-white py-4 rounded-2xl font-black transition text-sm cursor-pointer shadow-xl shadow-slate-900/20"
                 >
-                  {lang === "sw" ? "Sawa, Nimeelewa" : "Understood, Close"}
+                  {gatewayIsHeld
+                    ? (lang === "sw" ? "Endelea Kufuatilia Oda" : "Continue to Order Tracking")
+                    : (lang === "sw" ? "Sawa, Nimeelewa" : "Understood, Close")}
                 </button>
               </>
             )}
