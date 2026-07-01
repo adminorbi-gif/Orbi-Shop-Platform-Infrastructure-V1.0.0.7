@@ -920,6 +920,8 @@ export default function SellerApp({
                         <ResponsiveContainer
                           width="100%"
                           height={350}
+                          minWidth={50}
+                          minHeight={50}
                         >
                           <AreaChart
                             data={computedStats.chartData}
@@ -1000,7 +1002,7 @@ export default function SellerApp({
                         </p>
                       </div>
                       <div className="h-[300px] sm:h-[400px] w-full font-mono mt-2">
-                        <ResponsiveContainer width="100%" height={350}>
+                        <ResponsiveContainer width="100%" height={350} minWidth={50} minHeight={50}>
                           <LineChart data={computedStats.chartData} margin={{ top: 5, right: 0, left: -25, bottom: -5 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                             <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickMargin={8} />

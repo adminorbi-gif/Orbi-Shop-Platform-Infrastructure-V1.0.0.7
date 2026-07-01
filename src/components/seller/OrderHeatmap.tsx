@@ -34,7 +34,7 @@ export const OrderHeatmap: React.FC<OrderHeatmapProps> = ({ orders }) => {
 
   return (
     <div className="h-64 w-full">
-      <ResponsiveContainer>
+      <ResponsiveContainer width="100%" height="100%" minWidth={50} minHeight={50}>
         <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
           <XAxis type="number" dataKey="hour" name="Hour" unit=":00" domain={[0, 23]} tickCount={24} />
           <YAxis type="number" dataKey="day" name="Day" tickFormatter={(d) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]} />

@@ -235,15 +235,15 @@ router.post("/spotlights", async (req, res) => {
       visible: false
     };
     
-    let selectRes = await getSupabase(req).from('promotions').select('id').eq('title', 'SYSTEM_MARKETPLACE_ADS').maybeSingle();
+    let selectRes = await supabase.from('promotions').select('id').eq('title', 'SYSTEM_MARKETPLACE_ADS').maybeSingle();
     const data = selectRes.data;
     
     let error;
     if (data && data.id) {
-       const updateRes = await getSupabase(req).from('promotions').update(payload).eq('id', data.id);
+       const updateRes = await supabase.from('promotions').update(payload).eq('id', data.id);
        error = updateRes.error;
     } else {
-       const insertRes = await getSupabase(req).from('promotions').insert([payload]);
+       const insertRes = await supabase.from('promotions').insert([payload]);
        error = insertRes.error;
     }
 
@@ -264,9 +264,9 @@ router.get("/billboards", async (req, res) => {
 
     let banners = [];
     if (data && data.description) {
-      try {
-        banners = JSON.parse(data.description);
-      } catch (e) {}
+       try {
+         banners = JSON.parse(data.description);
+       } catch (e) {}
     }
     res.json({ success: true, data: banners });
   } catch (error: any) {
@@ -285,15 +285,15 @@ router.post("/billboards", async (req, res) => {
       visible: false
     };
 
-    let selectRes = await getSupabase(req).from('promotions').select('id').eq('title', 'SYSTEM_PROMOTIONAL_BANNERS').maybeSingle();
+    let selectRes = await supabase.from('promotions').select('id').eq('title', 'SYSTEM_PROMOTIONAL_BANNERS').maybeSingle();
     const data = selectRes.data;
 
     let error;
     if (data && data.id) {
-       const updateRes = await getSupabase(req).from('promotions').update(payload).eq('id', data.id);
+       const updateRes = await supabase.from('promotions').update(payload).eq('id', data.id);
        error = updateRes.error;
     } else {
-       const insertRes = await getSupabase(req).from('promotions').insert([payload]);
+       const insertRes = await supabase.from('promotions').insert([payload]);
        error = insertRes.error;
     }
 
