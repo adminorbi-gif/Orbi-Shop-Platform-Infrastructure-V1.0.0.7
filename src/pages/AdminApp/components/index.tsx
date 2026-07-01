@@ -1125,71 +1125,82 @@ export function SellersAdmin({
                 <div
                   key={s.id}
                   onClick={() => setSelectedSellerId(s.id)}
-                  className="cursor-pointer border border-slate-200 rounded-2xl p-5 flex flex-col relative bg-slate-50 shadow-sm transition-all hover:border-slate-350"
+                  className="cursor-pointer bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 flex flex-col relative hover:border-slate-300 hover:shadow-md transition-all group"
                 >
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+                      {s.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex flex-col min-w-0 pr-16">
+                      <h3 className="font-semibold text-slate-900 text-sm truncate">
+                        {s.name}
+                      </h3>
+                      {s.email && (
+                        <p className="text-[11px] text-slate-400 truncate">
+                          {s.email}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
                   {isCurrentlyPro && (
-                    <div className="absolute top-3 right-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-sm">
+                    <div className="absolute top-4 right-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-sm">
                       {matchedPlan ? matchedPlan.name.toUpperCase() : "PRO"} (
                       {Math.ceil(
                         ((s.proUntil || 0) - Date.now()) /
                           (1000 * 60 * 60 * 24),
                       )}{" "}
-                      {lang === "sw" ? "siku zilizobaki" : "days left"})
+                      d)
                     </div>
                   )}
-                  <h3 className="font-bold text-lg text-slate-850 pr-16 truncate">
-                    {s.name}
-                  </h3>
-                  {s.email && (
-                    <p className="text-xs text-slate-400 font-mono mt-1">
-                      {s.email}
-                    </p>
-                  )}
-                  <div className="flex gap-2 mt-2">
+
+                  <div className="flex flex-wrap gap-1.5 mb-3">
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${s.status === "frozen" ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-600"}`}
+                      className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${s.status === "frozen" ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"}`}
                     >
                       {s.status === "frozen" ? "Frozen" : "Active"}
                     </span>
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${s.isApproved === false ? "bg-amber-100 text-amber-700 animate-pulse font-black" : "bg-teal-100 text-teal-700"}`}
+                      className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${s.isApproved === false ? "bg-amber-50 text-amber-700 animate-pulse font-black" : "bg-teal-50 text-teal-700"}`}
                     >
                       {s.isApproved === false
                         ? lang === "sw"
-                          ? "Inasubiri Idhini"
-                          : "Pending Approval"
+                          ? "Pending"
+                          : "Pending"
                         : lang === "sw"
-                          ? "Idhini: Sawa"
+                          ? "Approved"
                           : "Approved"}
                     </span>
                     {s.deleteRequested && (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-600">
-                        Delete Requested
+                      <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest bg-orange-50 text-orange-600">
+                        Del Req
                       </span>
                     )}
                   </div>
-                  <p className="text-slate-500 text-sm mt-2 flex-grow line-clamp-3">
-                    {s.description}
+
+                  <p className="text-slate-500 text-xs leading-relaxed flex-grow line-clamp-2 bg-slate-50/50 rounded-lg p-2.5">
+                    {s.description || "No description provided."}
                   </p>
-                  <div className="mt-4 pt-4 border-t border-slate-200 flex gap-2">
+
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex gap-2">
                     <button
-                      onClick={() => handleOpen(s)}
-                      className="bg-white border border-slate-300 text-slate-700 px-3 py-2 rounded-xl text-sm font-bold flex-1 hover:bg-slate-100 transition shadow-xs"
+                      onClick={(e) => { e.stopPropagation(); handleOpen(s); }}
+                      className="bg-slate-50 text-slate-600 hover:text-primary hover:bg-primary/5 px-3 py-1.5 rounded-lg text-[11px] font-bold flex-1 transition"
                     >
                       {lang === "sw" ? "Hariri" : "Edit"}
                     </button>
                     {(currentStaff?.role === "super_admin" ||
                       currentStaff?.role === "human_resources") && (
                       <button
-                        onClick={() => handleRemove(s.id, s.name)}
-                        className={`px-3 py-2 rounded-xl text-sm font-bold shadow-xs transition ${
+                        onClick={(e) => { e.stopPropagation(); handleRemove(s.id, s.name); }}
+                        className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition ${
                           s.deleteRequested &&
                           currentStaff?.role === "human_resources"
-                            ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
+                            ? "bg-slate-50 text-slate-400 cursor-not-allowed"
                             : currentStaff?.role === "super_admin" &&
                                 s.deleteRequested
-                              ? "bg-red-500 text-white hover:bg-red-600"
-                              : "bg-white border border-red-200 text-red-500 hover:bg-red-50"
+                              ? "bg-red-50 text-red-600 hover:bg-red-500 hover:text-white"
+                              : "bg-rose-50 text-rose-500 hover:bg-rose-100"
                         }`}
                         disabled={
                           s.deleteRequested &&
@@ -1198,7 +1209,7 @@ export function SellersAdmin({
                       >
                         {currentStaff?.role === "super_admin"
                           ? "Delete"
-                          : "Req Delete"}
+                          : "Req Del"}
                       </button>
                     )}
                   </div>
@@ -1240,7 +1251,7 @@ export function SellersAdmin({
               {plans.map((p) => (
                 <div
                   key={p.id}
-                  className={`border rounded-2xl p-6 flex flex-col relative bg-white shadow-sm transition hover:border-slate-300 ${p.active ? "border-slate-200" : "border-slate-150 opacity-60 bg-slate-50"}`}
+                  className={`border rounded-2xl p-5 flex flex-col relative bg-white shadow-sm transition hover:border-slate-300 hover:shadow-md group ${p.active ? "border-slate-200" : "border-slate-150 opacity-60 bg-slate-50"}`}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-extrabold text-lg text-slate-800">
@@ -1267,21 +1278,21 @@ export function SellersAdmin({
                       / {p.days} {lang === "sw" ? "Siku" : "Days"}
                     </span>
                   </div>
-                  <p className="text-slate-500 text-xs leading-relaxed flex-grow mt-2 whitespace-pre-line">
+                  <p className="text-slate-500 text-xs leading-relaxed flex-grow mt-2 whitespace-pre-line bg-slate-50/50 p-3 rounded-lg border border-slate-100">
                     {lang === "sw" && p.descriptionSw
                       ? p.descriptionSw
                       : p.description}
                   </p>
-                  <div className="mt-5 pt-4 border-t border-slate-100 flex gap-2 shrink-0">
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex gap-2 shrink-0">
                     <button
                       onClick={() => handleOpenPlan(p)}
-                      className="bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold flex-1 hover:bg-slate-50 transition"
+                      className="bg-slate-50 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold flex-1 hover:bg-primary/5 hover:text-primary transition"
                     >
                       {lang === "sw" ? "Hariri" : "Edit"}
                     </button>
                     <button
                       onClick={() => handleDeletePlan(p.id)}
-                      className="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-100 transition"
+                      className="bg-rose-50 text-rose-500 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-rose-100 transition"
                     >
                       {lang === "sw" ? "Futa" : "Delete"}
                     </button>
@@ -10615,7 +10626,7 @@ export function CustomersAdmin({
           )}
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className={selectedCustomerId ? "space-y-4" : "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"}>
           {selectedCustomerId ? (
             <CustomerDetailView 
               customer={customers.find(c => c.id === selectedCustomerId)!}
@@ -10625,7 +10636,7 @@ export function CustomersAdmin({
           ) : (
           <>
             {filteredCustomers.length === 0 ? (
-              <div className="bg-white p-12 text-center rounded-3xl border border-slate-200/60 shadow-xs text-slate-400 font-bold flex flex-col items-center justify-center">
+              <div className="col-span-full bg-white p-12 text-center rounded-3xl border border-slate-200/60 shadow-xs text-slate-400 font-bold flex flex-col items-center justify-center">
                 <Users size={48} className="mb-4 text-slate-200" />
                 <p className="text-lg font-medium text-slate-600">
                   {t(lang, "cust.empty")}
@@ -10647,159 +10658,107 @@ export function CustomersAdmin({
                   <div
                     key={c.id}
                     onClick={() => setSelectedCustomerId(c.id)}
-                    className="cursor-pointer bg-white rounded-3xl border border-slate-200/60 shadow-xs p-5 sm:p-6 space-y-4 hover:border-slate-300 transition duration-150"
+                    className="cursor-pointer bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 flex flex-col gap-4 hover:border-slate-300 hover:shadow-md transition-all duration-200 group"
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-slate-700 text-white flex items-center justify-center font-bold shadow-sm text-lg shrink-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
                           {c.name.charAt(0).toUpperCase()}
                         </div>
-                        <div>
-                          <div className="font-black text-slate-900 flex flex-wrap items-center gap-2 text-[15px]">
+                        <div className="flex flex-col min-w-0">
+                          <h3 className="font-semibold text-slate-900 text-sm truncate">
                             {c.name}
-                            <span
-                              className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${c.status === "frozen" ? "bg-red-50 border border-red-100 text-red-600" : "bg-emerald-50 border border-emerald-100 text-emerald-700"}`}
-                            >
-                              {c.status === "frozen" ? "Frozen" : "Active"}
-                            </span>
-                            {c.deleteRequested && (
-                              <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-orange-50 border border-orange-100 text-orange-600">
-                                Delete Requested
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[10px] text-slate-400 font-mono tracking-tight mt-0.5">
-                            ID: {c.id.substring(0, 12)}
-                          </div>
+                          </h3>
+                          <span className="text-[11px] text-slate-400 font-medium">
+                            Joined {new Date(c.registeredAt).toLocaleDateString()}
+                          </span>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                          Joined:
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${c.status === "frozen" ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"}`}
+                        >
+                          {c.status === "frozen" ? "Frozen" : "Active"}
                         </span>
-                        <span className="text-[10px] text-slate-600 font-bold bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-                          {new Date(c.registeredAt).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </span>
+                        {c.deleteRequested && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest bg-orange-50 text-orange-600">
+                            Del Req
+                          </span>
+                        )}
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2.5">
-                        <h4 className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
-                          CONTACT INFO
-                        </h4>
-                        <div className="flex flex-col gap-2">
-                          <div className="flex items-center gap-2 text-slate-700 font-medium text-sm">
-                            <Phone size={14} className="text-slate-400" />
-                            <span>{c.phone || "N/A"}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-slate-700 font-medium text-sm">
-                            <Mail size={14} className="text-slate-400" />
-                            <span>{c.email || "N/A"}</span>
-                          </div>
-                        </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-slate-50/80 border border-slate-100 rounded-xl p-3 flex flex-col">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase mb-0.5">Orders</span>
+                        <span className="font-semibold text-slate-700 text-sm">{customerOrders.length}</span>
                       </div>
-
-                      <div className="bg-slate-50 p-4 rounded-2xl flex flex-col justify-between text-xs space-y-2 font-medium">
-                        <div>
-                          <h4 className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1.5">
-                            ACCOUNT METRICS
-                          </h4>
-                          <div className="flex items-center justify-between text-slate-600 mb-1">
-                            <span>Total Orders Completed:</span>
-                            <span className="font-black text-slate-900">
-                              {customerOrders.length}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between text-slate-600">
-                            <span>Total Value Spent:</span>
-                            <span className="font-black text-emerald-600">
-                              {formatCurrency(totalSpent)}
-                            </span>
-                          </div>
-                        </div>
+                      <div className="bg-slate-50/80 border border-slate-100 rounded-xl p-3 flex flex-col">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase mb-0.5">Spent</span>
+                        <span className="font-semibold text-emerald-600 text-sm truncate">{formatCurrency(totalSpent)}</span>
                       </div>
                     </div>
 
-                    <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-end gap-2">
+                    <div className="flex flex-col gap-1.5 text-[11px] text-slate-500 font-medium">
+                      <div className="flex items-center gap-2 truncate">
+                        <Phone size={14} className="text-slate-400 shrink-0" />
+                        <span className="truncate">{c.phone || "N/A"}</span>
+                      </div>
+                      <div className="flex items-center gap-2 truncate">
+                        <Mail size={14} className="text-slate-400 shrink-0" />
+                        <span className="truncate">{c.email || "N/A"}</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 mt-auto border-t border-slate-100 flex items-center justify-end gap-1">
                       <button
                         onClick={(e) => { e.stopPropagation(); setViewOrdersCustomer(c); }}
-                        className="px-3 py-1.5 text-primary bg-primary/10 rounded-xl hover:bg-primary hover:text-white transition font-bold text-[10px] uppercase flex items-center gap-1.5 cursor-pointer"
-                        title={
-                          lang === "sw"
-                            ? "Angalia Oda / View Orders"
-                            : "View Orders"
-                        }
+                        className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition"
+                        title={lang === "sw" ? "Angalia Oda" : "View Orders"}
                       >
-                        <ShoppingBag size={14} strokeWidth={2.5} /> View Orders
+                        <ShoppingBag size={16} />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); setMsgCustomer(c); }}
-                        className="px-3 py-1.5 text-accent bg-accent/10 rounded-xl hover:bg-accent hover:text-white transition font-bold text-[10px] uppercase flex items-center gap-1.5 cursor-pointer"
-                        title={
-                          lang === "sw" ? "Tuma Ujumbe / Message" : "Message"
-                        }
+                        className="p-2 text-slate-400 hover:text-accent hover:bg-accent/5 rounded-lg transition"
+                        title={lang === "sw" ? "Tuma Ujumbe" : "Message"}
                       >
-                        <MessageSquare size={14} strokeWidth={2.5} /> Message
+                        <MessageSquare size={16} />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); setResetPwdCustomer(c); }}
-                        className="px-3 py-1.5 text-amber-600 bg-amber-50 rounded-xl hover:bg-amber-600 hover:text-white transition font-bold text-[10px] uppercase flex items-center gap-1.5 border border-amber-100 cursor-pointer"
-                        title="Reset User Password"
+                        className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition"
+                        title="Reset Auth"
                       >
-                        <Lock size={14} strokeWidth={2.5} /> Reset Auth
+                        <Lock size={16} />
                       </button>
 
-                      {(currentStaff?.role === "super_admin" ||
-                        currentStaff?.role === "human_resources") && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleToggleFreeze(c); }}
-                          className={`px-3 py-1.5 rounded-xl transition font-bold text-[10px] uppercase flex items-center gap-1.5 border min-w-0 cursor-pointer ${
-                            c.status === "frozen"
-                              ? "text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white border-emerald-200"
-                              : "text-slate-600 bg-slate-50 hover:bg-slate-600 hover:text-white border-slate-200"
-                          }`}
-                          title={
-                            c.status === "frozen"
-                              ? "Activate Customer"
-                              : "Freeze Customer"
-                          }
-                        >
-                          <Lock size={14} strokeWidth={2.5} />{" "}
-                          {c.status === "frozen" ? "Unfreeze" : "Freeze"}
-                        </button>
-                      )}
-
-                      {(currentStaff?.role === "super_admin" ||
-                        currentStaff?.role === "human_resources") && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(c); }}
-                          className={`px-3 py-1.5 rounded-xl transition font-bold text-[10px] uppercase flex items-center gap-1.5 border min-w-0 cursor-pointer ${
-                            c.deleteRequested &&
-                            currentStaff?.role === "human_resources"
-                              ? "bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed"
-                              : currentStaff?.role === "super_admin" &&
-                                  c.deleteRequested
-                                ? "bg-red-500 text-white hover:bg-red-600 border-red-600"
-                                : "text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white border-rose-200"
-                          }`}
-                          title={
-                            currentStaff?.role === "super_admin"
-                              ? "Delete User"
-                              : "Request Delete User"
-                          }
-                          disabled={
-                            c.deleteRequested &&
-                            currentStaff?.role === "human_resources"
-                          }
-                        >
-                          <Trash size={14} strokeWidth={2.5} /> Delete
-                        </button>
+                      {(currentStaff?.role === "super_admin" || currentStaff?.role === "human_resources") && (
+                        <>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleToggleFreeze(c); }}
+                            className={`p-2 rounded-lg transition ${
+                              c.status === "frozen"
+                                ? "text-emerald-500 hover:bg-emerald-50"
+                                : "text-slate-400 hover:text-rose-500 hover:bg-rose-50"
+                            }`}
+                            title={c.status === "frozen" ? "Activate Customer" : "Freeze Customer"}
+                          >
+                            <Lock size={16} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(c); }}
+                            className={`p-2 rounded-lg transition ${
+                              c.deleteRequested && currentStaff?.role === "human_resources"
+                                ? "text-slate-300 cursor-not-allowed"
+                                : "text-slate-400 hover:text-red-500 hover:bg-red-50"
+                            }`}
+                            title={currentStaff?.role === "super_admin" ? "Delete User" : "Request Delete"}
+                            disabled={c.deleteRequested && currentStaff?.role === "human_resources"}
+                          >
+                            <Trash size={16} />
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
