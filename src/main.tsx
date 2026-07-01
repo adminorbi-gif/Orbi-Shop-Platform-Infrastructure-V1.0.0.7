@@ -7,7 +7,6 @@ import './index.css';
 import { DialogProvider } from './components/CustomDialogContext.tsx';
 import { aiPilotEngine } from './engine/AIPilotEngine';
 import { HelmetProvider } from 'react-helmet-async';
-import { isDynamicImportError, recoverFromDynamicImportError } from './utils/lazyWithRetry.ts';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,18 +63,6 @@ try {
     }
   }
 }
-
-window.addEventListener('unhandledrejection', (event) => {
-  if (isDynamicImportError(event.reason) && recoverFromDynamicImportError()) {
-    event.preventDefault();
-  }
-});
-
-window.addEventListener('error', (event) => {
-  if (isDynamicImportError(event.error || event.message) && recoverFromDynamicImportError()) {
-    event.preventDefault();
-  }
-});
 
 // Start the background engine for platform-wide automated tasks.
 // Delay it to prevent blocking the initial render.

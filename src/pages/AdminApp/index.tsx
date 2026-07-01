@@ -1678,8 +1678,10 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     try {
       setSavingNewPassword(true);
       // Update this seller status in local sellers roster lists
+      let found = false;
       const updatedSellers = sellers.map((s) => {
         if (s.id === currentSeller?.id) {
+          found = true;
           return {
             ...s,
             password: newPassword.trim(),
@@ -1688,6 +1690,14 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         }
         return s;
       });
+
+      if (!found && currentSeller) {
+        updatedSellers.push({
+          ...currentSeller,
+          password: newPassword.trim(),
+          mustChangePassword: false,
+        });
+      }
 
       setSellers(updatedSellers);
       await db.saveSellers(updatedSellers);
@@ -1861,8 +1871,10 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
     try {
       setSavingVerification(true);
+      let found = false;
       const updatedSellers = sellers.map((s) => {
         if (s.id === currentSeller?.id) {
+          found = true;
           return {
             ...s,
             fullName: verifyFullName.trim(),
@@ -1875,6 +1887,18 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         }
         return s;
       });
+
+      if (!found && currentSeller) {
+        updatedSellers.push({
+          ...currentSeller,
+          fullName: verifyFullName.trim(),
+          name: verifyBusinessName.trim(),
+          phone: verifyPhone.trim(),
+          location: verifyLocation.trim(),
+          tin: tinClean,
+          isVerifiedSeller: true,
+        });
+      }
 
       setSellers(updatedSellers);
       await db.saveSellers(updatedSellers);
@@ -1913,18 +1937,18 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   if (currentSeller) {
     if (currentSeller.mustChangePassword) {
       return (
-        <div className="min-h-screen w-full bg-slate-100 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-200">
+        <div className="min-h-screen w-full bg-gradient-to-br from-amber-950 via-slate-950 to-black flex items-center justify-center p-4">
+          <div className="bg-slate-900/90 rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-amber-500/20 backdrop-blur-xl animate-in zoom-in-95 duration-200 text-white">
             <div className="text-center mb-6">
-              <div className="bg-emerald-50 text-emerald-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100 shadow-xs">
+              <div className="bg-amber-950/80 text-amber-400 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-500/30 shadow-lg shadow-amber-500/10">
                 <ShieldCheck size={32} />
               </div>
-              <h2 className="text-2xl font-display font-black text-slate-800 tracking-tight">
+              <h2 className="text-2xl font-display font-black text-amber-100 tracking-tight">
                 {lang === "sw"
                   ? "Fanya Nenosiri Lako Kuwa Salama"
                   : "Secure Your Account"}
               </h2>
-              <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+              <p className="text-xs text-amber-200/60 mt-2 leading-relaxed">
                 {lang === "sw"
                   ? "Ili kulinda akaunti yako ya muuzaji, tafadhali badilisha nenosiri la muda lililotolewa na msimamizi kabla ya kuendelea kwenye dashibodi."
                   : "To guarantee your store's security, you must update the temporary login password provided by the administrator before continuing."}
@@ -1933,7 +1957,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
             <form onSubmit={handleForcePasswordSave} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">
+                <label className="block text-xs font-black text-amber-400 mb-1.5 uppercase tracking-wide">
                   {lang === "sw" ? "Nenosiri Jipya" : "New Password"}
                 </label>
                 <input
@@ -1942,11 +1966,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   placeholder="••••••"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full border border-slate-300 p-3.5 rounded-xl outline-none focus:border-emerald-500 font-mono text-sm bg-slate-50"
+                  className="w-full border border-slate-800 p-3.5 rounded-xl outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/50 font-mono text-sm bg-slate-950/80 text-white placeholder:text-slate-600"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">
+                <label className="block text-xs font-black text-amber-400 mb-1.5 uppercase tracking-wide">
                   {lang === "sw"
                     ? "Thibitisha Nenosiri Jipya"
                     : "Confirm New Password"}
@@ -1957,14 +1981,14 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   placeholder="••••••"
                   value={newPasswordConfirm}
                   onChange={(e) => setNewPasswordConfirm(e.target.value)}
-                  className="w-full border border-slate-300 p-3.5 rounded-xl outline-none focus:border-emerald-500 font-mono text-sm bg-slate-50"
+                  className="w-full border border-slate-800 p-3.5 rounded-xl outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/50 font-mono text-sm bg-slate-950/80 text-white placeholder:text-slate-600"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={savingNewPassword}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-md transition-all active:scale-[0.98] disabled:opacity-50 mt-6 text-xs uppercase tracking-wider cursor-pointer"
+                className="w-full bg-gradient-to-r from-yellow-500 via-amber-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-slate-950 font-black py-4 rounded-xl shadow-lg shadow-amber-500/10 hover:shadow-amber-500/20 active:scale-[0.98] disabled:opacity-50 mt-6 text-xs uppercase tracking-wider cursor-pointer transition-all duration-200"
               >
                 {savingNewPassword
                   ? lang === "sw"
@@ -1978,7 +2002,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               <button
                 type="button"
                 onClick={onLogout}
-                className="w-full bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100 font-bold py-3 rounded-xl transition text-xs uppercase cursor-pointer"
+                className="w-full bg-transparent border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 font-bold py-3 rounded-xl transition text-xs uppercase cursor-pointer"
               >
                 {lang === "sw" ? "Ondoka kwenye akaunti" : "Cancel & Logout"}
               </button>
@@ -1997,29 +2021,29 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       if (phoneVerified) completionScore += 20;
 
       return (
-        <div className="min-h-screen w-full bg-slate-50 flex items-center justify-center p-4 md:p-8 overflow-y-auto">
-          <div className="max-w-2xl w-full bg-white rounded-[2rem] shadow-2xl border border-slate-150 overflow-hidden animate-in fade-in duration-200">
+        <div className="min-h-screen w-full bg-gradient-to-br from-amber-950 via-slate-900 to-black flex items-center justify-center p-4 md:p-8 overflow-y-auto">
+          <div className="max-w-2xl w-full bg-slate-900/90 rounded-[2.5rem] shadow-2xl border border-amber-500/20 backdrop-blur-xl overflow-hidden animate-in fade-in duration-200 text-white">
             {/* Header banner */}
-            <div className="bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 p-8 text-white relative">
+            <div className="bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-500 p-8 text-slate-950 relative">
               <div className="absolute right-6 top-6 opacity-10">
                 <ShieldCheck size={120} />
               </div>
               <div className="flex items-center gap-3.5 mb-2">
-                <span className="bg-white/20 text-white backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                <span className="bg-slate-950/10 text-slate-900 border border-slate-950/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
                   {lang === "sw"
                     ? "Sera ya Usalama ya Orbi"
                     : "Orbi Security Alliance"}
                 </span>
-                <span className="bg-amber-400 text-slate-900 px-3 py-1 rounded-full text-[10px] font-black uppercase">
+                <span className="bg-slate-950 text-yellow-400 px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-sm">
                   {lang === "sw" ? "Inahitajika" : "MANDATORY"}
                 </span>
               </div>
-              <h2 className="text-2xl md:text-3xl font-display font-black tracking-tight">
+              <h2 className="text-2xl md:text-3xl font-display font-black tracking-tight text-slate-950">
                 {lang === "sw"
                   ? "Uhakiki wa Taarifa za Biashara"
                   : "Merchant Business Verification"}
               </h2>
-              <p className="text-orange-100 text-xs mt-1.5 max-w-lg leading-relaxed font-bold">
+              <p className="text-slate-900/80 text-xs mt-1.5 max-w-lg leading-relaxed font-bold">
                 {lang === "sw"
                   ? "Kulingana na sera ya usalama ya Orbi, wauzaji wote wanapaswa kuhakiki taarifa zao za biashara kabla ya kufikia dashibodi ya duka lao."
                   : "To fulfill Orbi trust and compliance standards, please complete your merchant profile with verified contact details, business location, and tax registers."}
@@ -2028,19 +2052,13 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
             {/* Completion Indicator */}
             <div className="px-8 pt-6">
-              <div className="flex items-center justify-between text-xs font-bold text-slate-500 mb-1.5 flex-row">
+              <div className="flex items-center justify-between text-xs font-bold text-amber-400/80 mb-1.5 flex-row">
                 <span>
                   {lang === "sw"
                     ? "Uhakiki Kukamilika:"
                     : "Verification Score:"}
                 </span>
-                <span
-                  className={
-                    completionScore === 100
-                      ? "text-orange-600"
-                      : "text-amber-500"
-                  }
-                >
+                <span className="text-yellow-400 font-extrabold flex items-center gap-1">
                   {completionScore}%{" "}
                   {completionScore === 100
                     ? lang === "sw"
@@ -2049,9 +2067,9 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     : ""}
                 </span>
               </div>
-              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-amber-500/10">
                 <div
-                  className="h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-300"
+                  className="h-full bg-gradient-to-r from-amber-500 via-yellow-500 to-yellow-400 transition-all duration-300"
                   style={{ width: `${completionScore}%` }}
                 />
               </div>
@@ -2064,7 +2082,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {/* Full Seller Name */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider">
+                  <label className="block text-xs font-black text-amber-400 uppercase tracking-wider">
                     {lang === "sw"
                       ? "Jina Kamili la Muuzaji"
                       : "Full Seller Name"}
@@ -2075,10 +2093,10 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       type="text"
                       value={verifyFullName}
                       onChange={(e) => setVerifyFullName(e.target.value)}
-                      className="w-full border border-slate-200 focus:border-orange-500 p-3.5 pl-10 rounded-xl outline-none font-medium text-sm transition bg-slate-50/50"
+                      className="w-full border border-slate-800 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400/50 p-3.5 pl-10 rounded-xl outline-none font-medium text-sm transition bg-slate-950 text-white placeholder:text-slate-600"
                       placeholder="e.g. Salim Said Hamad"
                     />
-                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-500">
                       <ShieldCheck size={18} />
                     </div>
                   </div>
@@ -2086,7 +2104,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
                 {/* Business Name */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider">
+                  <label className="block text-xs font-black text-amber-400 uppercase tracking-wider">
                     {lang === "sw"
                       ? "Jina la Duka / Biashara"
                       : "Official Business Name"}
@@ -2097,10 +2115,10 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       type="text"
                       value={verifyBusinessName}
                       onChange={(e) => setVerifyBusinessName(e.target.value)}
-                      className="w-full border border-slate-200 focus:border-orange-500 p-3.5 pl-10 rounded-xl outline-none font-medium text-sm transition bg-slate-50/50"
+                      className="w-full border border-slate-800 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400/50 p-3.5 pl-10 rounded-xl outline-none font-medium text-sm transition bg-slate-950 text-white placeholder:text-slate-600"
                       placeholder="e.g. Kariakoo Electronics"
                     />
-                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-500">
                       <Store size={18} />
                     </div>
                   </div>
@@ -2108,7 +2126,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
                 {/* Business Location */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider">
+                  <label className="block text-xs font-black text-amber-400 uppercase tracking-wider">
                     {lang === "sw"
                       ? "Mahali pa Biashara / Duka"
                       : "Business Location"}
@@ -2119,7 +2137,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       type="text"
                       value={verifyLocation}
                       onChange={(e) => setVerifyLocation(e.target.value)}
-                      className="w-full border border-slate-200 focus:border-orange-500 p-3.5 pl-10 rounded-xl outline-none font-medium text-sm transition bg-slate-50/50"
+                      className="w-full border border-slate-800 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400/50 p-3.5 pl-10 rounded-xl outline-none font-medium text-sm transition bg-slate-950 text-white placeholder:text-slate-600"
                       placeholder="e.g. Mtaa wa Msimbazi, Dar es Salaam"
                     />
                     <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
@@ -2130,9 +2148,9 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
                 {/* TIN Number */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider flex items-center justify-between">
+                  <label className="block text-xs font-black text-amber-400 uppercase tracking-wider flex items-center justify-between">
                     <span>TIN (Namba ya Mlipakodi)</span>
-                    <span className="text-[10px] text-slate-450 font-bold lowercase">
+                    <span className="text-[10px] text-amber-500/60 font-bold lowercase">
                       exactly 9 digits
                     </span>
                   </label>
@@ -2143,10 +2161,10 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       maxLength={11}
                       value={verifyTin}
                       onChange={(e) => setVerifyTin(e.target.value)}
-                      className="w-full border border-slate-200 focus:border-orange-500 p-3.5 pl-10 rounded-xl outline-none font-mono text-sm transition bg-slate-50/50"
+                      className="w-full border border-slate-800 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400/50 p-3.5 pl-10 rounded-xl outline-none font-mono text-sm transition bg-slate-950 text-white placeholder:text-slate-600"
                       placeholder="e.g. 123456789"
                     />
-                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-500">
                       <FileText size={18} />
                     </div>
                   </div>
@@ -2154,23 +2172,23 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               </div>
 
               {/* Verified Phone Section */}
-              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-4">
+              <div className="bg-slate-950/50 p-6 rounded-2xl border border-amber-500/10 space-y-4">
                 <div className="flex items-start justify-between flex-row">
                   <div>
-                    <h4 className="text-sm font-black text-slate-800 flex items-center gap-2">
-                      <Smartphone size={18} className="text-orange-500" />
+                    <h4 className="text-sm font-black text-amber-300 flex items-center gap-2">
+                      <Smartphone size={18} className="text-amber-500" />
                       {lang === "sw"
                         ? "Uhakiki wa Nambari ya Simu"
                         : "Phone Verification Engine"}
                     </h4>
-                    <p className="text-[11px] text-slate-400 mt-0.5 leading-normal">
+                    <p className="text-[11px] text-amber-200/50 mt-0.5 leading-normal">
                       {lang === "sw"
                         ? "Tunatuma nenosiri la mara moja (OTP) kuhakikisha nambari hii ni yako na inaweza kupokea malipo."
                         : "Required step to protect your shop registry and ensure reliable cashouts."}
                     </p>
                   </div>
                   {phoneVerified && (
-                    <span className="bg-orange-100 text-orange-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
+                    <span className="bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
                       <Check size={12} strokeWidth={3} />
                       {lang === "sw" ? "Imethibitishwa" : "Verified"}
                     </span>
@@ -2184,10 +2202,10 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       type="tel"
                       value={verifyPhone}
                       onChange={(e) => setVerifyPhone(e.target.value)}
-                      className="w-full border border-slate-200 focus:border-orange-500 p-3.5 pl-10 rounded-xl outline-none font-bold text-sm bg-white disabled:bg-slate-100 disabled:text-slate-500"
+                      className="w-full border border-slate-800 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400/50 p-3.5 pl-10 rounded-xl outline-none font-bold text-sm bg-slate-950 text-white placeholder:text-slate-600 disabled:bg-slate-900 disabled:text-slate-500"
                       placeholder="e.g. +255 712 345 678"
                     />
-                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
                       <Phone size={16} />
                     </div>
                   </div>
@@ -2197,11 +2215,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       type="button"
                       onClick={handleSendSimulatedOtp}
                       disabled={isVerifyingPhoneState}
-                      className="whitespace-nowrap bg-slate-800 hover:bg-slate-900 text-white font-bold px-5 py-3.5 rounded-xl transition text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="whitespace-nowrap bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-5 py-3.5 rounded-xl transition text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isVerifyingPhoneState ? (
                         <>
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <div className="w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />
                           {lang === "sw" ? "Inatuma..." : "Sending..."}
                         </>
                       ) : (
@@ -2216,14 +2234,14 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
                 {/* OTP Input display once sent */}
                 {!phoneVerified && otpSentMessage && (
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-3.5 animate-in slide-in-from-top-2 duration-200">
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3.5 animate-in slide-in-from-top-2 duration-200">
                     <div className="flex items-center justify-between flex-row">
-                      <label className="block text-xs font-black text-slate-700 uppercase">
+                      <label className="block text-xs font-black text-amber-400 uppercase">
                         {lang === "sw"
                           ? "Weka Msimbo wa OTP"
                           : "Enter Verification OTP"}
                       </label>
-                      <span className="text-[10px] text-orange-600 font-bold bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 animate-pulse">
+                      <span className="text-[10px] text-yellow-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 animate-pulse">
                         {lang === "sw" ? "Msimbo umetumwa" : "OTP simulated!"}
                       </span>
                     </div>
@@ -2233,13 +2251,13 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         maxLength={6}
                         value={enteredOtp}
                         onChange={(e) => setEnteredOtp(e.target.value)}
-                        className="flex-1 border border-slate-250 focus:border-orange-500 p-3 rounded-xl outline-none font-mono text-center tracking-[0.25em] text-lg font-bold bg-slate-50"
+                        className="flex-1 border border-slate-800 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400/50 p-3 rounded-xl outline-none font-mono text-center tracking-[0.25em] text-lg font-bold bg-slate-900 text-white placeholder:text-slate-700"
                         placeholder="••••"
                       />
                       <button
                         type="button"
                         onClick={handleVerifyEnteredOtp}
-                        className="bg-orange-600 hover:bg-orange-700 text-white font-black px-6 rounded-xl transition text-xs uppercase cursor-pointer"
+                        className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black px-6 rounded-xl transition text-xs uppercase cursor-pointer"
                       >
                         {lang === "sw" ? "Thibitisha" : "Confirm Code"}
                       </button>
@@ -2249,18 +2267,18 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               </div>
 
               {/* Form Actions */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-100">
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={onLogout}
-                  className="flex-1 border border-slate-250 hover:bg-slate-50 text-slate-500 font-bold py-4 rounded-xl transition text-xs uppercase cursor-pointer text-center"
+                  className="flex-1 border border-amber-500/30 hover:bg-amber-500/10 text-amber-400 font-bold py-4 rounded-xl transition text-xs uppercase cursor-pointer text-center"
                 >
                   {lang === "sw" ? "Ondoka" : "Cancel & Logout"}
                 </button>
                 <button
                   type="submit"
                   disabled={savingVerification}
-                  className="flex-1 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-700 hover:to-amber-600 text-white font-black py-4 rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-[0.98] disabled:opacity-50 text-xs uppercase tracking-wider cursor-pointer font-bold"
+                  className="flex-1 bg-gradient-to-r from-yellow-500 via-amber-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-slate-950 font-black py-4 rounded-xl shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 transition-all active:scale-[0.98] disabled:opacity-50 text-xs uppercase tracking-wider cursor-pointer font-bold duration-200"
                 >
                   {savingVerification
                     ? lang === "sw"

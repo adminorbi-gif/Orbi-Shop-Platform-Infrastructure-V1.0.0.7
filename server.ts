@@ -1,6 +1,14 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+// Global crash prevention hooks to prevent server crashes resulting in 502 Bad Gateway
+process.on("uncaughtException", (err) => {
+  console.error("CRITICAL: UNCAUGHT EXCEPTION PREVENTED CRASH:", err);
+});
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("CRITICAL: UNHANDLED REJECTION PREVENTED CRASH:", reason);
+});
+
 import express from "express";
 import path from "path";
 import fs from "fs";
@@ -168,6 +176,7 @@ async function startServer() {
   app.use("/api/v1/campaigns", promotionsRouter);
   app.use("/api/v1/reviews", reviewsRouter);
   app.use("/api/v1/search", searchRouter);
+  app.use("/api/search", searchRouter);
   app.use("/api/v1/settings", settingsRouter);
   app.use("/api/sitemap", sitemapRouter);
   app.use("/sitemap.xml", sitemapRouter);
@@ -222,21 +231,7 @@ async function startServer() {
     });
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(
-      express.static(distPath, {
-        index: false,
-        setHeaders: (res, filePath) => {
-          if (filePath.includes(`${path.sep}assets${path.sep}`)) {
-            res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-            return;
-          }
-
-          if (filePath.endsWith(".html")) {
-            res.setHeader("Cache-Control", "no-store, max-age=0");
-          }
-        },
-      }),
-    );
+    app.use(express.static(distPath, { index: false }));
     
     app.get("*", async (req, res) => {
       const url = req.originalUrl;
@@ -268,10 +263,7 @@ async function startServer() {
         }
       }
       
-      res.status(200).set({
-        "Content-Type": "text/html",
-        "Cache-Control": "no-store, max-age=0",
-      }).send(html);
+      res.status(200).set({ "Content-Type": "text/html" }).send(html);
     });
   }
 

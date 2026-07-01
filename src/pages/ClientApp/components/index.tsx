@@ -1956,7 +1956,7 @@ export function CheckoutModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 z-[99999] flex items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
-      <div className="orbi-checkout-shell bg-white w-full h-full sm:rounded-[2rem] sm:max-w-md overflow-y-auto sm:max-h-[95vh] relative flex flex-col border border-white/70">
+      <div className="bg-white w-full h-full sm:rounded-xl sm:max-w-md overflow-y-auto sm:max-h-[95vh] relative flex flex-col">
         {loadingMsg && <LoadingOverlay message={loadingMsg} />}
         <button
           onClick={onClose}
@@ -1967,24 +1967,15 @@ export function CheckoutModal({
 
         {step === 1 ? (
           <div className="p-6">
-            <div className="mb-5 rounded-[1.6rem] bg-slate-950 p-5 text-white relative overflow-hidden">
-              <div className="absolute -right-8 -top-10 h-28 w-28 rounded-full bg-orange-500/25 blur-2xl" />
-              <p className="relative z-10 text-[10px] font-black uppercase tracking-[0.22em] text-amber-300">
-                {lang === "sw" ? "Checkout" : "Checkout"}
-              </p>
-              <h2 className="relative z-10 mt-1 text-2xl font-black tracking-tight">{lang === "sw" ? "Hakiki oda yako" : "Review your order"}</h2>
-              <p className="relative z-10 mt-1 text-xs font-semibold text-slate-300">
-                {lang === "sw" ? "Thibitisha bidhaa na taarifa zako kabla ya malipo." : "Confirm items and delivery details before payment."}
-              </p>
-            </div>
+            <h2 className="text-xl font-bold mb-4">{lang === "sw" ? "Hakiki Oda & Malizia" : "Preview Order & Checkout"}</h2>
 
             {/* Order Items Preview */}
-            <div className="orbi-section-card bg-slate-50 border border-slate-100 rounded-[1.4rem] p-3 mb-6 space-y-3">
+            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 mb-6 space-y-3">
               <h3 className="text-xs font-black uppercase text-slate-500 tracking-wider mb-2">
                 {lang === "sw" ? "Bidhaa Zako" : "Your Items"}
               </h3>
               {cart.map((item: any, idx: number) => (
-                <div key={idx} className="flex gap-3 bg-white p-2.5 rounded-2xl border border-slate-100 shadow-sm items-center">
+                <div key={idx} className="flex gap-3 bg-white p-2.5 rounded-lg border border-slate-100 shadow-sm items-center">
                   <div className="w-12 h-12 bg-slate-50 rounded-lg flex-shrink-0 border border-slate-100 overflow-hidden">
                     {item.product.images[0] && (
                       <MediaRenderer src={item.product.images[0]} className="w-full h-full object-cover" />
@@ -2012,7 +2003,7 @@ export function CheckoutModal({
             </div>
 
             {/* Coupon Field */}
-            <div className="bg-white/85 p-3 rounded-2xl border border-slate-200 mb-4 flex gap-2 shadow-sm">
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-4 flex gap-2">
               <input
                 type="text"
                 value={couponCode}
@@ -2020,14 +2011,14 @@ export function CheckoutModal({
                 placeholder={
                   lang === "sw" ? "Msimbo wa Punguzo" : "Coupon Code"
                 }
-                className="orbi-form-control w-full border border-slate-200 outline-none p-2 rounded-xl text-sm"
+                className="w-full border border-slate-200 outline-none p-2 rounded-lg text-sm"
                 disabled={!!appliedCoupon}
               />
               {!appliedCoupon ? (
                 <button
                   type="button"
                   onClick={applyCoupon}
-                  className="bg-slate-950 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-bold transition"
+                  className="bg-slate-200 hover:bg-slate-300 text-slate-800 px-4 py-2 rounded-lg text-sm font-bold transition"
                 >
                   Apply
                 </button>
@@ -2038,7 +2029,7 @@ export function CheckoutModal({
                     setAppliedCoupon(null);
                     setCouponCode("");
                   }}
-                  className="bg-red-100 hover:bg-red-200 text-red-600 px-4 py-2 rounded-xl text-sm font-bold transition"
+                  className="bg-red-100 hover:bg-red-200 text-red-600 px-4 py-2 rounded-lg text-sm font-bold transition"
                 >
                   Remove
                 </button>
@@ -2456,7 +2447,7 @@ export function CheckoutModal({
                   value={name}
                   onBlur={() => handleBlur('name')}
                   onChange={(e) => setName(e.target.value)}
-                  className={`orbi-form-control w-full border p-2.5 rounded-xl outline-none transition-all ${touched.name && currentErrors.name ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/10' : 'focus:border-primary focus:ring-2 focus:ring-primary/10'}`}
+                  className={`w-full border p-2.5 rounded-lg outline-none transition-all ${touched.name && currentErrors.name ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/10' : 'focus:border-primary focus:ring-2 focus:ring-primary/10'}`}
                 />
                 {touched.name && currentErrors.name && (
                   <p className="text-[11px] text-red-500 font-medium mt-1 ml-1 flex items-center gap-1"><Info size={12}/> {currentErrors.name}</p>
@@ -2474,7 +2465,7 @@ export function CheckoutModal({
                   value={phone}
                   onBlur={() => handleBlur('phone')}
                   onChange={(e) => setPhone(e.target.value)}
-                  className={`orbi-form-control w-full border p-2.5 rounded-xl outline-none transition-all ${touched.phone && currentErrors.phone ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/10' : 'focus:border-primary focus:ring-2 focus:ring-primary/10'}`}
+                  className={`w-full border p-2.5 rounded-lg outline-none transition-all ${touched.phone && currentErrors.phone ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/10' : 'focus:border-primary focus:ring-2 focus:ring-primary/10'}`}
                 />
                 {touched.phone && currentErrors.phone && (
                   <p className="text-[11px] text-red-500 font-medium mt-1 ml-1 flex items-center gap-1"><Info size={12}/> {currentErrors.phone}</p>
@@ -2490,7 +2481,7 @@ export function CheckoutModal({
                   type="text"
                   value={customerTin}
                   onChange={(e) => setCustomerTin(e.target.value)}
-                  className="orbi-form-control w-full border p-2.5 rounded-xl outline-none"
+                  className="w-full border p-2.5 rounded-lg outline-none"
                   placeholder="e.g. 144893102"
                 />
               </div>
@@ -2503,7 +2494,7 @@ export function CheckoutModal({
                   value={address}
                   onBlur={() => handleBlur('address')}
                   onChange={(e) => setAddress(e.target.value)}
-                  className={`orbi-form-control w-full border p-2.5 rounded-xl outline-none transition-all ${touched.address && currentErrors.address ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/10' : 'focus:border-primary focus:ring-2 focus:ring-primary/10'}`}
+                  className={`w-full border p-2.5 rounded-lg outline-none transition-all ${touched.address && currentErrors.address ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/10' : 'focus:border-primary focus:ring-2 focus:ring-primary/10'}`}
                   rows={2}
                   placeholder={
                     lang === "sw"
@@ -2702,7 +2693,7 @@ export function CheckoutModal({
                   }
                 }}
                 disabled={!isValid && (touched.name && touched.phone && touched.address)}
-                className="orbi-primary-button w-full bg-primary text-white py-3 rounded-2xl font-bold mt-2 disabled:opacity-50 transition-all hover:opacity-90"
+                className="w-full bg-primary text-white py-3 rounded-lg font-bold mt-2 disabled:opacity-50 transition-all hover:opacity-90"
               >
                 {lang === "sw" ? "Endelea kwenye Malipo" : "Continue to Payment"}
               </button>
@@ -2742,20 +2733,19 @@ export function CheckoutModal({
             </form>
           </div>
         ) : step === 2 ? (
-          <div className="p-5 sm:p-6 space-y-5 max-h-[85vh] overflow-y-auto bg-transparent">
-            <div className="rounded-[2rem] bg-slate-950 border border-slate-800 p-5 shadow-sm text-white relative overflow-hidden">
-              <div className="absolute -right-8 -top-10 h-28 w-28 rounded-full bg-orange-500/25 blur-2xl" />
-              <h2 className="relative z-10 text-2xl font-black tracking-tight text-white">
+          <div className="p-5 sm:p-6 space-y-5 max-h-[85vh] overflow-y-auto bg-slate-50">
+            <div className="rounded-[2rem] bg-white border border-slate-200 p-5 shadow-sm">
+              <h2 className="text-2xl font-black tracking-tight text-slate-950">
                 {lang === "sw" ? "Chagua Njia ya Malipo" : "Choose Payment Method"}
               </h2>
-              <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-300">
+              <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500">
                 {lang === "sw"
                   ? "Chagua njia unayotaka kutumia kulipia oda yako."
                   : "Select how you would like to pay for your order."}
               </p>
             </div>
 
-            <div className="orbi-section-card bg-white border border-slate-200 p-4 rounded-3xl space-y-2 text-sm text-slate-700 shadow-sm">
+            <div className="bg-white border border-slate-200 p-4 rounded-3xl space-y-2 text-sm text-slate-700 shadow-sm">
               <div className="flex justify-between">
                 <span>{lang === "sw" ? "Jumla ya Bidhaa:" : "Items Total:"}</span>
                 <span className="font-bold"><PriceDisplay amount={total} size="sm" /></span>
@@ -2802,7 +2792,7 @@ export function CheckoutModal({
                       className={`w-full rounded-3xl border p-4 text-left transition-all ${
                         active
                           ? "border-slate-950 bg-white shadow-xl shadow-slate-900/10 ring-2 ring-amber-300/60"
-                          : "border-slate-200 bg-white/80 hover:border-slate-300 hover:bg-white hover:shadow-lg hover:shadow-slate-900/5"
+                          : "border-slate-200 bg-white/80 hover:border-slate-300 hover:bg-white"
                       }`}
                     >
                       <div className="flex items-start gap-4">

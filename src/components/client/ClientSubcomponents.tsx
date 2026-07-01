@@ -224,8 +224,8 @@ export function ApplySellerModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950/70 z-[300] flex items-center justify-center p-4 backdrop-blur-md" id="apply-seller-modal">
-      <div className="orbi-checkout-shell bg-white rounded-[2rem] w-full max-w-lg p-8 relative shadow-2xl border border-white/70 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 z-[300] flex items-center justify-center p-4 backdrop-blur-sm" id="apply-seller-modal">
+      <div className="bg-white rounded-[2rem] w-full max-w-lg p-8 relative shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
           type="button"
@@ -235,7 +235,7 @@ export function ApplySellerModal({
         </button>
 
         <div className="flex flex-col items-center mb-6">
-          <div className="w-16 h-16 bg-slate-950 text-amber-300 rounded-2xl flex items-center justify-center mb-3 shadow-xl shadow-slate-900/15">
+          <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-amber-500 text-white rounded-full flex items-center justify-center mb-3 shadow-md animate-pulse">
             <Store size={30} />
           </div>
           <h2 className="text-2xl font-black text-center text-slate-900 tracking-tight">
@@ -261,7 +261,7 @@ export function ApplySellerModal({
                 placeholder={lang === "sw" ? "Jina Kamili" : "Full Name"}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="orbi-form-control w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-medium text-sm transition-all"
+                className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-medium text-sm transition-all"
               />
               <input
                 required
@@ -269,7 +269,7 @@ export function ApplySellerModal({
                 placeholder={lang === "sw" ? "Barua Pepe yako" : "Email Address"}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="orbi-form-control w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-medium text-sm transition-all"
+                className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-medium text-sm transition-all"
               />
             </div>
             <input
@@ -278,7 +278,7 @@ export function ApplySellerModal({
               placeholder={lang === "sw" ? "Namba ya Simu (e.g. 0744111222)" : "Phone Number (e.g. 0744111222)"}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="orbi-form-control w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-medium text-sm transition-all mt-3"
+              className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-medium text-sm transition-all mt-3"
             />
           </div>
 
@@ -301,7 +301,7 @@ export function ApplySellerModal({
                 }
                 value={storeName}
                 onChange={(e) => setStoreName(e.target.value)}
-                className="orbi-form-control w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-semibold text-sm transition-all"
+                className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-semibold text-sm transition-all"
               />
 
               {/* Niche selector */}
@@ -312,7 +312,7 @@ export function ApplySellerModal({
                 <select
                   value={niche}
                   onChange={(e) => setNiche(e.target.value)}
-                  className="orbi-form-control w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-medium text-sm"
+                  className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-medium text-sm"
                 >
                   {inchesList.map((item) => (
                     <option key={item.name} value={item.name}>
@@ -330,7 +330,7 @@ export function ApplySellerModal({
                   placeholder={lang === "sw" ? "Taja jina la Niche yako" : "Specify your custom niche"}
                   value={customNiche}
                   onChange={(e) => setCustomNiche(e.target.value)}
-                  className="orbi-form-control w-full bg-slate-50 border border-orange-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-medium text-sm animate-in slide-in-from-top-2 duration-150"
+                  className="w-full bg-slate-50 border border-orange-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-medium text-sm animate-in slide-in-from-top-2 duration-150"
                 />
               )}
 
@@ -341,7 +341,7 @@ export function ApplySellerModal({
                 placeholder={lang === "sw" ? "Eneo Duka Lilipo (Mji/Mkoa)" : "Store Physical Location (City/Region)"}
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="orbi-form-control w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-medium text-sm transition-all"
+                className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-medium text-sm transition-all"
               />
             </div>
           </div>
@@ -362,7 +362,7 @@ export function ApplySellerModal({
                 <select
                   value={businessType}
                   onChange={(e) => setBusinessType(e.target.value)}
-                  className="orbi-form-control w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-medium text-sm"
+                  className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-medium text-sm"
                 >
                   <option value="Individual">{lang === "sw" ? "Mtu Binafsi / Mjasiriamali" : "Individual / Sole Proprietor"}</option>
                   <option value="Registered Company">{lang === "sw" ? "Kampuni Iliyosajiliwa (Ltd)" : "Registered Company (Ltd)"}</option>
@@ -377,7 +377,7 @@ export function ApplySellerModal({
                 <select
                   value={estimatedOrders}
                   onChange={(e) => setEstimatedOrders(e.target.value)}
-                  className="orbi-form-control w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-medium text-sm"
+                  className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-medium text-sm"
                 >
                   <option value="1-10">1 - 10 orders</option>
                   <option value="11-50">11 - 50 orders</option>
@@ -398,7 +398,7 @@ export function ApplySellerModal({
                 placeholder={lang === "sw" ? "Weka Namba yako ya TIN ya biashara" : "Enter your business TIN number"}
                 value={tin}
                 onChange={(e) => setTin(e.target.value)}
-                className="orbi-form-control w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-mono text-sm transition-all"
+                className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-mono text-sm transition-all"
               />
             </div>
           </div>
@@ -412,7 +412,7 @@ export function ApplySellerModal({
             }
             value={info}
             onChange={(e) => setInfo(e.target.value)}
-            className="orbi-form-control w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-medium text-xs min-h-[70px] resize-none"
+            className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-medium text-xs min-h-[70px] resize-none"
           />
 
           {/* Policy Agreement Checkbox */}
@@ -436,7 +436,7 @@ export function ApplySellerModal({
           <button
             type="submit"
             disabled={loading}
-            className="orbi-primary-button w-full bg-slate-900 hover:bg-slate-800 text-white py-3.5 rounded-2xl font-bold mt-4 disabled:opacity-50 transition-all shadow-md cursor-pointer border-none text-sm uppercase tracking-wider"
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3.5 rounded-xl font-bold mt-4 disabled:opacity-50 transition-all shadow-md cursor-pointer border-none text-sm uppercase tracking-wider"
           >
             {loading
               ? lang === "sw"

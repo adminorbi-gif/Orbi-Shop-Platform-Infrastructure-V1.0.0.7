@@ -2524,7 +2524,7 @@ Zawadi ya Alama za Uaminifu zilizoongezwa kwenye kibeti chako: +${earned} Points
           localStorage.setItem("orbi_visitor_carrier", carrier);
         }
         const res = await fetch(
-          `/api/search/expand?q=${encodeURIComponent(debouncedSearch)}&sessionId=${sid}&carrier=${carrier}&device=${devType}`,
+          `/api/v1/search/expand?q=${encodeURIComponent(debouncedSearch)}&sessionId=${sid}&carrier=${carrier}&device=${devType}`,
         );
         const json = await res.json();
         if (isMounted && json.success && Array.isArray(json.keywords)) {
