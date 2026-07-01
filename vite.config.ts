@@ -13,6 +13,14 @@ export default defineConfig(({ mode }) => {
     resolve: {
       dedupe: ["react", "react-dom"],
     },
+    build: {
+      rollupOptions: {
+        input: {
+          main: 'index.html',
+          admin: 'admin.html'
+        }
+      }
+    },
     define: {
       'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(supabaseUrl || ""),
       'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(supabaseKey || "")

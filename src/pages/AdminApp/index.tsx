@@ -892,6 +892,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   }, []);
 
   // Data State
+  const [initialLoading, setInitialLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [promos, setPromos] = useState<Promotion[]>([]);
@@ -1224,6 +1225,10 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         if (isMounted) setPayouts(payList || []);
       } catch (e) {
         console.warn("Failed to fetch payouts in interval:", e);
+      }
+      
+      if (isMounted) {
+        setInitialLoading(false);
       }
     };
 
@@ -1889,6 +1894,10 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       setSavingVerification(false);
     }
   };
+
+  if (initialLoading) {
+    return <LoadingOverlay message={lang === "sw" ? "Inapakia Dashibodi..." : "Loading Dashboard..."} />;
+  }
 
   if (currentSeller) {
     if (currentSeller.mustChangePassword) {
