@@ -36,16 +36,33 @@ export async function callOrbiPayGateway(path: string, options: PayGatewayReques
     throw new Error("ORBI Shop Pay Gateway service key is required. Set ORBI_SHOP_PAY_API_KEY.");
   }
 
-  const response = await fetch(`${baseUrl}${path.startsWith("/") ? path : `/${path}`}`, {
-    method: options.method || "GET",
-    headers: {
-      "content-type": "application/json",
-      "x-orbi-pay-service-key": serviceKey,
-      "x-orbi-app-id": process.env.ORBI_CORE_APP_ID || "orbi-shop",
-      "x-orbi-app-origin": process.env.ORBI_CORE_APP_ORIGIN || "https://shop.orbifinancial.com",
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  const timeoutMs = Number(process.env.ORBI_PAY_GATEWAY_TIMEOUT_MS || 12000);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}${path.startsWith("/") ? path : `/${path}`}`, {
+      method: options.method || "GET",
+      headers: {
+        "content-type": "application/json",
+        "x-orbi-pay-service-key": serviceKey,
+        "x-orbi-app-id": process.env.ORBI_CORE_APP_ID || "orbi-shop",
+        "x-orbi-app-origin": process.env.ORBI_CORE_APP_ORIGIN || "https://shop.orbifinancial.com",
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (error: any) {
+    const message = error?.name === "AbortError"
+      ? `ORBI Pay Gateway timed out after ${timeoutMs}ms`
+      : error?.message || "ORBI Pay Gateway is unreachable";
+    const gatewayError = new Error(message);
+    (gatewayError as any).status = 502;
+    (gatewayError as any).details = { gateway: baseUrl, path, timeoutMs };
+    throw gatewayError;
+  } finally {
+    clearTimeout(timeout);
+  }
 
   const text = await response.text();
   let data: any = null;

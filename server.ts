@@ -110,8 +110,8 @@ async function startServer() {
   });
   app.use("/api", apiLimiter);
 
-  // Add JSON body parser middleware which is necessary for Express POST endpoints
-  app.use(express.json());
+  // Checkout payloads are intentionally lean, but allow room for admin/product APIs.
+  app.use(express.json({ limit: "1mb" }));
 
   // Database proxy endpoint for frontend Supabase customProxyFetch
   app.post("/api/db/proxy", async (req, res) => {

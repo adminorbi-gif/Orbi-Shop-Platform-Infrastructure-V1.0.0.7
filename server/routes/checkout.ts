@@ -64,6 +64,29 @@ const isValidUUID = (id: any): boolean => {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 };
 
+function mapDbProduct(row: any, fallback: any = {}) {
+  const tagsList = Array.isArray(row?.tags) ? row.tags : [];
+  const sellerTag = tagsList.find((tag: string) => typeof tag === "string" && tag.startsWith("seller_id:"));
+  const categoryRaw = typeof row?.category === "string" ? row.category : "";
+  const [niche = fallback.niche || "Mengineyo", category = fallback.category || "General", family = fallback.family || ""] = categoryRaw.split("::");
+
+  return {
+    ...fallback,
+    id: row?.id || fallback.id,
+    name: row?.name || fallback.name || "Product",
+    niche,
+    category,
+    family,
+    price: Number(row?.price ?? fallback.price ?? 0),
+    oldPrice: row?.old_price ? Number(row.old_price) : fallback.oldPrice,
+    stock: Number(row?.stock ?? fallback.stock ?? 0),
+    description: row?.description || fallback.description || "",
+    tags: tagsList,
+    sellerId: row?.seller_id || (sellerTag ? sellerTag.split(":")[1] : fallback.sellerId) || "system",
+    wholesaleTiers: Array.isArray(row?.wholesale_tiers) ? row.wholesale_tiers : (Array.isArray(fallback.wholesaleTiers) ? fallback.wholesaleTiers : []),
+  };
+}
+
 type GatewayPaymentCategory = "orbi" | "mobile_money" | "bank" | "card";
 type GatewayPaymentRail = "orbi_wallet" | "mno_tz" | "bank_transfer_tz" | "card_gateway";
 type ShopPaymentOutcome = "held" | "requires_action" | "processing" | "failed";
@@ -206,8 +229,8 @@ router.post("/", async (req, res) => {
     }
 
     const stockCheckPromises = cart.map(async (c: any) => {
-      const prodId = c.product?.id;
-      let query = supabase.from("products").select("id, stock, name");
+      const prodId = c.product?.id || c.productId || c.id;
+      let query = supabase.from("products").select("*");
       if (isValidUUID(prodId)) {
         query = query.eq("id", prodId);
       } else {
@@ -216,7 +239,13 @@ router.post("/", async (req, res) => {
       const { data: p } = await query.maybeSingle();
       if (!p) throw new Error(`Product "${c.product?.name || 'product'}" not found.`);
       if (p.stock < c.quantity) throw new Error(`Insufficient stock for ${p.name}.`);
-      return { ...c, dbProductId: p.id, currentStock: p.stock };
+      return {
+        ...c,
+        product: mapDbProduct(p, c.product || {}),
+        quantity: parseInt(c.quantity, 10) || 1,
+        dbProductId: p.id,
+        currentStock: Number(p.stock) || 0,
+      };
     });
     const validatedCart = await Promise.all(stockCheckPromises);
 

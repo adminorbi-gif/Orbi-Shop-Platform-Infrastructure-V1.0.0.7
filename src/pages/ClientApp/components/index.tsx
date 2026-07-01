@@ -1808,11 +1808,15 @@ export function CheckoutModal({
     setLoadingMsg(t(lang, "checkout.loading"));
 
     try {
+      const checkoutCart = cart.map((item: any) => ({
+        productId: item.product?.id,
+        quantity: parseInt(item.quantity, 10) || 1,
+      }));
       const resp = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          cart,
+          cart: checkoutCart,
           user,
           paymentMethod: normalizedMethod,
           paymentCategory: selectedPaymentRoute.category,
@@ -1831,11 +1835,18 @@ export function CheckoutModal({
         }),
       });
       
-      let data;
+      let data: any = null;
+      const responseText = await resp.text();
       try {
-        data = await resp.json();
+        data = responseText ? JSON.parse(responseText) : null;
       } catch (parseErr) {
-        throw new Error(`Server returned non-JSON response with status ${resp.status}`);
+        data = {
+          success: false,
+          error: resp.ok
+            ? "Checkout returned an unreadable response."
+            : `Checkout service returned HTTP ${resp.status}. Please try again or contact support if money was deducted.`,
+          raw: responseText?.slice(0, 500),
+        };
       }
 
       if (resp.ok && data.success) {
