@@ -1325,6 +1325,42 @@ export default function ClientApp() {
                     onSelectProduct={setSelectedProduct}
                     lang={lang}
                   />
+
+                  <section className="mb-8 grid grid-cols-1 gap-3 md:grid-cols-3">
+                    {[
+                      {
+                        icon: ShieldCheck,
+                        title: lang === "sw" ? "PaySafe Escrow Live" : "Live PaySafe Escrow",
+                        body: lang === "sw" ? "Malipo hupitia Gateway na hushikiliwa mpaka uthibitisho wa kupokea mzigo." : "Payments route through Gateway and stay protected until delivery confirmation.",
+                      },
+                      {
+                        icon: Store,
+                        title: lang === "sw" ? "Wauzaji Waliothibitishwa" : "Verified Merchant Network",
+                        body: lang === "sw" ? "Kila duka linafuatiliwa kwa historia, oda na ubora wa huduma." : "Merchants are tracked by order history, fulfillment quality, and service health.",
+                      },
+                      {
+                        icon: Truck,
+                        title: lang === "sw" ? "Ufuatiliaji wa Oda" : "Order Lifecycle Tracking",
+                        body: lang === "sw" ? "Mteja anaona hali ya malipo, usafirishaji na uthibitisho wa mwisho." : "Customers see payment, delivery, and final confirmation states clearly.",
+                      },
+                    ].map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <div key={item.title} className="group relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-900/5">
+                          <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-orange-500/5 blur-2xl transition group-hover:bg-orange-500/10" />
+                          <div className="relative flex items-start gap-4">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-amber-300 shadow-lg shadow-slate-900/10">
+                              <Icon size={22} />
+                            </div>
+                            <div>
+                              <h3 className="text-sm font-black text-slate-950">{item.title}</h3>
+                              <p className="mt-1.5 text-xs font-semibold leading-relaxed text-slate-500">{item.body}</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </section>
                 </>
               ) : (
                 <div className="mb-10 bg-white rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 shadow-sm border border-slate-200">
@@ -3013,15 +3049,24 @@ export default function ClientApp() {
         {showCart && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99999] flex justify-end">
             <div className="w-full max-w-md bg-white h-full flex flex-col shadow-2xl animate-in slide-in-from-right duration-300">
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
-                <h2 className="font-bold text-xl flex items-center gap-3 text-slate-800">
-                  <ShoppingCart size={22} className="text-primary" />{" "}
-                  {t(lang, "cart.title")} (
-                  {cart.reduce((a, c) => a + c.quantity, 0)})
-                </h2>
+              <div className="relative overflow-hidden p-6 border-b border-slate-800 flex justify-between items-start bg-slate-950 sticky top-0 z-10 text-white">
+                <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-500/20 blur-2xl" />
+                <div className="relative z-10">
+                  <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-amber-300">
+                    <ShieldCheck size={12} />
+                    PaySafe Ready
+                  </div>
+                  <h2 className="font-black text-2xl flex items-center gap-3 tracking-tight">
+                    <ShoppingCart size={24} className="text-amber-300" />{" "}
+                    {t(lang, "cart.title")}
+                  </h2>
+                  <p className="mt-1 text-xs font-semibold text-slate-400">
+                    {cart.reduce((a, c) => a + c.quantity, 0)} {lang === "sw" ? "bidhaa ziko tayari kwa checkout salama" : "items ready for secure checkout"}
+                  </p>
+                </div>
                 <button
                   onClick={() => setShowCart(false)}
-                  className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-800 transition-colors"
+                  className="relative z-10 p-2 hover:bg-white/10 rounded-full text-white/60 hover:text-white transition-colors"
                 >
                   <X size={20} />
                 </button>
@@ -3031,7 +3076,7 @@ export default function ClientApp() {
                 {cart.map((item, idx) => (
                   <div
                     key={idx}
-                    className="flex gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm"
+                    className="flex gap-4 bg-white p-4 rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl hover:shadow-slate-900/5 transition-all"
                   >
                     <div className="w-20 h-20 bg-slate-50 rounded-xl flex-shrink-0 border border-slate-100 overflow-hidden">
                       {item.product.images[0] && (
@@ -3063,10 +3108,10 @@ export default function ClientApp() {
                         )}
                       </div>
                       <div className="flex items-center justify-between mt-auto pt-3">
-                        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg p-0.5">
+                        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-0.5">
                           <button
                             onClick={() => updateQuantity(item.product.id, -1)}
-                            className="w-7 h-7 flex items-center justify-center text-slate-500 hover:bg-white hover:shadow-sm rounded transition disabled:opacity-50"
+                            className="w-7 h-7 flex items-center justify-center text-slate-500 hover:bg-white hover:shadow-sm rounded-lg transition disabled:opacity-50"
                             disabled={item.quantity <= 1}
                           >
                             -
@@ -3076,7 +3121,7 @@ export default function ClientApp() {
                           </span>
                           <button
                             onClick={() => updateQuantity(item.product.id, 1)}
-                            className="w-7 h-7 flex items-center justify-center text-slate-500 hover:bg-white hover:shadow-sm rounded transition disabled:opacity-50"
+                            className="w-7 h-7 flex items-center justify-center text-slate-500 hover:bg-white hover:shadow-sm rounded-lg transition disabled:opacity-50"
                             disabled={item.quantity >= item.product.stock}
                           >
                             +
@@ -3120,22 +3165,32 @@ export default function ClientApp() {
               </div>
 
               {cart.length > 0 && (
-                <div className="p-6 border-t border-slate-100 bg-white shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
-                  <div className="flex justify-between items-center mb-1 text-sm text-slate-500 font-medium">
-                    <span>{t(lang, "cart.items")}</span>
-                    <span>{cart.reduce((a, c) => a + c.quantity, 0)}</span>
-                  </div>
-                  <div className="flex justify-between items-center mb-6 text-xl font-black">
-                    <span className="text-slate-800">
-                      {t(lang, "cart.total")}
-                    </span>
-                    <span className="text-primary">
-                      <PriceDisplay
-                        amount={totalCart}
-                        colorClass="text-primary"
-                        size="2xl"
-                      />
-                    </span>
+                <div className="p-6 border-t border-slate-100 bg-white shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] space-y-4">
+                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex justify-between items-center mb-2 text-sm text-slate-500 font-bold">
+                      <span>{t(lang, "cart.items")}</span>
+                      <span>{cart.reduce((a, c) => a + c.quantity, 0)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xl font-black">
+                      <span className="text-slate-800">
+                        {t(lang, "cart.total")}
+                      </span>
+                      <span className="text-primary">
+                        <PriceDisplay
+                          amount={totalCart}
+                          colorClass="text-primary"
+                          size="2xl"
+                        />
+                      </span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] font-black uppercase tracking-wider text-slate-500">
+                      <div className="rounded-2xl bg-white px-3 py-2 ring-1 ring-slate-200">
+                        {lang === "sw" ? "Gateway live" : "Gateway live"}
+                      </div>
+                      <div className="rounded-2xl bg-white px-3 py-2 ring-1 ring-slate-200">
+                        {lang === "sw" ? "Escrow hold" : "Escrow hold"}
+                      </div>
+                    </div>
                   </div>
                   <button
                     onClick={() => {
@@ -3147,9 +3202,9 @@ export default function ClientApp() {
                         setShowCheckout(true);
                       }
                     }}
-                    className="w-full bg-primary text-white py-4 rounded-2xl font-bold hover:bg-slate-800 shadow-[0_8px_30px_rgb(30,41,59,0.2)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 text-lg cursor-pointer"
+                    className="w-full bg-slate-950 text-white py-4 rounded-2xl font-black hover:bg-[#ff4c00] shadow-xl shadow-slate-900/20 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 text-lg cursor-pointer"
                   >
-                    <Check size={20} /> {t(lang, "cart.checkout")}
+                    <ShieldCheck size={20} /> {t(lang, "cart.checkout")}
                   </button>
                 </div>
               )}
@@ -3580,11 +3635,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
   return (
     <>
       <div
-        className="flex flex-col group transition-all duration-300 hover:-translate-y-0.5 cursor-pointer h-full bg-white rounded-xl sm:rounded-2xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-slate-100/60 p-1.5 sm:p-2"
+        className="flex flex-col group transition-all duration-300 hover:-translate-y-1 cursor-pointer h-full bg-white rounded-2xl sm:rounded-[1.6rem] shadow-sm hover:shadow-2xl hover:shadow-slate-900/10 border border-slate-200/70 hover:border-slate-300 p-1.5 sm:p-2 ring-1 ring-transparent hover:ring-orange-500/10"
         onClick={() => onSelect(p)}
       >
         <div
-          className="relative aspect-square bg-[#f1f5f9]/50 rounded-lg sm:rounded-xl overflow-hidden mb-2 sm:mb-2.5 cursor-pointer"
+          className="relative aspect-square bg-gradient-to-br from-slate-100 via-white to-slate-100 rounded-xl sm:rounded-[1.2rem] overflow-hidden mb-2 sm:mb-2.5 cursor-pointer"
           onClick={(e) => {
             e.stopPropagation();
             if (onInteract) onInteract();
@@ -3601,7 +3656,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
               <MediaRenderer
                 src={p.images[imgIdx]}
                 alt={p.name}
-                className="w-full h-full object-contain group-hover:scale-[1.03] transition duration-500 ease-out p-1"
+                  className="w-full h-full object-contain group-hover:scale-[1.05] transition duration-700 ease-out p-1.5"
                 autoPlay
               />
               {p.images.length > 1 && (
@@ -3640,7 +3695,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           )}
 
           {p.oldPrice && p.oldPrice > p.price && (
-            <div className="absolute top-1 left-1 sm:top-1.5 sm:left-1.5 bg-rose-500 text-white text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow-xs animate-pulse">
+            <div className="absolute top-1 left-1 sm:top-1.5 sm:left-1.5 bg-rose-600 text-white text-[8px] sm:text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wider shadow-lg shadow-rose-900/20">
               -{Math.round(((p.oldPrice - p.price) / p.oldPrice) * 100)}%
             </div>
           )}
@@ -3695,10 +3750,21 @@ const ProductCard: React.FC<ProductCardProps> = ({
           )}
         </div>
 
-        <div className="flex flex-col flex-1 px-1 justify-between pb-1 mt-0.5">
+        <div className="flex flex-col flex-1 px-1.5 justify-between pb-1 mt-0.5">
           <div>
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <span className="truncate text-[8px] sm:text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                {p.category || p.niche || "ORBI MARKET"}
+              </span>
+              {!isOutOfStock && (
+                <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-emerald-700 ring-1 ring-emerald-100">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  Live
+                </span>
+              )}
+            </div>
             <h3
-              className="text-[12px] sm:text-[13px] md:text-[14px] font-bold leading-[1.3] text-slate-800 line-clamp-2 h-auto mb-0.5 flex-shrink-0 group-hover:text-[#ff4c00] transition-colors"
+              className="text-[12px] sm:text-[13px] md:text-[14px] font-black leading-[1.28] text-slate-900 line-clamp-2 h-auto mb-0.5 flex-shrink-0 group-hover:text-[#ff4c00] transition-colors"
               title={p.name}
             >
               {p.name}
@@ -3732,6 +3798,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   />
                 )}
               </div>
+              <div className="mt-1 flex items-center gap-1.5 text-[9px] font-bold text-slate-400">
+                <ShieldCheck size={10} className="text-emerald-500" />
+                <span>{lang === "sw" ? "PaySafe protected" : "PaySafe protected"}</span>
+              </div>
             </div>
           </div>
 
@@ -3743,7 +3813,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     e.stopPropagation();
                     onAdd(false);
                   }}
-                  className="flex-1 min-w-0 border border-slate-200 hover:border-[#ff4c00]/60 text-slate-700 hover:text-[#ff4c00] text-[10px] sm:text-[11px] font-bold py-1 sm:py-1.5 px-0.5 sm:px-1 rounded-full transition-colors flex items-center justify-center gap-0.5 cursor-pointer"
+                  className="flex-1 min-w-0 border border-slate-200 hover:border-[#ff4c00]/60 bg-white text-slate-700 hover:text-[#ff4c00] text-[10px] sm:text-[11px] font-bold py-1.5 sm:py-2 px-0.5 sm:px-1 rounded-xl transition-colors flex items-center justify-center gap-0.5 cursor-pointer"
                   title={lang === "sw" ? "Weka kwenye kikapu" : "Add to Cart"}
                 >
                   <ShoppingCart size={11} className="shrink-0" />
@@ -3756,7 +3826,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     e.stopPropagation();
                     onAdd(true);
                   }}
-                  className="flex-1 min-w-0 bg-[#ff4c00] hover:bg-[#e04300] text-white text-[10px] sm:text-[11px] font-black py-1 sm:py-1.5 px-0.5 sm:px-1 rounded-full transition-colors flex items-center justify-center gap-0.5 cursor-pointer shadow-xs"
+                  className="flex-1 min-w-0 bg-slate-950 hover:bg-[#ff4c00] text-white text-[10px] sm:text-[11px] font-black py-1.5 sm:py-2 px-0.5 sm:px-1 rounded-xl transition-colors flex items-center justify-center gap-0.5 cursor-pointer shadow-lg shadow-slate-900/10"
                   title={lang === "sw" ? "Nunua Sasa" : "Buy Now"}
                 >
                   <Zap
