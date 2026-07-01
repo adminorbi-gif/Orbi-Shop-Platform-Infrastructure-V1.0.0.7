@@ -101,6 +101,59 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.orbi-product-detail-shell {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(249, 115, 22, 0.12), transparent 24rem),
+    radial-gradient(circle at 92% 12%, rgba(15, 23, 42, 0.10), transparent 28rem),
+    linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+}
+
+.orbi-product-detail-hero {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94)),
+    radial-gradient(circle at 0% 0%, rgba(249, 115, 22, 0.10), transparent 18rem);
+  box-shadow:
+    0 34px 90px rgba(15, 23, 42, 0.10),
+    0 1px 0 rgba(255, 255, 255, 0.9) inset;
+}
+
+.orbi-product-detail-media {
+  background:
+    radial-gradient(circle at 50% 4%, rgba(249, 115, 22, 0.12), transparent 16rem),
+    linear-gradient(145deg, #ffffff, #f8fafc 52%, #eef2f7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 24px 56px rgba(15, 23, 42, 0.08);
+}
+
+.orbi-product-buy-panel,
+.orbi-product-detail-card {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(203, 213, 225, 0.78);
+  box-shadow:
+    0 18px 44px rgba(15, 23, 42, 0.07),
+    0 1px 0 rgba(255, 255, 255, 0.92) inset;
+}
+
+.orbi-detail-price {
+  font-size: clamp(2rem, 5vw, 3.35rem);
+  line-height: 0.95;
+  letter-spacing: -0.055em;
+  font-variant-numeric: tabular-nums;
+}
+
+.orbi-detail-section-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(1rem, 2vw, 1.5rem);
+}
+
+@media (min-width: 1024px) {
+  .orbi-detail-section-grid {
+    grid-template-columns: minmax(0, 1.45fr) minmax(20rem, 0.75fr);
+  }
+}
+
 @media (min-width: 640px) {
   .orbi-product-list-grid {
     grid-template-columns: repeat(auto-fit, minmax(12.5rem, 1fr));

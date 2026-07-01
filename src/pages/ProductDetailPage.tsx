@@ -599,13 +599,14 @@ export default function ProductDetailPage({
       </header>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto w-full bg-slate-50/50 pb-24 md:pb-8">
-        <div className="max-w-6xl mx-auto w-full p-4 md:p-8 flex flex-col md:flex-row gap-8 lg:gap-12">
+      <div className="orbi-product-detail-shell flex-1 overflow-y-auto w-full pb-24 md:pb-12">
+        <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8">
+        <div className="orbi-product-detail-hero rounded-[2rem] lg:rounded-[2.5rem] border border-white/70 p-3 sm:p-5 lg:p-7 grid grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(24rem,0.95fr)] gap-6 lg:gap-9 items-start">
           
           {/* Left Column: Images */}
-          <div className="w-full md:w-1/2 flex flex-col gap-4">
+          <div className="w-full flex flex-col gap-4 lg:sticky lg:top-24">
             <div 
-              className="relative aspect-square sm:aspect-[4/3] bg-white rounded-3xl overflow-hidden shadow-xs shrink-0 border border-slate-200/60 flex items-center justify-center cursor-zoom-in group"
+              className="orbi-product-detail-media relative aspect-square sm:aspect-[4/3] rounded-[1.75rem] lg:rounded-[2rem] overflow-hidden shrink-0 border border-slate-200/70 flex items-center justify-center cursor-zoom-in group"
               onClick={() => setShowFullImage(true)}
               onMouseMove={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
@@ -625,9 +626,24 @@ export default function ProductDetailPage({
               <img
                 src={product.images[imgIdx]}
                 alt={product.name}
-                className="w-full h-full object-contain p-4 transition-transform duration-200 ease-out group-hover:scale-[2.5]"
+                className="w-full h-full object-contain p-5 sm:p-7 lg:p-8 transition-transform duration-200 ease-out group-hover:scale-[2.2]"
                 style={{ transformOrigin: 'var(--zoom-x, 50%) var(--zoom-y, 50%)' }}
               />
+              <div className="absolute left-4 top-4 z-20 flex flex-wrap gap-2">
+                {product.oldPrice && product.oldPrice > currentUnitPrice && (
+                  <span className="rounded-full bg-rose-600 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white shadow-lg">
+                    -{Math.round(((product.oldPrice - currentUnitPrice) / product.oldPrice) * 100)}%
+                  </span>
+                )}
+                {displaySeller.isPro && displaySeller.proUntil && displaySeller.proUntil > Date.now() && (
+                  <span className="rounded-full bg-slate-950/90 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white shadow-lg">
+                    Pro seller
+                  </span>
+                )}
+              </div>
+              <div className="absolute bottom-4 left-4 z-20 rounded-full bg-white/90 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-600 shadow-sm ring-1 ring-slate-200/70 backdrop-blur">
+                {lang === "sw" ? "Bofya kukuza" : "Click to zoom"}
+              </div>
               {product.images.length > 1 && (
                 <>
                   <button
@@ -635,7 +651,7 @@ export default function ProductDetailPage({
                       e.stopPropagation();
                       setImgIdx((i) => (i - 1 + product.images.length) % product.images.length);
                     }}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full text-slate-700 hover:text-orange-600 shadow-md transition-all hover:scale-105 cursor-pointer opacity-100 group-hover:opacity-0"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center bg-white/92 backdrop-blur-sm rounded-full text-slate-700 hover:text-orange-600 shadow-lg transition-all hover:scale-105 cursor-pointer"
                   >
                     <ChevronLeft size={24} />
                   </button>
@@ -644,7 +660,7 @@ export default function ProductDetailPage({
                       e.stopPropagation();
                       setImgIdx((i) => (i + 1) % product.images.length);
                     }}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full text-slate-700 hover:text-orange-600 shadow-md transition-all hover:scale-105 cursor-pointer opacity-100 group-hover:opacity-0"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center bg-white/92 backdrop-blur-sm rounded-full text-slate-700 hover:text-orange-600 shadow-lg transition-all hover:scale-105 cursor-pointer"
                   >
                     <ChevronRight size={24} />
                   </button>
@@ -653,13 +669,13 @@ export default function ProductDetailPage({
             </div>
 
             {product.images.length > 1 && (
-              <div className="grid grid-cols-5 md:grid-cols-4 gap-2 py-2">
+              <div className="grid grid-cols-5 md:grid-cols-6 gap-2 py-2">
                 {product.images.map((img, idx) => (
                   <button
                     key={idx}
                     onClick={() => setImgIdx(idx)}
-                    className={`w-full aspect-square bg-white rounded-xl overflow-hidden border-2 transition-all p-1 cursor-pointer ${
-                      idx === imgIdx ? "border-orange-500 ring-2 ring-orange-100" : "border-slate-100 hover:border-slate-300"
+                    className={`w-full aspect-square bg-white rounded-2xl overflow-hidden border transition-all p-1.5 cursor-pointer shadow-sm ${
+                      idx === imgIdx ? "border-orange-500 ring-4 ring-orange-100" : "border-slate-200 hover:border-slate-300"
                     }`}
                   >
                     <img
@@ -674,7 +690,7 @@ export default function ProductDetailPage({
 
             {/* Wholesale Price per Piece Tier Table */}
             {tiers && tiers.length > 0 && (
-              <div id="wholesale-table-card" className="mt-4 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+              <div id="wholesale-table-card" className="orbi-product-detail-card mt-2 rounded-[1.5rem] p-4">
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
                   <div className="bg-orange-50 text-[#ff4c00] p-1.5 rounded-lg border border-orange-100">
                     <Package size={15} />
@@ -752,25 +768,25 @@ export default function ProductDetailPage({
           </div>
 
           {/* Right Column: Details */}
-          <div className="w-full md:w-1/2 flex flex-col pt-2 pb-10">
+          <div className="w-full flex flex-col pb-4">
             
-            <div className="flex flex-col mb-4">
+            <div className="flex flex-col mb-5">
               <div className="flex items-center gap-2 flex-wrap mb-2">
-                <span className="bg-orange-100 text-orange-700 text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">
+                <span className="bg-orange-100 text-orange-700 text-[11px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest">
                   {product.category}
                 </span>
                 {(product.niche && product.niche !== "Zote") && (
-                  <span className="bg-amber-100 text-amber-800 text-xs font-semibold px-2.5 py-1 rounded-md uppercase tracking-wide">
+                  <span className="bg-amber-100 text-amber-800 text-[11px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest">
                     {product.niche}
                   </span>
                 )}
                 {product.tags && product.tags.map(t => (
-                  <span key={t} className="bg-slate-100 text-slate-600 text-xs font-semibold px-2 py-1 rounded-md">
+                  <span key={t} className="bg-slate-100 text-slate-600 text-[11px] font-bold px-2.5 py-1 rounded-full">
                     #{t}
                   </span>
                 ))}
               </div>
-              <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-slate-900 leading-tight mb-2 tracking-tight">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-950 leading-[1.02] mb-3 tracking-[-0.045em]">
                 {product.name}
               </h2>
               
@@ -796,7 +812,7 @@ export default function ProductDetailPage({
                 </div>
 
                  {product.warranty && (
-                  <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black bg-gradient-to-r from-amber-500/10 via-yellow-500/15 to-amber-500/10 border border-amber-500/30 text-amber-700 shadow-xs hover:shadow-md transition-all hover:scale-105 duration-200 cursor-help" title={lang === "sw" ? "Muda wa Dhamana (Warranty)" : "Warranty Duration"}>
+                  <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black bg-gradient-to-r from-amber-500/10 via-yellow-500/15 to-amber-500/10 border border-amber-500/30 text-amber-700 shadow-xs hover:shadow-md transition-all duration-200 cursor-help" title={lang === "sw" ? "Muda wa Dhamana (Warranty)" : "Warranty Duration"}>
                     <Award size={13.5} className="text-amber-500 shrink-0" />
                     <span className="uppercase tracking-widest text-[10px] font-bold">
                       {lang === "sw" ? `DHAMANA: ${product.warranty}` : `WARRANTY: ${product.warranty}`}
@@ -812,7 +828,7 @@ export default function ProductDetailPage({
                     onViewSeller(displaySeller);
                   }
                 }}
-                className="inline-flex items-center gap-2 mt-1 mb-2.5 px-3 py-1.5 rounded-xl border border-slate-200/60 bg-slate-50 hover:bg-white hover:border-orange-300 hover:shadow-xs transition-all cursor-pointer w-fit group/badge"
+                className="inline-flex items-center gap-2 mt-1 mb-3 px-3 py-2 rounded-2xl border border-slate-200/70 bg-white/80 hover:bg-white hover:border-orange-300 hover:shadow-md transition-all cursor-pointer w-fit group/badge"
               >
                 <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 border border-slate-200/60 flex items-center justify-center bg-white">
                   {displaySeller.avatar ? (
@@ -855,14 +871,14 @@ export default function ProductDetailPage({
             </div>
 
             {/* Pricing Card with Font Auto-Adjust PriceDisplay */}
-            <div className="bg-white rounded-2xl p-5 md:p-6 shadow-xs border border-slate-200/60 mb-6 flex flex-col gap-4">
+            <div className="orbi-product-buy-panel rounded-[1.75rem] p-5 md:p-6 mb-6 flex flex-col gap-4 lg:sticky lg:top-24 z-20">
               <div className="flex flex-col">
                 <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">
                   {lang === "sw" ? "BEI YA BIDHAA (KIPANDE)" : "PRICE PER PIECE"}
                 </span>
                 <div className="flex items-end gap-3 flex-wrap">
                   {/* Incorporating auto-adjusting PriceDisplay */}
-                  <PriceDisplay amount={currentUnitPrice} size="3xl" colorClass="text-[#ff4c00]" />
+                  <PriceDisplay amount={currentUnitPrice} size="3xl" colorClass="text-[#ff4c00]" className="orbi-detail-price font-black" />
                   
                   {product.oldPrice && product.oldPrice > currentUnitPrice && (
                     <div className="pb-1">
@@ -892,7 +908,7 @@ export default function ProductDetailPage({
 
               {/* Delivery Estimation Badge */}
               <div className="border-t border-slate-100 pt-4 mt-1">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-blue-50/50 border border-blue-100/50 rounded-2xl p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-blue-50/70 border border-blue-100/70 rounded-2xl p-4">
                   <div className="flex gap-3 items-start sm:items-center">
                     <div className="p-2 bg-white rounded-xl shadow-sm text-blue-600 border border-blue-100">
                       <Truck size={18} />
@@ -1001,7 +1017,7 @@ export default function ProductDetailPage({
                       onClick={() => {
                         onAdd(product, false, qty);
                       }}
-                      className="flex-1 h-12 md:h-14 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-black transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 shadow-xs text-sm sm:text-base cursor-pointer"
+                      className="flex-1 h-12 md:h-14 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl font-black transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 shadow-xs text-sm sm:text-base cursor-pointer"
                     >
                       <ShoppingCart size={18} />
                       <span>{lang === "sw" ? "Weka Kikapuni" : "Add to Cart"}</span>
@@ -1012,7 +1028,7 @@ export default function ProductDetailPage({
                         onAdd(product, true, qty);
                         onClose();
                       }}
-                      className="flex-1 h-12 md:h-14 bg-[#ff4c00] hover:bg-[#e04300] text-white rounded-xl font-black transition-all hover:shadow-lg hover:shadow-orange-500/20 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 shadow-xs text-sm sm:text-base cursor-pointer"
+                      className="flex-1 h-12 md:h-14 bg-[#ff4c00] hover:bg-[#e04300] text-white rounded-2xl font-black transition-all hover:shadow-lg hover:shadow-orange-500/20 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 shadow-xs text-sm sm:text-base cursor-pointer"
                     >
                       <Zap size={18} />
                       <span>{lang === "sw" ? "Nunua Sasa" : "Buy Now"}</span>
@@ -1026,7 +1042,7 @@ export default function ProductDetailPage({
                       e.stopPropagation();
                       onLikeToggle(product.id, product.niche);
                     }}
-                    className={`h-12 md:h-14 px-5 rounded-xl font-black transition-all border shrink-0 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 shadow-xs text-sm cursor-pointer ${
+                    className={`h-12 md:h-14 px-5 rounded-2xl font-black transition-all border shrink-0 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 shadow-xs text-sm cursor-pointer ${
                       isLiked
                         ? "bg-rose-50 border-rose-300 text-rose-500 hover:bg-rose-100"
                         : "bg-white border-slate-200 text-slate-500 hover:text-rose-500 hover:bg-slate-50"
@@ -1058,7 +1074,7 @@ export default function ProductDetailPage({
 
             {/* Price Drop Alert */}
             {showPriceDrop ? (
-              <div className="bg-white p-5 rounded-2xl shadow-xs border border-blue-100 space-y-3 mb-6 relative overflow-hidden">
+              <div className="orbi-product-detail-card p-5 rounded-[1.5rem] border-blue-100 space-y-3 mb-6 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
                 <div className="flex justify-between items-start">
                   <div>
@@ -1098,7 +1114,7 @@ export default function ProductDetailPage({
             ) : (
               <button
                 onClick={() => setShowPriceDrop(true)}
-                className="w-full flex items-center justify-center gap-2 h-11 mb-6 bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-700 border border-slate-200 hover:border-blue-200 rounded-xl font-bold transition-all text-sm cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 h-11 mb-6 bg-white/80 hover:bg-blue-50 text-slate-600 hover:text-blue-700 border border-slate-200 hover:border-blue-200 rounded-2xl font-bold transition-all text-sm cursor-pointer shadow-sm"
               >
                 <Bell size={16} />
                 <span>{lang === "sw" ? "Nijulishe bei ikishuka" : "Notify me of price drop"}</span>
@@ -1161,7 +1177,7 @@ export default function ProductDetailPage({
 
             {/* Out of stock notify form */}
             {showNotify && (
-              <div className="bg-white p-5 rounded-2xl shadow-xs border border-orange-100 space-y-3 mb-6 relative overflow-hidden">
+              <div className="orbi-product-detail-card p-5 rounded-[1.5rem] border-orange-100 space-y-3 mb-6 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
                 <h4 className="font-bold text-slate-900">
                   {lang === "sw" ? "Bidhaa imeisha" : "Product out of stock"}
@@ -1201,7 +1217,7 @@ export default function ProductDetailPage({
                     onViewSeller(displaySeller);
                   }
                 }}
-                className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-2xl cursor-pointer hover:border-orange-300 hover:shadow-md transition-all group mb-8 shadow-xs animate-in fade-in"
+                className="orbi-product-detail-card flex items-center gap-4 p-4 rounded-[1.5rem] cursor-pointer hover:border-orange-300 hover:shadow-md transition-all group mb-8 animate-in fade-in"
               >
                 <div className="w-14 h-14 rounded-full border border-slate-200 overflow-hidden flex items-center justify-center bg-slate-50 shrink-0 shadow-inner p-0.5">
                   <div className="w-full h-full rounded-full overflow-hidden bg-white flex items-center justify-center">
@@ -1246,9 +1262,9 @@ export default function ProductDetailPage({
             )}
 
             {/* Description & Technical Specifications Grid Tab */}
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mb-8 shadow-xs">
-              <div className="border-b border-slate-200 bg-slate-50/50 px-5 py-3">
-                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+            <div className="orbi-product-detail-card rounded-[1.75rem] overflow-hidden mb-8">
+              <div className="border-b border-slate-200/70 bg-slate-50/70 px-5 py-4">
+                <h3 className="font-black text-slate-900 flex items-center gap-2">
                   <Info size={16} className="text-orange-500" />
                   {lang === "sw" ? "Ufafanuzi na Taarifa za Bidhaa" : "Specifications & Description"}
                 </h3>
@@ -1263,7 +1279,7 @@ export default function ProductDetailPage({
                       {lang === "sw" ? "Sifa na Vigezo vya Bidhaa" : "Key Product Attributes"}
                     </h4>
                     
-                    <div className="border border-slate-200/80 rounded-2xl overflow-hidden bg-white shadow-2xs divide-y divide-slate-100">
+                    <div className="border border-slate-200/80 rounded-2xl overflow-hidden bg-white shadow-sm divide-y divide-slate-100">
                       {(showAllSpecs ? keyAttributes : keyAttributes.slice(0, 8)).map((attr, idx) => (
                         <div key={idx} className="grid grid-cols-12 text-xs hover:bg-slate-50/50 transition duration-75">
                           <div className="col-span-5 bg-slate-50/60 p-3 font-semibold text-slate-500 capitalize border-r border-slate-100/80 flex items-center select-none">
@@ -1303,9 +1319,9 @@ export default function ProductDetailPage({
             </div>
 
             {/* Reviews Section */}
-            <div id="reviews" className="bg-white rounded-2xl border border-slate-200 overflow-hidden mb-8 shadow-xs">
-              <div className="border-b border-slate-200 bg-slate-50/50 px-5 py-3 flex justify-between items-center">
-                <h3 className="font-bold text-slate-800">
+            <div id="reviews" className="orbi-product-detail-card rounded-[1.75rem] overflow-hidden mb-8">
+              <div className="border-b border-slate-200/70 bg-slate-50/70 px-5 py-4 flex justify-between items-center">
+                <h3 className="font-black text-slate-900">
                   {lang === "sw" ? "Maeni ya Wateja" : "Customer Reviews"} ({reviews.length})
                 </h3>
               </div>
@@ -1318,7 +1334,7 @@ export default function ProductDetailPage({
                     </p>
                   ) : (
                     reviews.map((r) => (
-                      <div key={r.id} className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm">
+                      <div key={r.id} className="bg-slate-50/80 p-4 rounded-2xl border border-slate-100 text-sm">
                         <div className="flex items-center justify-between mb-2">
                           <div className="font-bold text-slate-800">{r.userName}</div>
                           <div className="flex text-amber-400 text-xs">
@@ -1336,7 +1352,7 @@ export default function ProductDetailPage({
                   )}
                 </div>
 
-                <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+                <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200 space-y-4">
                   <h4 className="font-bold text-sm text-slate-800">
                     {lang === "sw" ? "Acha Maoni Yako" : "Leave a Review"}
                   </h4>
@@ -1373,7 +1389,7 @@ export default function ProductDetailPage({
 
         {/* Related Similar Products Section (Full Width, Bottom) */}
         {relatedProducts && relatedProducts.length > 0 && (
-          <div className="w-full bg-slate-50 border-t border-slate-250/80 py-12 px-4 md:px-8 mt-4">
+          <div className="w-full py-12 mt-4">
             <div className="max-w-7xl mx-auto">
               {/* Specialized Niche Banner */}
               <div className="relative w-full rounded-3xl bg-slate-900 bg-gradient-to-br from-slate-900 via-slate-800 to-amber-950 border border-slate-800 overflow-hidden mb-8 shadow-xl flex flex-col md:flex-row items-center">
@@ -1411,7 +1427,7 @@ export default function ProductDetailPage({
               </div>
               
               {/* Responsive columns grid - strictly starting with 2 on mobile devices! */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
+              <div className="orbi-product-list-grid">
                 {relatedProducts.slice(0, 10).map((rp) => (
                   <div
                     key={rp.id}
@@ -1424,19 +1440,19 @@ export default function ProductDetailPage({
                         window.scrollTo(0, 0);
                       }
                     }}
-                    className="bg-white rounded-2xl shadow-xs border border-slate-150 select-none hover:shadow-md transition duration-300 cursor-pointer overflow-hidden flex flex-col group h-full"
+                    className="orbi-market-product-card select-none transition duration-300 cursor-pointer overflow-hidden flex flex-col group h-full rounded-[1.4rem] border border-slate-200/80"
                   >
-                    <div className="aspect-[4/3] w-full bg-slate-100 relative overflow-hidden shrink-0">
+                    <div className="orbi-product-image-stage aspect-[1/1.05] w-full relative overflow-hidden shrink-0">
                       <img
                         src={rp.images[0]}
                         alt={rp.name}
-                        className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500"
+                        className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500"
                         loading="lazy"
                       />
                     </div>
-                    <div className="p-3.5 flex flex-col flex-1 justify-between gap-1.5 text-left">
+                    <div className="p-4 flex flex-col flex-1 justify-between gap-2 text-left">
                       <div>
-                        <p className="text-xs sm:text-sm font-bold text-slate-800 line-clamp-2 leading-tight group-hover:text-[#ff4c00] transition-colors">
+                        <p className="text-sm font-black text-slate-950 line-clamp-2 leading-tight group-hover:text-[#ff4c00] transition-colors">
                           {rp.name}
                         </p>
                       </div>
@@ -1451,6 +1467,7 @@ export default function ProductDetailPage({
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* Sticky Bottom Action Bar for Mobile Screens (hides on desktop) */}
