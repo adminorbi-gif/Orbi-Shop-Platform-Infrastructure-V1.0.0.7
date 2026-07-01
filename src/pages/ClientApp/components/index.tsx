@@ -1744,9 +1744,7 @@ export function CheckoutModal({
       providerCode: "",
       icon: Wallet,
       title: lang === "sw" ? "ORBI Wallet" : "ORBI Wallet",
-      subtitle: lang === "sw" ? "Idhini ya ndani ya ORBI Core" : "Native ORBI Core authorization",
-      eta: lang === "sw" ? "Dakika 0-3" : "0-3 min",
-      assurance: lang === "sw" ? "Mtumiaji wa ORBI anathibitisha ndani ya app" : "ORBI user approves inside the app",
+      subtitle: lang === "sw" ? "Lipa kwa akaunti yako ya ORBI" : "Pay with your ORBI account",
     },
     {
       id: "mno_tz",
@@ -1755,9 +1753,7 @@ export function CheckoutModal({
       providerCode: "orbi_shop_mno_tz",
       icon: Phone,
       title: lang === "sw" ? "Mobile Money" : "Mobile Money",
-      subtitle: lang === "sw" ? "M-Pesa, Tigo Pesa na mitandao inayoungwa mkono" : "M-Pesa, Tigo Pesa and supported MNO rails",
-      eta: lang === "sw" ? "Sekunde 30-180" : "30-180 sec",
-      assurance: lang === "sw" ? "Fedha huingia PaySafe baada ya uthibitisho wa mtandao" : "Funds enter PaySafe after network confirmation",
+      subtitle: lang === "sw" ? "M-Pesa, Tigo Pesa na mitandao mingine" : "M-Pesa, Tigo Pesa and other networks",
     },
     {
       id: "tz_bank",
@@ -1766,9 +1762,7 @@ export function CheckoutModal({
       providerCode: "orbi_shop_card_gateway",
       icon: CreditCard,
       title: lang === "sw" ? "Kadi ya Benki" : "Bank Card",
-      subtitle: lang === "sw" ? "Visa, Mastercard, Amex kupitia njia salama" : "Visa, Mastercard, Amex through secure card rail",
-      eta: lang === "sw" ? "Sekunde 15-90" : "15-90 sec",
-      assurance: lang === "sw" ? "Hakuna taarifa za kadi zinazohifadhiwa na duka" : "Card details are not stored by the shop",
+      subtitle: lang === "sw" ? "Visa, Mastercard na kadi nyingine" : "Visa, Mastercard and other cards",
     },
   ];
   const effectivePaymentMethod = normalizePaymentMethod(paymentMethod);
@@ -2740,41 +2734,15 @@ export function CheckoutModal({
           </div>
         ) : step === 2 ? (
           <div className="p-5 sm:p-6 space-y-5 max-h-[85vh] overflow-y-auto bg-slate-50">
-            <div className="relative overflow-hidden rounded-[2rem] bg-slate-950 text-white p-5 shadow-2xl">
-              <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-amber-400/20 blur-2xl" />
-              <div className="absolute -left-16 bottom-0 h-36 w-36 rounded-full bg-emerald-400/10 blur-2xl" />
-              <div className="relative z-10 flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.28em] text-amber-300">
-                    ORBI PaySafe Settlement
-                  </p>
-                  <h2 className="mt-2 text-2xl font-black tracking-tight">
-                    {lang === "sw" ? "Malipo Salama ya Kiwango cha Taasisi" : "Institutional Secure Checkout"}
-                  </h2>
-                  <p className="mt-2 max-w-md text-xs font-medium leading-relaxed text-slate-300">
-                    {lang === "sw"
-                      ? "Duka linatuma ombi halisi kwenda Gateway. ORBI Core huthibitisha njia ya fedha, ada na hali ya PaySafe kabla oda haijakamilika."
-                      : "The shop sends a live request to the Gateway. ORBI Core validates the funding rail, fees, and PaySafe state before the order is finalized."}
-                  </p>
-                </div>
-                <div className="hidden sm:flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/10">
-                  <ShieldCheck size={24} className="text-emerald-300" />
-                </div>
-              </div>
-              <div className="relative z-10 mt-5 grid grid-cols-3 gap-2 text-[10px] font-black uppercase tracking-wider text-slate-300">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <div className="text-emerald-300">01</div>
-                  <div>{lang === "sw" ? "Route" : "Route"}</div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <div className="text-amber-300">02</div>
-                  <div>{lang === "sw" ? "Hold" : "Hold"}</div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <div className="text-sky-300">03</div>
-                  <div>{lang === "sw" ? "Result" : "Result"}</div>
-                </div>
-              </div>
+            <div className="rounded-[2rem] bg-white border border-slate-200 p-5 shadow-sm">
+              <h2 className="text-2xl font-black tracking-tight text-slate-950">
+                {lang === "sw" ? "Chagua Njia ya Malipo" : "Choose Payment Method"}
+              </h2>
+              <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500">
+                {lang === "sw"
+                  ? "Chagua njia unayotaka kutumia kulipia oda yako."
+                  : "Select how you would like to pay for your order."}
+              </p>
             </div>
 
             <div className="bg-white border border-slate-200 p-4 rounded-3xl space-y-2 text-sm text-slate-700 shadow-sm">
@@ -2809,11 +2777,8 @@ export function CheckoutModal({
             <div className="space-y-4 mt-4">
               <div className="flex items-center justify-between gap-3">
                 <label className="block text-xs font-black text-slate-800 uppercase tracking-widest">
-                  {lang === "sw" ? "Chagua Njia ya Malipo" : "Choose Payment Route"}
+                  {lang === "sw" ? "Njia za Malipo" : "Payment Methods"}
                 </label>
-                <span className="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-700 ring-1 ring-emerald-100">
-                  Live Gateway
-                </span>
               </div>
               <div className="grid gap-3">
                 {paymentRoutes.map((route) => {
@@ -2839,26 +2804,8 @@ export function CheckoutModal({
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <h4 className="text-sm font-black text-slate-900">{route.title}</h4>
-                            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600">
-                              {route.eta}
-                            </span>
                           </div>
                           <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">{route.subtitle}</p>
-                          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                            <span className="rounded-xl bg-slate-50 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-500">
-                              {route.category}
-                            </span>
-                            <span className="rounded-xl bg-slate-50 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-500">
-                              {route.rail}
-                            </span>
-                            <span className="rounded-xl bg-slate-50 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-500">
-                              {route.providerCode || "ORBI_CORE"}
-                            </span>
-                          </div>
-                          <p className="mt-3 flex items-center gap-2 text-[11px] font-bold text-slate-600">
-                            <ShieldCheck size={14} className="text-emerald-500" />
-                            {route.assurance}
-                          </p>
                         </div>
                       </div>
                     </button>
@@ -2982,7 +2929,7 @@ export function CheckoutModal({
               className="w-full bg-slate-950 hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-70 text-white py-4 rounded-2xl font-black mt-6 shadow-xl shadow-slate-900/20 transition-all flex items-center justify-center gap-2"
             >
               {isPaying ? <RefreshCw size={18} className="animate-spin" /> : <ShieldCheck size={18} />}
-              {isPaying ? (lang === "sw" ? "Inatuma kwa Gateway..." : "Submitting to Gateway...") : (lang === "sw" ? "Thibitisha & Lipa Sasa" : "Confirm & Pay Now")}
+              {isPaying ? (lang === "sw" ? "Inachakata malipo..." : "Processing payment...") : (lang === "sw" ? "Thibitisha & Lipa Sasa" : "Confirm & Pay Now")}
             </button>
 
             <button
@@ -3008,11 +2955,11 @@ export function CheckoutModal({
 
             <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">
               {gatewayIsHeld
-                ? (lang === "sw" ? "Fedha Zimeshikiliwa Salama" : "Funds Held Securely")
+                ? (lang === "sw" ? "Malipo Yamefanikiwa" : "Payment Successful")
                 : gatewayIsFailed
                   ? (lang === "sw" ? "Malipo Yamekataliwa" : "Payment Declined")
                   : gatewayNeedsAction
-                    ? (lang === "sw" ? "Idhini ya Mnunuzi Inahitajika" : "Buyer Authorization Required")
+                    ? (lang === "sw" ? "Thibitisha Malipo" : "Approve Payment")
                     : (lang === "sw" ? "Malipo Yanachakatwa" : "Payment Processing")}
             </h2>
             <p className="mx-auto max-w-md text-slate-500 text-xs px-2 leading-relaxed">
@@ -3021,12 +2968,7 @@ export function CheckoutModal({
 
             <div className="bg-white border border-slate-200 p-4 rounded-3xl text-left text-xs space-y-3 shadow-sm">
                 <p className="font-extrabold text-slate-700 tracking-wide border-b border-slate-100 pb-2 flex items-center justify-between uppercase">
-                  <span>{lang === "sw" ? "Maelezo ya Malipo" : "Payment Details"}</span>
-                  <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${
-                    gatewayIsHeld ? "bg-emerald-50 text-emerald-700" : gatewayIsFailed ? "bg-red-50 text-red-700" : gatewayNeedsAction ? "bg-amber-50 text-amber-700" : "bg-sky-50 text-sky-700"
-                  }`}>
-                    {(gatewayResponse?.rawStatus || gatewayResponse?.status || "processing").toString().replace(/_/g, " ").toUpperCase()}
-                  </span>
+                  <span>{lang === "sw" ? "Muhtasari wa Oda" : "Order Summary"}</span>
                 </p>
 
                 <div className="space-y-2 text-slate-600 font-medium">
@@ -3040,25 +2982,6 @@ export function CheckoutModal({
                     <span>{lang === "sw" ? "Order Ref:" : "Order Ref:"}</span>
                     <strong className="font-mono text-[11px] text-slate-800 text-right">{lastCreatedOrderId || gatewayResponse?.reference || "N/A"}</strong>
                   </p>
-                  <p className="flex justify-between gap-4">
-                    <span>{lang === "sw" ? "Payment Intent:" : "Payment Intent:"}</span>
-                    <strong className="font-mono text-[11px] text-slate-800 text-right">{gatewayResponse?.paymentIntentId || "Pending"}</strong>
-                  </p>
-                  <p className="flex justify-between gap-4">
-                    <span>{lang === "sw" ? "Core Tx:" : "Core Tx:"}</span>
-                    <strong className="font-mono text-[11px] text-slate-800 text-right">{gatewayResponse?.transactionId || (gatewayNeedsAction ? "Awaiting approval" : "Not issued yet")}</strong>
-                  </p>
-                  <div className="grid grid-cols-1 gap-2 pt-2 sm:grid-cols-3">
-                    <span className="rounded-xl bg-slate-50 px-3 py-2 font-black uppercase tracking-wide text-slate-500">
-                      {gatewayResponse?.paymentCategory || selectedPaymentRoute.category}
-                    </span>
-                    <span className="rounded-xl bg-slate-50 px-3 py-2 font-black uppercase tracking-wide text-slate-500">
-                      {gatewayResponse?.paymentRail || selectedPaymentRoute.rail}
-                    </span>
-                    <span className="rounded-xl bg-slate-50 px-3 py-2 font-black uppercase tracking-wide text-slate-500">
-                      {gatewayResponse?.providerCode || selectedPaymentRoute.providerCode || "ORBI_CORE"}
-                    </span>
-                  </div>
                 </div>
               </div>
 
@@ -3090,13 +3013,13 @@ export function CheckoutModal({
                     <div>
                       <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
                         {gatewayIsHeld
-                          ? (lang === "sw" ? "PaySafe Hold Imethibitishwa" : "PaySafe Hold Confirmed")
+                          ? (lang === "sw" ? "Oda Yako Imepokelewa" : "Your Order Is Confirmed")
                           : gatewayNeedsAction
-                            ? (lang === "sw" ? "Fungua ORBI App Kuthibitisha" : "Open ORBI App to Approve")
-                            : (lang === "sw" ? "Inasubiri Mtandao/Gateway" : "Awaiting Network/Gateway")}
+                            ? (lang === "sw" ? "Kamilisha Uthibitisho" : "Complete Approval")
+                            : (lang === "sw" ? "Tunasubiri Uthibitisho" : "Awaiting Confirmation")}
                       </h4>
                       <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight mt-0.5">
-                        Secure PaySafe Checkout
+                        {selectedPaymentRoute.title}
                       </p>
                     </div>
                   </div>
@@ -3104,15 +3027,15 @@ export function CheckoutModal({
                   <p className="text-xs text-slate-600 font-medium leading-relaxed relative z-10">
                     {gatewayIsHeld
                       ? (lang === "sw"
-                        ? "Fedha zako zinashikiliwa kwa usalama na Orbi PaySafe. Zitatolewa kwa muuzaji mara utakapothibitisha kupokea mzigo."
-                        : "Your funds are held securely by Orbi PaySafe. They will be released to the merchant once you confirm receipt.")
+                        ? "Asante. Oda yako imepokelewa na unaweza kuifuatilia kwenye akaunti yako."
+                        : "Thank you. Your order has been received and can be tracked from your account.")
                       : gatewayNeedsAction
                         ? (lang === "sw"
-                          ? "Ombi limefika ORBI Core lakini linahitaji idhini ya mnunuzi kabla fedha hazijashikiliwa."
-                          : "The request reached ORBI Core but needs buyer authorization before funds can be held.")
+                          ? "Tafadhali kamilisha uthibitisho wa malipo ili oda iendelee."
+                          : "Please complete payment approval so your order can continue.")
                         : (lang === "sw"
-                          ? "Ombi limepokelewa na linaendelea kuchakatwa. Tutaboresha hali ya oda baada ya webhook ya Gateway."
-                          : "The request was accepted and is still processing. The order state will update after the Gateway webhook.")}
+                          ? "Ombi la malipo linaendelea kuchakatwa. Tafadhali subiri au fuatilia oda yako baada ya muda mfupi."
+                          : "Your payment is still processing. Please wait or track your order shortly.")}
                   </p>
                 </div>
 

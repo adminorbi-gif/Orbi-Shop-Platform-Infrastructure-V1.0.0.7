@@ -3017,10 +3017,6 @@ export default function ClientApp() {
               <div className="relative overflow-hidden p-6 border-b border-slate-800 flex justify-between items-start bg-slate-950 sticky top-0 z-10 text-white">
                 <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-500/20 blur-2xl" />
                 <div className="relative z-10">
-                  <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-amber-300">
-                    <ShieldCheck size={12} />
-                    PaySafe Ready
-                  </div>
                   <h2 className="font-black text-2xl flex items-center gap-3 tracking-tight">
                     <ShoppingCart size={24} className="text-amber-300" />{" "}
                     {t(lang, "cart.title")}
@@ -3147,14 +3143,6 @@ export default function ClientApp() {
                           size="2xl"
                         />
                       </span>
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] font-black uppercase tracking-wider text-slate-500">
-                      <div className="rounded-2xl bg-white px-3 py-2 ring-1 ring-slate-200">
-                        {lang === "sw" ? "Gateway live" : "Gateway live"}
-                      </div>
-                      <div className="rounded-2xl bg-white px-3 py-2 ring-1 ring-slate-200">
-                        {lang === "sw" ? "Escrow hold" : "Escrow hold"}
-                      </div>
                     </div>
                   </div>
                   <button
