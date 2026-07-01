@@ -222,6 +222,7 @@ import {
   Webcam,
   Wheat,
   CreditCard,
+  Info,
 } from "lucide-react";
 import { Lang, t } from "../../../lib/i18nClient";
 import {
