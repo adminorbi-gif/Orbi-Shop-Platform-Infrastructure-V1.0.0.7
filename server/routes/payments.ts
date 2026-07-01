@@ -14,6 +14,70 @@ const LOGS_FILE = path.join(process.cwd(), "server/data/payment_ledger_logs.json
 // In-memory registry to track real-time active automated payment verifications
 const activeVerifications = new Map<string, { startTime: number; orderId: string }>();
 
+type PaySafePaymentCategory = "orbi" | "mobile_money" | "bank" | "card";
+type PaySafePaymentRail = "orbi_wallet" | "mno_tz" | "bank_transfer_tz" | "card_gateway";
+
+const paySafeRouteByMethod: Record<string, { paymentCategory: PaySafePaymentCategory; paymentRail: PaySafePaymentRail; providerCode?: string }> = {
+  orbi_wallet: { paymentCategory: "orbi", paymentRail: "orbi_wallet" },
+  mno_tz: { paymentCategory: "mobile_money", paymentRail: "mno_tz", providerCode: "orbi_shop_mno_tz" },
+  tz_bank: { paymentCategory: "card", paymentRail: "card_gateway", providerCode: "orbi_shop_card_gateway" },
+  card_gateway: { paymentCategory: "card", paymentRail: "card_gateway", providerCode: "orbi_shop_card_gateway" },
+  bank_transfer_tz: { paymentCategory: "bank", paymentRail: "bank_transfer_tz", providerCode: "orbi_shop_bank_transfer_tz" },
+};
+
+const paySafeCategoryForRail: Record<PaySafePaymentRail, PaySafePaymentCategory> = {
+  orbi_wallet: "orbi",
+  mno_tz: "mobile_money",
+  bank_transfer_tz: "bank",
+  card_gateway: "card",
+};
+
+function paySafeRouteError(message: string) {
+  const error = new Error(message);
+  (error as any).status = 400;
+  return error;
+}
+
+function resolvePaySafeRoute(input: {
+  paymentMethod?: string;
+  paymentCategory?: string;
+  paymentRail?: string;
+  providerCode?: string;
+  buyer?: any;
+  customerPhone?: string;
+  accountNumber?: string;
+}) {
+  const methodRoute = paySafeRouteByMethod[String(input.paymentMethod || "").trim().toLowerCase()];
+  const paymentCategory = String(input.paymentCategory || methodRoute?.paymentCategory || "").trim().toLowerCase();
+  const paymentRail = String(input.paymentRail || methodRoute?.paymentRail || "").trim().toLowerCase();
+  const providerCode = String(input.providerCode || methodRoute?.providerCode || "").trim();
+
+  if (!["orbi", "mobile_money", "bank", "card"].includes(paymentCategory)) {
+    throw paySafeRouteError("PaySafe paymentCategory is required and must be orbi, mobile_money, bank, or card.");
+  }
+  if (!["orbi_wallet", "mno_tz", "bank_transfer_tz", "card_gateway"].includes(paymentRail)) {
+    throw paySafeRouteError("PaySafe paymentRail is required and must be orbi_wallet, mno_tz, bank_transfer_tz, or card_gateway.");
+  }
+
+  const category = paymentCategory as PaySafePaymentCategory;
+  const rail = paymentRail as PaySafePaymentRail;
+  if (paySafeCategoryForRail[rail] !== category) {
+    throw paySafeRouteError("PaySafe paymentCategory and paymentRail do not match.");
+  }
+  if (category !== "orbi" && !providerCode) {
+    throw paySafeRouteError("External PaySafe routes require providerCode.");
+  }
+  if (category === "mobile_money" && !String(input.buyer?.phone || input.customerPhone || "").trim()) {
+    throw paySafeRouteError("Mobile-money PaySafe checkout requires buyer phone.");
+  }
+
+  return {
+    paymentCategory: category,
+    paymentRail: rail,
+    providerCode: providerCode || undefined,
+  };
+}
+
 function ensureLogsDir() {
   const dir = path.dirname(LOGS_FILE);
   if (!fs.existsSync(dir)) {
@@ -232,6 +296,10 @@ async function initiatePaySafeEscrow(req: any) {
   const {
     amount,
     orderId,
+    paymentMethod,
+    paymentCategory,
+    paymentRail,
+    providerCode,
     customerId,
     customerName,
     customerEmail,
@@ -249,6 +317,16 @@ async function initiatePaySafeEscrow(req: any) {
     throw error;
   }
 
+  const route = resolvePaySafeRoute({
+    paymentMethod,
+    paymentCategory,
+    paymentRail,
+    providerCode,
+    buyer,
+    customerPhone,
+    accountNumber: req.body.accountNumber,
+  });
+
   console.log(`Initiating live ORBI PaySafe escrow for Order ${orderId} of ${currency} ${amount}`);
 
   const result = await callOrbiPayGateway("/v1/paysafe/escrows", {
@@ -258,9 +336,13 @@ async function initiatePaySafeEscrow(req: any) {
       reference: String(orderId),
       amount: Number(amount),
       currency,
+      paymentCategory: route.paymentCategory,
+      paymentRail: route.paymentRail,
+      providerCode: route.providerCode,
       confirm: true,
       description: description || "ORBI Shop protected checkout",
       buyer: buyer || {
+        type: customerId ? "user" : "external_customer",
         userId: customerId,
         name: customerName,
         email: customerEmail,
@@ -273,6 +355,10 @@ async function initiatePaySafeEscrow(req: any) {
       metadata: {
         source: "orbi-shop",
         shopOrderId: orderId,
+        paymentCategory: route.paymentCategory,
+        paymentRail: route.paymentRail,
+        providerCode: route.providerCode,
+        settlementPolicy: "paysafe_hold_required",
         customerId,
         sellerId,
         holdMinutes: getPaySafeHoldMinutes(),

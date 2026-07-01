@@ -1756,13 +1756,16 @@ export function CheckoutModal({
 
     let paymentCategory = "mobile_money";
     let paymentRail = "mno_tz";
+    let providerCode = "orbi_shop_mno_tz";
 
     if (paymentMethod === "orbi_wallet") {
       paymentCategory = "orbi";
       paymentRail = "orbi_wallet";
+      providerCode = "";
     } else if (paymentMethod === "tz_bank") {
-      paymentCategory = "bank_transfer";
-      paymentRail = "tz_bank";
+      paymentCategory = "card";
+      paymentRail = "card_gateway";
+      providerCode = "orbi_shop_card_gateway";
     }
 
     try {
@@ -1775,6 +1778,7 @@ export function CheckoutModal({
           paymentMethod,
           paymentCategory,
           paymentRail,
+          providerCode,
           paymentAccount: paymentMethod === 'tz_bank' ? cardNumber : (ussdPhone || phone),
           operation: "paysafe",
           appliedCoupon,

@@ -95,7 +95,10 @@ export function CheckoutView({
         ...details,
         cart,
         appliedCoupon,
-        finalTotal: total
+        finalTotal: total,
+        operation: details.paymentMethod === "escrow" ? "paysafe" : "cash_on_delivery",
+        paymentCategory: details.paymentMethod === "escrow" ? "orbi" : undefined,
+        paymentRail: details.paymentMethod === "escrow" ? "orbi_wallet" : undefined
       });
       setShowCheckout(false);
     } catch (err: any) {

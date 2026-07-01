@@ -64,9 +64,67 @@ const isValidUUID = (id: any): boolean => {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 };
 
+type GatewayPaymentCategory = "orbi" | "mobile_money" | "bank" | "card";
+type GatewayPaymentRail = "orbi_wallet" | "mno_tz" | "bank_transfer_tz" | "card_gateway";
+
+const routeByMethod: Record<string, { paymentCategory: GatewayPaymentCategory; paymentRail: GatewayPaymentRail; providerCode?: string }> = {
+  orbi_wallet: { paymentCategory: "orbi", paymentRail: "orbi_wallet" },
+  mno_tz: { paymentCategory: "mobile_money", paymentRail: "mno_tz", providerCode: "orbi_shop_mno_tz" },
+  tz_bank: { paymentCategory: "card", paymentRail: "card_gateway", providerCode: "orbi_shop_card_gateway" },
+  card_gateway: { paymentCategory: "card", paymentRail: "card_gateway", providerCode: "orbi_shop_card_gateway" },
+  bank_transfer_tz: { paymentCategory: "bank", paymentRail: "bank_transfer_tz", providerCode: "orbi_shop_bank_transfer_tz" },
+};
+
+const categoryForRail: Record<GatewayPaymentRail, GatewayPaymentCategory> = {
+  orbi_wallet: "orbi",
+  mno_tz: "mobile_money",
+  bank_transfer_tz: "bank",
+  card_gateway: "card",
+};
+
+function normalizeGatewayPaySafeRoute(input: {
+  paymentMethod?: string;
+  paymentCategory?: string;
+  paymentRail?: string;
+  providerCode?: string;
+  paymentAccount?: string;
+}) {
+  const methodRoute = routeByMethod[String(input.paymentMethod || "").trim().toLowerCase()];
+  const paymentCategory = String(input.paymentCategory || methodRoute?.paymentCategory || "").trim().toLowerCase();
+  const paymentRail = String(input.paymentRail || methodRoute?.paymentRail || "").trim().toLowerCase();
+  const providerCode = String(input.providerCode || methodRoute?.providerCode || "").trim();
+
+  if (!paymentCategory || !paymentRail) {
+    throw new Error("Gateway Error: Missing paymentCategory or paymentRail. Every PaySafe request must declare a funding route.");
+  }
+
+  if (!["orbi", "mobile_money", "bank", "card"].includes(paymentCategory)) {
+    throw new Error(`Gateway Error: Unsupported paymentCategory '${paymentCategory}'.`);
+  }
+
+  if (!["orbi_wallet", "mno_tz", "bank_transfer_tz", "card_gateway"].includes(paymentRail)) {
+    throw new Error(`Gateway Error: Unsupported paymentRail '${paymentRail}'.`);
+  }
+
+  if (categoryForRail[paymentRail as GatewayPaymentRail] !== paymentCategory) {
+    throw new Error("Gateway Error: paymentCategory and paymentRail do not match.");
+  }
+
+  if (paymentCategory !== "orbi" && !providerCode) {
+    throw new Error("Gateway Error: External PaySafe rails require providerCode.");
+  }
+
+  return {
+    paymentCategory: paymentCategory as GatewayPaymentCategory,
+    paymentRail: paymentRail as GatewayPaymentRail,
+    providerCode: providerCode || undefined,
+    paymentAccount: String(input.paymentAccount || "").trim(),
+  };
+}
+
 router.post("/", async (req, res) => {
   try {
-    const { cart, user, paymentMethod, paymentCategory, paymentRail, paymentAccount, operation, appliedCoupon, finalTotal, name, phone, address, options, tin, lang } = req.body;
+    const { cart, user, paymentMethod, paymentCategory, paymentRail, providerCode, paymentAccount, operation, appliedCoupon, finalTotal, name, phone, address, options, tin, lang } = req.body;
 
     // Gateway contract validation
     if (!paymentCategory || !paymentRail || !operation) {
@@ -76,6 +134,14 @@ router.post("/", async (req, res) => {
     if (operation !== "paysafe") {
       return res.status(400).json({ success: false, error: "Gateway Error: Only 'paysafe' operation is supported for this checkout." });
     }
+
+    const paymentRoute = normalizeGatewayPaySafeRoute({
+      paymentMethod,
+      paymentCategory,
+      paymentRail,
+      providerCode,
+      paymentAccount,
+    });
 
     let gatewayStatus = "pending";
     let gatewayMessage = "Processing transaction...";
@@ -144,11 +210,12 @@ router.post("/", async (req, res) => {
         reference: oId,
         amount: sellerTotal,
         currency: "TZS",
-        paymentCategory: paymentCategory,
-        paymentRail: paymentRail,
+        paymentCategory: paymentRoute.paymentCategory,
+        paymentRail: paymentRoute.paymentRail,
+        providerCode: paymentRoute.providerCode,
         customer: {
           type: dbCustomerId ? "user" : "external_customer",
-          orbiUserId: dbCustomerId,
+          userId: dbCustomerId,
           name: name,
           phone: phone
         },
@@ -158,7 +225,12 @@ router.post("/", async (req, res) => {
         },
         metadata: {
           orderId: oId,
-          checkoutMode: "secure_escrow"
+          checkoutMode: "secure_escrow",
+          paymentCategory: paymentRoute.paymentCategory,
+          paymentRail: paymentRoute.paymentRail,
+          providerCode: paymentRoute.providerCode,
+          paymentAccountHint: paymentRoute.paymentAccount ? `${paymentRoute.paymentAccount.slice(0, 3)}***${paymentRoute.paymentAccount.slice(-3)}` : undefined,
+          settlementPolicy: "paysafe_hold_required"
         }
       };
 
@@ -171,9 +243,13 @@ router.post("/", async (req, res) => {
               reference: String(oId),
               amount: Number(sellerTotal),
               currency: "TZS",
+              paymentCategory: paymentIntent.paymentCategory,
+              paymentRail: paymentIntent.paymentRail,
+              providerCode: paymentIntent.providerCode,
               confirm: true,
               description: "ORBI Shop protected checkout",
               buyer: {
+                type: dbCustomerId ? "user" : "external_customer",
                 userId: dbCustomerId,
                 name: name,
                 phone: phone,
@@ -210,11 +286,11 @@ router.post("/", async (req, res) => {
           customer_address: encrypt(address),
           customer_tin: tin ? encrypt(tin) : null,
           customer_id: dbCustomerId,
-          payment_method: paymentRail,
-          payment_method_name: paymentCategory,
+          payment_method: paymentRoute.paymentRail,
+          payment_method_name: paymentRoute.paymentCategory,
           total: sellerTotal,
           status: "pending",
-          payment_reference: encrypt(`ESCROW:HELD:${paymentRail}||`) // Ensures money is marked as held safely initially
+          payment_reference: encrypt(`ESCROW:HELD:${paymentRoute.paymentRail}||`) // Ensures money is marked as held safely initially
         }])
         .select("id")
         .single();
