@@ -49,7 +49,7 @@ export const decrypt = (encryptedText: string): string => {
     decrypted += decipher.final('utf8');
     return decrypted;
   } catch (e) {
-    // If decryption fails, try with the hardcoded fallback key just in case it was encrypted before the environment variable was set
+    // Try fallbacks
     try {
       let cleanText = encryptedText;
       if (encryptedText.startsWith('$2a$encrypted:')) {
@@ -58,20 +58,35 @@ export const decrypt = (encryptedText: string): string => {
       const [ivHex, tagHex, encrypted] = cleanText.split(':');
       if (!ivHex || !tagHex || !encrypted) return encryptedText;
 
-      const fallbackKey = crypto.scryptSync("orbi_paysafe_secure_encryption_key_2026_v1_fallback", "orbi-shop-v1", KEY_LENGTH);
-      
-      const decipher = crypto.createDecipheriv(
-        ALGORITHM,
-        fallbackKey,
-        Buffer.from(ivHex, 'hex')
-      );
-      decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
-      
-      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-      decrypted += decipher.final('utf8');
-      return decrypted;
+      const keysToTry = [
+        // 1. Current key but with original 'salt'
+        crypto.scryptSync((typeof process !== 'undefined' && process.env?.ENCRYPTION_KEY) || "orbi_paysafe_secure_encryption_key_2026_v1_fallback", "salt", KEY_LENGTH),
+        // 2. Original default key and salt
+        crypto.scryptSync("default-super-secret-key-32-chars", "salt", KEY_LENGTH),
+        // 3. Current fallback
+        crypto.scryptSync("orbi_paysafe_secure_encryption_key_2026_v1_fallback", "orbi-shop-v1", KEY_LENGTH)
+      ];
+
+      for (const fallbackKey of keysToTry) {
+        try {
+          const decipher = crypto.createDecipheriv(
+            ALGORITHM,
+            fallbackKey,
+            Buffer.from(ivHex, 'hex')
+          );
+          decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
+          
+          let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+          decrypted += decipher.final('utf8');
+          return decrypted; // Return on first successful decryption
+        } catch (err) {
+          // Continue to next key
+        }
+      }
+
+      // If all fallbacks fail, return raw text
+      return encryptedText;
     } catch (fallbackError) {
-      // Silently fall back to returning raw text if not encrypted or key mismatch
       return encryptedText;
     }
   }
@@ -94,9 +109,11 @@ export const decryptIfEncrypted = (text: any): any => {
         const dec = decrypt(text);
         if (dec !== text) {
           return dec;
+        } else {
+          return "[Encrypted Data]";
         }
       } catch {
-        return text;
+        return "[Encrypted Data]";
       }
     }
   }

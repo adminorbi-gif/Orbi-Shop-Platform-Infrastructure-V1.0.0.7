@@ -1896,7 +1896,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   };
 
   if (initialLoading) {
-    return <LoadingOverlay message={lang === "sw" ? "Inapakia Dashibodi..." : "Loading Dashboard..."} />;
+    return <LoadingOverlay message={lang === "sw" ? "Inapakia Duka..." : "Fetching Data..."} />;
   }
 
   if (currentSeller) {
