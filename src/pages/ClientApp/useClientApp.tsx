@@ -1121,7 +1121,7 @@ const { showAlert, showConfirm } = useDialog();
       reader.onloadend = async () => {
         const base64data = reader.result as string;
         try {
-          const res = await fetch("/api/ai/parse-receipt", {
+          const res = await fetch("/api/v1/ai/parse-receipt", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -1333,7 +1333,7 @@ Zawadi ya Alama za Uaminifu zilizoongezwa kwenye kibeti chako: +${earned} Points
     if (!userId || userId === "guest") return;
     try {
       const res = await fetch(
-        `/api/ai/status?customerId=${encodeURIComponent(userId)}`,
+        `/api/v1/ai/status?customerId=${encodeURIComponent(userId)}`,
       );
       const data = await res.json();
       if (data.success) {
@@ -1552,7 +1552,7 @@ Zawadi ya Alama za Uaminifu zilizoongezwa kwenye kibeti chako: +${earned} Points
     setIsAILoading(true);
 
     try {
-      const response = await fetch("/api/ai/assistant", {
+      const response = await fetch("/api/v1/ai/assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

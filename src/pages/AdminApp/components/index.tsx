@@ -8303,7 +8303,7 @@ export function MessagesAdmin({
   useEffect(() => {
     const fetchUnlockedUsers = async () => {
       try {
-        const res = await fetch("/api/ai/unlocked-ai/list");
+        const res = await fetch("/api/v1/ai/unlocked-ai/list");
         const data = await res.json();
         if (data.success) {
           setUnlockedAIUsers(data.list || []);
@@ -8317,7 +8317,7 @@ export function MessagesAdmin({
 
   const handleToggleAIOverride = async (customerId: string) => {
     try {
-      const res = await fetch("/api/ai/unlocked-ai/toggle", {
+      const res = await fetch("/api/v1/ai/unlocked-ai/toggle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ customerId }),
@@ -8340,7 +8340,7 @@ export function MessagesAdmin({
 
   const handleResetAIQuota = async (customerId: string) => {
     try {
-      const res = await fetch("/api/ai/reset-quota", {
+      const res = await fetch("/api/v1/ai/reset-quota", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ customerId }),
@@ -8380,7 +8380,7 @@ export function MessagesAdmin({
 
       const lastMsg = activeHist[activeHist.length - 1]?.text || "";
 
-      const res = await fetch("/api/ai/copilot-suggest", {
+      const res = await fetch("/api/v1/ai/copilot-suggest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -8669,11 +8669,12 @@ export function MessagesAdmin({
     if (unreadMsgs.length === 0) return;
 
     try {
-      const promises = unreadMsgs.map((m) => {
-        const updated = { ...m, isRead: true };
-        return db.saveMessage(updated);
-      });
-      await Promise.all(promises);
+      for (let i = 0; i < unreadMsgs.length; i += 5) {
+        const chunk = unreadMsgs.slice(i, i + 5);
+        await Promise.all(
+          chunk.map((m) => db.saveMessage({ ...m, isRead: true }))
+        );
+      }
 
       setMessages((prev: Message[]) =>
         prev.map((msg) => {

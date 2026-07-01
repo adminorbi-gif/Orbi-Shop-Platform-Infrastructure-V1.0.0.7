@@ -3115,7 +3115,7 @@ export default function SellerApp({
                         setIsGeneratingDesc(true);
                         try {
                           const res = await fetch(
-                            "/api/ai/generate-description",
+                            "/api/v1/ai/generate-description",
                             {
                               method: "POST",
                               headers: { "Content-Type": "application/json" },

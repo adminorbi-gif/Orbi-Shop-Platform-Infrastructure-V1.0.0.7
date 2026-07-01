@@ -37,7 +37,7 @@ export function AICopilotWidget({
             `Name: ${p.name}, category: ${p.category}, price: TSh ${p.price}`,
         )
         .join("\n");
-      const resp = await fetch("/api/ai/copilot-suggest", {
+      const resp = await fetch("/api/v1/ai/copilot-suggest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
