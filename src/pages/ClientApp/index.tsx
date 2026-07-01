@@ -2214,13 +2214,13 @@ export default function ClientApp() {
                 {/* Main Grid */}
                 <div className="">
                   {isLoading ? (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-2 py-1 sm:gap-3">
+                    <div className="orbi-product-list-grid py-1">
                       {Array.from({ length: 12 }).map((_, i) => (
                         <ProductSkeleton key={i} />
                       ))}
                     </div>
                   ) : filteredProducts.length > 0 ? (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-2 py-1 sm:gap-3">
+                    <div className="orbi-product-list-grid py-1">
                       <AnimatePresence mode="popLayout">
                         {filteredProducts.flatMap((p, idx) => {
                           const pSeller = sellers.find(
@@ -2356,7 +2356,7 @@ export default function ClientApp() {
                           </div>
 
                           {/* Similar Products Grid */}
-                          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-1.5 py-1 sm:gap-2">
+                          <div className="orbi-product-list-grid py-1">
                             <AnimatePresence mode="popLayout">
                               {similarSuggestions.map((p) => {
                                 const pSeller = sellers.find(
@@ -3552,6 +3552,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const isOutOfStock = p.stock <= 0;
   const [imgIdx, setImgIdx] = useState(0);
   const [showFullImage, setShowFullImage] = useState(false);
+  const displayName = lang === "sw" ? (p.nameSw || p.name) : p.name;
+  const hasDiscount = Boolean(p.oldPrice && p.oldPrice > p.price);
+  const discountPercent = hasDiscount
+    ? Math.round(((p.oldPrice! - p.price) / p.oldPrice!) * 100)
+    : 0;
+  const isLowStock = p.stock > 0 && p.stock <= 5;
+  const hasActivePro = Boolean(seller?.isPro && seller?.proUntil && seller.proUntil > Date.now());
+  const sellerName = seller?.storeName || seller?.name;
 
   const avgRating = useMemo(() => {
     if (!reviews || reviews.length === 0) return 0;
@@ -3589,97 +3597,51 @@ const ProductCard: React.FC<ProductCardProps> = ({
   return (
     <>
       <div
-        className="flex flex-col group transition-all duration-300 hover:-translate-y-1 cursor-pointer h-full bg-white rounded-2xl sm:rounded-[1.6rem] shadow-sm hover:shadow-2xl hover:shadow-slate-900/10 border border-slate-200/70 hover:border-slate-300 p-1.5 sm:p-2 ring-1 ring-transparent hover:ring-orange-500/10"
+        className="orbi-market-product-card flex h-full cursor-pointer flex-col overflow-hidden rounded-[1.4rem] border border-slate-200/80 transition-all duration-300 hover:-translate-y-1 hover:border-orange-300/70"
         onClick={() => onSelect(p)}
       >
         <div
-          className="relative aspect-square bg-gradient-to-br from-slate-100 via-white to-slate-100 rounded-xl sm:rounded-[1.2rem] overflow-hidden mb-2 sm:mb-2.5 cursor-pointer"
+          className="orbi-product-image-stage relative aspect-[1/1.08] overflow-hidden cursor-pointer"
           onClick={(e) => {
             e.stopPropagation();
             if (onInteract) onInteract();
             onSelect(p);
           }}
         >
-          {seller?.isPro && seller?.proUntil && seller.proUntil > Date.now() ? (
-            <div className="absolute top-1 left-1 sm:top-1.5 sm:left-1.5 z-10 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded shadow-xs flex items-center gap-0.5">
-              PRO <Store size={8} className="sm:w-2 sm:h-2" />
-            </div>
-          ) : null}
-          {p.images.length > 0 ? (
-            <>
-              <MediaRenderer
-                src={p.images[imgIdx]}
-                alt={p.name}
-                  className="w-full h-full object-contain group-hover:scale-[1.05] transition duration-700 ease-out p-1.5"
-                autoPlay
-              />
-              {p.images.length > 1 && (
-                <>
-                  <button
-                    onClick={prevImg}
-                    className="absolute left-1 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-xs text-slate-800 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all hover:bg-white hover:scale-110 shadow-xs"
-                  >
-                    <ChevronLeft size={12} strokeWidth={2.5} />
-                  </button>
-                  <button
-                    onClick={nextImg}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-xs text-slate-800 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all hover:bg-white hover:scale-110 shadow-xs"
-                  >
-                    <ChevronRight size={12} strokeWidth={2.5} />
-                  </button>
-                  <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-0.5">
-                    {p.images.map((_, i) => (
-                      <button
-                        key={i}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setImgIdx(i);
-                        }}
-                        className={`h-1 rounded-full transition-all duration-300 ${i === imgIdx ? "w-2.5 bg-white shadow-xs" : "w-1 bg-white/50 hover:bg-white"}`}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-            </>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-slate-300">
-              <ImageIcon size={24} strokeWidth={1} />
-            </div>
-          )}
-
-          {p.oldPrice && p.oldPrice > p.price && (
-            <div className="absolute top-1 left-1 sm:top-1.5 sm:left-1.5 bg-rose-600 text-white text-[8px] sm:text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wider shadow-lg shadow-rose-900/20">
-              -{Math.round(((p.oldPrice - p.price) / p.oldPrice) * 100)}%
-            </div>
-          )}
-
-          <div className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 flex flex-col gap-1 items-end z-10">
-            {seller?.isVerifiedSeller && (
-              <div className="bg-blue-50/95 text-blue-600 border border-blue-100/60 backdrop-blur-xs text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow-xs flex items-center gap-0.5 w-fit">
-                <ShieldCheck
-                  size={10}
-                  className="text-blue-500 shrink-0"
-                />
-                Verified
+          <div className="absolute left-2 top-2 z-20 flex max-w-[72%] flex-wrap gap-1.5">
+            {hasDiscount && (
+              <div className="rounded-full bg-rose-600 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white shadow-lg shadow-rose-900/20">
+                -{discountPercent}%
               </div>
             )}
-
-            {p.warranty && (
-              <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white border border-amber-600/30 backdrop-blur-xs text-[7px] sm:text-[8px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1 w-fit transform hover:scale-105 transition-all">
-                <Award size={8} className="sm:w-3 sm:h-3 text-white" />
-                <span>{p.warranty}</span>
+            {hasActivePro && (
+              <div className="flex items-center gap-1 rounded-full bg-slate-950/90 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white shadow-lg">
+                <Crown size={10} className="text-amber-300" />
+                Pro seller
+              </div>
+            )}
+            {isLowStock && !isOutOfStock && (
+              <div className="rounded-full bg-amber-500 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white shadow-lg">
+                {lang === "sw" ? "Chache" : "Low stock"}
               </div>
             )}
           </div>
 
-          {isOutOfStock && (
-            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[1px] flex items-center justify-center z-10">
-              <span className="bg-white text-slate-900 px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-black shadow-md tracking-wider uppercase">
-                {t((lang || "sw") as Lang, "prod.out_of_stock")}
-              </span>
-            </div>
-          )}
+          <div className="absolute right-2 top-2 z-20 flex flex-col items-end gap-1.5">
+            {seller?.isVerifiedSeller && (
+              <div className="flex w-fit items-center gap-1 rounded-full border border-blue-100/70 bg-white/95 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-blue-600 shadow-sm backdrop-blur">
+                <ShieldCheck size={10} className="shrink-0 text-blue-500" />
+                {lang === "sw" ? "Imethib." : "Verified"}
+              </div>
+            )}
+
+            {p.warranty && (
+              <div className="flex w-fit items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500 px-2 py-1 text-[8px] font-extrabold uppercase tracking-wider text-white shadow-sm">
+                <Award size={9} className="text-white" />
+                <span>{p.warranty}</span>
+              </div>
+            )}
+          </div>
 
           {onLikeToggle && (
             <button
@@ -3688,145 +3650,208 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 if (onInteract) onInteract();
                 onLikeToggle(p.id, p.niche);
               }}
-              className={`absolute bottom-2 right-2 sm:bottom-2.5 sm:right-2.5 z-20 rounded-full p-2 backdrop-blur-xs transition z-30 shadow-xs hover:scale-110 active:scale-95 outline-none ${
+              className={`absolute bottom-2 right-2 z-30 rounded-full p-2.5 shadow-md backdrop-blur transition hover:scale-110 active:scale-95 ${
                 isLiked
-                  ? "bg-rose-500 text-white border border-rose-500"
-                  : "bg-white/80 border border-slate-200 text-slate-500 hover:text-rose-500 hover:bg-white"
+                  ? "bg-rose-500 text-white ring-1 ring-rose-500"
+                  : "bg-white/90 text-slate-500 ring-1 ring-slate-200 hover:bg-white hover:text-rose-500"
               }`}
               title={lang === "sw" ? "Penda" : "Favorite"}
             >
-              <Heart
-                size={12}
-                fill={isLiked ? "currentColor" : "none"}
-                className="sm:w-3.5 sm:h-3.5"
-              />
+              <Heart size={14} fill={isLiked ? "currentColor" : "none"} />
             </button>
+          )}
+
+          <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-slate-600 shadow-sm ring-1 ring-slate-200/70 backdrop-blur">
+            <Eye size={10} />
+            {lang === "sw" ? "Tazama" : "Quick view"}
+          </div>
+
+          <div className="absolute inset-x-0 bottom-0 z-10 h-20 bg-gradient-to-t from-slate-950/18 to-transparent pointer-events-none" />
+
+          {p.images.length > 0 ? (
+            <>
+              <MediaRenderer
+                src={p.images[imgIdx]}
+                alt={displayName}
+                className="h-full w-full object-contain p-4 transition duration-700 ease-out group-hover:scale-[1.055]"
+                autoPlay
+              />
+              {p.images.length > 1 && (
+                <>
+                  <button
+                    onClick={prevImg}
+                    className="absolute left-2 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/90 p-1.5 text-slate-800 opacity-0 shadow-md backdrop-blur transition-all hover:scale-110 hover:bg-white group-hover:opacity-100"
+                    title={lang === "sw" ? "Picha iliyopita" : "Previous image"}
+                  >
+                    <ChevronLeft size={14} strokeWidth={2.5} />
+                  </button>
+                  <button
+                    onClick={nextImg}
+                    className="absolute right-2 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/90 p-1.5 text-slate-800 opacity-0 shadow-md backdrop-blur transition-all hover:scale-110 hover:bg-white group-hover:opacity-100"
+                    title={lang === "sw" ? "Picha inayofuata" : "Next image"}
+                  >
+                    <ChevronRight size={14} strokeWidth={2.5} />
+                  </button>
+                  <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 gap-1">
+                    {p.images.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setImgIdx(i);
+                        }}
+                        className={`h-1.5 rounded-full transition-all duration-300 ${i === imgIdx ? "w-4 bg-slate-950 shadow-sm" : "w-1.5 bg-white/80 hover:bg-white"}`}
+                        aria-label={`Image ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-slate-300">
+              <ImageIcon size={34} strokeWidth={1} />
+            </div>
+          )}
+
+          {isOutOfStock && (
+            <div className="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/68 backdrop-blur-[2px]">
+              <span className="rounded-xl bg-white px-4 py-2 text-[11px] font-black uppercase tracking-wider text-slate-900 shadow-md">
+                {t((lang || "sw") as Lang, "prod.out_of_stock")}
+              </span>
+            </div>
           )}
         </div>
 
-        <div className="flex flex-col flex-1 px-1.5 justify-between pb-1 mt-0.5">
-          <div>
-            <div className="mb-1 flex items-center justify-between gap-2">
-              <span className="truncate text-[8px] sm:text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+        <div className="flex flex-1 flex-col justify-between gap-3 p-3.5 sm:p-4">
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="min-w-0 truncate text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
                 {p.category || p.niche || "ORBI MARKET"}
               </span>
               {!isOutOfStock && (
-                <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-emerald-700 ring-1 ring-emerald-100">
+                <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-emerald-700 ring-1 ring-emerald-100">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  Live
+                  {lang === "sw" ? "Ipo" : "In stock"}
                 </span>
               )}
             </div>
             <h3
-              className="text-[12px] sm:text-[13px] md:text-[14px] font-black leading-[1.28] text-slate-900 line-clamp-2 h-auto mb-0.5 flex-shrink-0 group-hover:text-[#ff4c00] transition-colors"
-              title={p.name}
+              className="orbi-product-title line-clamp-2 text-[13px] font-black leading-[1.35] text-slate-950 transition-colors group-hover:text-[#ff4c00] sm:text-[15px]"
+              title={displayName}
             >
-              {p.name}
+              {displayName}
             </h3>
-            {avgRating > 0 && (
-              <div className="flex items-center gap-0.5 mb-0.5 mt-0.5">
-                <span className="flex items-center text-[#ff4c00]">
-                  <Star fill="currentColor" size={9} strokeWidth={0} />
-                </span>
-                <span className="text-[9px] font-black text-slate-800 leading-none">
-                  {avgRating}{" "}
-                  <span className="text-slate-400 font-medium font-sans">
-                    ({reviews.length})
-                  </span>
-                </span>
-              </div>
-            )}
 
-            <div className="mt-0.5 flex flex-col justify-start mb-1">
-              <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center justify-between gap-2">
+              {avgRating > 0 ? (
+                <div className="flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-1 text-[10px] font-black text-slate-800 ring-1 ring-amber-100">
+                  <Star fill="currentColor" size={11} strokeWidth={0} className="text-amber-500" />
+                  <span>
+                    {avgRating}
+                    <span className="ml-1 font-semibold text-slate-400">
+                      ({reviews.length})
+                    </span>
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 rounded-full bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-400 ring-1 ring-slate-100">
+                  <Star size={11} />
+                  <span>{lang === "sw" ? "Mpya" : "New"}</span>
+                </div>
+              )}
+              {p.stock > 0 && (
+                <span className="shrink-0 text-[10px] font-bold text-slate-400">
+                  {lang === "sw" ? `${p.stock} zipo` : `${p.stock} left`}
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-baseline gap-1.5">
                 <PriceDisplay
                   amount={p.price}
                   colorClass="text-[#ff4c00]"
-                  className="text-[13px] sm:text-[15px] font-black flex-shrink-0"
+                  className="orbi-product-price font-black"
                 />
-                {p.oldPrice && p.oldPrice > p.price && (
+                {hasDiscount && (
                   <PriceDisplay
                     amount={p.oldPrice}
                     colorClass="text-slate-400/90 line-through font-medium"
-                    className="text-[10px] sm:text-[11px]"
+                    className="text-[11px] sm:text-xs"
                   />
                 )}
               </div>
-              <div className="mt-1 flex items-center gap-1.5 text-[9px] font-bold text-slate-400">
-                <ShieldCheck size={10} className="text-emerald-500" />
-                <span>{lang === "sw" ? "PaySafe protected" : "PaySafe protected"}</span>
+              <div className="grid grid-cols-2 gap-1.5 text-[9px] font-bold text-slate-500">
+                <span className="flex items-center gap-1 rounded-xl bg-slate-50 px-2 py-1 ring-1 ring-slate-100">
+                  <ShieldCheck size={10} className="shrink-0 text-emerald-500" />
+                  {lang === "sw" ? "Secure pay" : "Secure pay"}
+                </span>
+                <span className="flex items-center gap-1 rounded-xl bg-slate-50 px-2 py-1 ring-1 ring-slate-100">
+                  <Truck size={10} className="shrink-0 text-blue-500" />
+                  {lang === "sw" ? "Delivery" : "Delivery"}
+                </span>
               </div>
             </div>
           </div>
 
-          <div className="mt-1 flex flex-col gap-1 w-full">
+          <div className="flex w-full flex-col gap-2">
             {!isOutOfStock ? (
-              <div className="flex gap-1 w-full">
+              <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onAdd(false);
                   }}
-                  className="flex-1 min-w-0 border border-slate-200 hover:border-[#ff4c00]/60 bg-white text-slate-700 hover:text-[#ff4c00] text-[10px] sm:text-[11px] font-bold py-1.5 sm:py-2 px-0.5 sm:px-1 rounded-xl transition-colors flex items-center justify-center gap-0.5 cursor-pointer"
+                  className="flex min-w-0 items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-2 py-2.5 text-[11px] font-black text-slate-700 transition-colors hover:border-[#ff4c00]/60 hover:text-[#ff4c00] sm:text-xs"
                   title={lang === "sw" ? "Weka kwenye kikapu" : "Add to Cart"}
                 >
-                  <ShoppingCart size={11} className="shrink-0" />
-                  <span className="truncate">
-                    {lang === "sw" ? "Kapuni" : "Add"}
-                  </span>
+                  <ShoppingCart size={13} className="shrink-0" />
+                  <span className="truncate">{lang === "sw" ? "Ongeza" : "Add cart"}</span>
                 </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onAdd(true);
                   }}
-                  className="flex-1 min-w-0 bg-slate-950 hover:bg-[#ff4c00] text-white text-[10px] sm:text-[11px] font-black py-1.5 sm:py-2 px-0.5 sm:px-1 rounded-xl transition-colors flex items-center justify-center gap-0.5 cursor-pointer shadow-lg shadow-slate-900/10"
+                  className="flex min-w-0 items-center justify-center gap-1.5 rounded-2xl bg-slate-950 px-2 py-2.5 text-[11px] font-black text-white shadow-lg shadow-slate-900/10 transition-colors hover:bg-[#ff4c00] sm:text-xs"
                   title={lang === "sw" ? "Nunua Sasa" : "Buy Now"}
                 >
-                  <Zap
-                    size={10}
-                    className="shrink-0 fill-current animate-pulse"
-                  />
-                  <span className="truncate">
-                    {lang === "sw" ? "Nunua" : "Buy"}
-                  </span>
+                  <Zap size={13} className="shrink-0 fill-current" />
+                  <span className="truncate">{lang === "sw" ? "Nunua sasa" : "Buy now"}</span>
                 </button>
               </div>
             ) : (
               <button
                 disabled
-                className="w-full border border-slate-200 text-slate-400 text-[10px] sm:text-[11px] font-bold py-1 sm:py-1.5 px-1 rounded-full flex items-center justify-center"
+                className="flex w-full items-center justify-center rounded-2xl border border-slate-200 px-3 py-2.5 text-[11px] font-bold text-slate-400 sm:text-xs"
               >
-                <span className="truncate">
-                  {lang === "sw" ? "Imeisha" : "Sold Out"}
-                </span>
+                <span className="truncate">{lang === "sw" ? "Imeisha" : "Sold Out"}</span>
               </button>
             )}
 
             {/* Direct Contact Seller - ONLY shown if allowed (Verified Seller and has Phone Number) */}
             {seller?.isVerifiedSeller && seller?.phone && (
-              <div className="flex gap-1 w-full">
+              <div className="grid w-full grid-cols-2 gap-2">
                 <a
                   href={getWhatsAppLink(seller.phone, p.name)}
                   target="_blank"
                   rel="noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="flex-1 min-w-0 border border-emerald-500 bg-white hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 text-[10px] font-bold py-1 rounded-full transition-colors flex items-center justify-center gap-1 cursor-pointer shadow-xs"
+                  className="flex min-w-0 items-center justify-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50/60 px-2 py-1.5 text-[10px] font-bold text-emerald-700 transition-colors hover:bg-emerald-100"
                   title={lang === "sw" ? "Meseji WhatsApp" : "WhatsApp Seller"}
                 >
                   <MessageCircle size={11} className="shrink-0 fill-current" />
-                  <span className="truncate">WhatsApp</span>
+                  <span className="truncate">{lang === "sw" ? "Chat" : "Chat"}</span>
                 </a>
                 <a
                   href={`tel:${seller.phone}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="flex-1 min-w-0 border border-blue-500 bg-white hover:bg-blue-50 text-blue-600 hover:text-blue-700 text-[10px] font-bold py-1 rounded-full transition-colors flex items-center justify-center gap-1 cursor-pointer shadow-xs"
+                  className="flex min-w-0 items-center justify-center gap-1 rounded-xl border border-blue-200 bg-blue-50/70 px-2 py-1.5 text-[10px] font-bold text-blue-700 transition-colors hover:bg-blue-100"
                   title={lang === "sw" ? "Piga Simu" : "Call Seller"}
                 >
                   <Phone size={10} className="shrink-0" />
-                  <span className="truncate">
-                    {lang === "sw" ? "Piga Simu" : "Call"}
-                  </span>
+                  <span className="truncate">{lang === "sw" ? "Call" : "Call"}</span>
                 </a>
               </div>
             )}
@@ -3837,11 +3862,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   e.stopPropagation();
                   onViewSeller && onViewSeller(seller);
                 }}
-                className="w-full py-0.5 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-full flex items-center justify-center gap-1 transition-colors border border-slate-200 text-[9px] font-medium cursor-pointer"
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 text-[10px] font-bold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
                 title={seller.name}
               >
                 <Store size={10} />
-                <span className="truncate max-w-[100px]">{seller.name}</span>
+                <span className="min-w-0 truncate">{sellerName}</span>
                 {seller.isVerifiedSeller && (
                   <ShieldCheck size={10} className="text-blue-500 shrink-0 fill-current" />
                 )}

@@ -79,19 +79,19 @@ export function ProductGrid({
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
+      <div className="orbi-product-list-grid">
         {products.map((p) => (
           <div
             key={p.id}
             onClick={() => handleProductSelect(p)}
-            className="group cursor-pointer bg-white rounded-2xl sm:rounded-3xl border border-slate-100 overflow-hidden hover:shadow-2xl hover:shadow-slate-200 transition-all active:scale-95 flex flex-col text-left"
+            className="orbi-market-product-card group flex cursor-pointer flex-col overflow-hidden rounded-[1.4rem] border border-slate-200/80 text-left transition-all duration-300 hover:-translate-y-1 hover:border-orange-300/70 active:scale-[0.99]"
           >
             {/* Image Container */}
-            <div className="relative aspect-[4/5] overflow-hidden bg-slate-50">
+            <div className="orbi-product-image-stage relative aspect-[1/1.08] overflow-hidden">
               {p.images?.[0] ? (
                 <img 
                   src={p.images[0]} 
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                  className="h-full w-full object-contain p-4 transition-transform duration-700 group-hover:scale-[1.055]"
                   alt={p.name}
                   referrerPolicy="no-referrer"
                 />
@@ -102,60 +102,64 @@ export function ProductGrid({
               )}
               
               {/* Badges */}
-              <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+              <div className="absolute left-2 top-2 z-20 flex max-w-[72%] flex-wrap gap-1.5">
                 {p.stock <= 5 && p.stock > 0 && (
-                  <span className="bg-red-500 text-white text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-wider shadow-md">
-                    Low Stock
+                  <span className="rounded-full bg-amber-500 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white shadow-lg">
+                    {lang === "sw" ? "Chache" : "Low stock"}
                   </span>
                 )}
                 {p.isNew && (
-                  <span className="bg-[#ff4c00] text-white text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-wider shadow-md">
-                    New Arrival
+                  <span className="rounded-full bg-slate-950/90 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white shadow-lg">
+                    {lang === "sw" ? "Mpya" : "New arrival"}
                   </span>
                 )}
               </div>
 
               {/* Hover Actions */}
-              <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform bg-gradient-to-t from-black/60 to-transparent flex justify-center gap-2">
-                <div className="bg-white/95 backdrop-blur-md px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-xl">
-                  Quick View
+              <div className="absolute inset-x-0 bottom-0 flex justify-center gap-2 bg-gradient-to-t from-slate-950/28 to-transparent p-3 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                <div className="rounded-full bg-white/95 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-xl backdrop-blur-md">
+                  {lang === "sw" ? "Tazama" : "Quick view"}
                 </div>
               </div>
             </div>
 
             {/* Content */}
-            <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{p.category || "General"}</p>
-                <h4 className="text-[13px] sm:text-[14px] font-black text-slate-800 line-clamp-2 leading-snug group-hover:text-[#ff4c00] transition-colors mb-2">
+            <div className="flex flex-1 flex-col justify-between gap-3 p-3.5 sm:p-4">
+              <div className="space-y-2.5">
+                <p className="truncate text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">{p.category || "General"}</p>
+                <h4 className="orbi-product-title line-clamp-2 text-[13px] font-black leading-[1.35] text-slate-950 transition-colors group-hover:text-[#ff4c00] sm:text-[15px]">
                   {lang === "sw" ? (p.nameSw || p.name) : p.name}
                 </h4>
                 
                 {/* Rating (Placeholder for now) */}
-                <div className="flex items-center gap-1 mb-3">
-                  <div className="flex items-center">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center rounded-full bg-amber-50 px-2 py-1 ring-1 ring-amber-100">
                     {[1, 2, 3, 4, 5].map((s) => (
-                      <Star key={s} size={10} className={s <= 4 ? "fill-amber-400 text-amber-400" : "fill-slate-100 text-slate-100"} />
+                      <Star key={s} size={10} className={s <= 4 ? "fill-amber-400 text-amber-400" : "fill-slate-200 text-slate-200"} />
                     ))}
                   </div>
-                  <span className="text-[10px] text-slate-300 font-bold ml-1">(12)</span>
+                  <span className="text-[10px] font-bold text-slate-400">
+                    {p.stock > 0 ? (lang === "sw" ? `${p.stock} zipo` : `${p.stock} left`) : (lang === "sw" ? "Imeisha" : "Sold out")}
+                  </span>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <div className="flex items-baseline gap-1.5 flex-wrap">
-                  <PriceDisplay amount={p.price} size="lg" colorClass="text-slate-900 font-black flex-shrink-0" />
+              <div className="space-y-2.5">
+                <div className="flex flex-wrap items-baseline gap-1.5">
+                  <PriceDisplay amount={p.price} size="lg" colorClass="text-[#ff4c00] font-black" className="orbi-product-price" />
                   {p.oldPrice && p.oldPrice > p.price && (
-                    <span className="text-[10px] text-slate-300 line-through font-bold">{formatCurrency(p.oldPrice)}</span>
+                    <span className="text-[11px] text-slate-400 line-through font-bold">{formatCurrency(p.oldPrice)}</span>
                   )}
                 </div>
 
-                <div className="pt-3 border-t border-slate-50 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">In Stock</span>
+                <div className="grid grid-cols-[1fr_auto] items-center gap-2 border-t border-slate-100 pt-2.5">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <div className={`h-2 w-2 rounded-full ${p.stock > 0 ? "bg-emerald-500" : "bg-slate-300"}`}></div>
+                    <span className="truncate text-[10px] font-bold uppercase tracking-tighter text-slate-500">
+                      {p.stock > 0 ? (lang === "sw" ? "Tayari kununua" : "Ready to buy") : (lang === "sw" ? "Haipatikani" : "Unavailable")}
+                    </span>
                   </div>
-                  <button className="text-slate-300 hover:text-[#ff4c00] transition-colors">
+                  <button className="rounded-full bg-slate-950 p-2 text-white transition-colors hover:bg-[#ff4c00]">
                     <ShoppingCart size={16} />
                   </button>
                 </div>
