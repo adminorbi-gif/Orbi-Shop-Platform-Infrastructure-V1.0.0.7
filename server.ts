@@ -222,7 +222,21 @@ async function startServer() {
     });
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath, { index: false }));
+    app.use(
+      express.static(distPath, {
+        index: false,
+        setHeaders: (res, filePath) => {
+          if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+            res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+            return;
+          }
+
+          if (filePath.endsWith(".html")) {
+            res.setHeader("Cache-Control", "no-store, max-age=0");
+          }
+        },
+      }),
+    );
     
     app.get("*", async (req, res) => {
       const url = req.originalUrl;
@@ -254,7 +268,10 @@ async function startServer() {
         }
       }
       
-      res.status(200).set({ "Content-Type": "text/html" }).send(html);
+      res.status(200).set({
+        "Content-Type": "text/html",
+        "Cache-Control": "no-store, max-age=0",
+      }).send(html);
     });
   }
 
