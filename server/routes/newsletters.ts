@@ -6,7 +6,7 @@ const router = Router();
 // GET /api/v1/newsletters - Get newsletters listed
 router.get("/", async (req, res) => {
   try {
-    const { data, error } = await getSupabase(req).from('newsletters').select('*').order('created_at', { ascending: false });
+    const { data, error } = await getSupabase(req).from('newsletters').select('*').order('created_at', { ascending: false }).limit(1000);
     if (error) throw error;
     res.json({ success: true, data: data || [] });
   } catch (error: any) {

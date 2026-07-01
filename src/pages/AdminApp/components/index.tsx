@@ -8669,12 +8669,13 @@ export function MessagesAdmin({
     if (unreadMsgs.length === 0) return;
 
     try {
-      for (let i = 0; i < unreadMsgs.length; i += 5) {
-        const chunk = unreadMsgs.slice(i, i + 5);
-        await Promise.all(
-          chunk.map((m) => db.saveMessage({ ...m, isRead: true }))
-        );
-      }
+      const idsToMark = unreadMsgs.map((m) => m.id).filter(Boolean);
+      
+      await fetch('/api/v1/messages/mark-read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: idsToMark })
+      });
 
       setMessages((prev: Message[]) =>
         prev.map((msg) => {

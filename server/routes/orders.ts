@@ -141,7 +141,7 @@ export const allowedTransitions: Record<string, string[]> = {
 // GET /api/v1/orders - Retrieve order listings and items
 router.get("/", requireAuth, async (req, res) => {
   try {
-    let selectRes = await getSupabase(req).from('orders').select(`*, items:order_items(*)`).or('is_archived.eq.false,is_archived.is.null').order('created_at', { ascending: false });
+    let selectRes = await getSupabase(req).from('orders').select(`*, items:order_items(*)`).or('is_archived.eq.false,is_archived.is.null').order('created_at', { ascending: false }).limit(1000);
     if (selectRes.error) throw selectRes.error;
     const data = selectRes.data;
 

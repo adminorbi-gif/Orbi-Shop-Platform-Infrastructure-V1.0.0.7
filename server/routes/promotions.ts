@@ -6,7 +6,7 @@ const router = Router();
 // GET /api/v1/promotions - Retrieve general public promos
 router.get("/", async (req, res) => {
   try {
-    let selectRes = await getSupabase(req).from('promotions').select('*').neq('title', 'SYSTEM_NICHES').order('created_at', { ascending: false });
+    let selectRes = await getSupabase(req).from('promotions').select('*').neq('title', 'SYSTEM_NICHES').order('created_at', { ascending: false }).limit(1000);
     if (selectRes.error) throw selectRes.error;
     const data = selectRes.data;
 
@@ -123,7 +123,7 @@ router.delete("/:id", async (req, res) => {
 // GET /api/v1/promotions/coupons - Fetch all valid coupons
 router.get("/coupons", async (req, res) => {
   try {
-    let selectRes = await getSupabase(req).from('coupons').select('*').order('created_at', { ascending: false });
+    let selectRes = await getSupabase(req).from('coupons').select('*').order('created_at', { ascending: false }).limit(1000);
     if (selectRes.error) throw selectRes.error;
     const data = selectRes.data;
 

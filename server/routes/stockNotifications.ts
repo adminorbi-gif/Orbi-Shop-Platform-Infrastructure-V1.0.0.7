@@ -6,7 +6,7 @@ const router = Router();
 // GET /api/v1/stock-notifications - Fetch all alert logs
 router.get("/", async (req, res) => {
   try {
-    const { data, error } = await getSupabase(req).from('stock_notifications').select('*').order('created_at', { ascending: false });
+    const { data, error } = await getSupabase(req).from('stock_notifications').select('*').order('created_at', { ascending: false }).limit(1000);
     if (error) throw error;
 
     const mapped = (data || []).map(sn => ({

@@ -27,7 +27,21 @@ export const supabase = new Proxy({} as any, {
 });
 
 export function getUserSupabase(req?: any) {
-  const authHeader = req?.headers?.authorization || "";
+  let authHeader = req?.headers?.authorization || "";
+  if (authHeader) {
+    try {
+      const token = authHeader.replace("Bearer ", "").trim();
+      const payloadBase64 = token.split('.')[1];
+      if (payloadBase64) {
+        const normalized = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(Buffer.from(normalized, 'base64').toString('utf8'));
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+          authHeader = "";
+        }
+      }
+    } catch (e) {}
+  }
+
   const url = getSupabaseUrl();
   const anonKey = getSupabaseAnonKey();
 

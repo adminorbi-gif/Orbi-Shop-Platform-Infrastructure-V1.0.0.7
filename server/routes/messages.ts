@@ -6,7 +6,7 @@ const router = Router();
 // GET /api/v1/messages - Retrieve message board items
 router.get("/", async (req, res) => {
   try {
-    const { data, error } = await getSupabase(req).from('messages').select('*').order('created_at', { ascending: false });
+    const { data, error } = await getSupabase(req).from('messages').select('*').order('created_at', { ascending: false }).limit(1000);
     if (error) throw error;
 
     const mapped = (data || []).map(m => ({
@@ -23,6 +23,40 @@ router.get("/", async (req, res) => {
     res.json({ success: true, data: mapped });
   } catch (error: any) {
     console.error("GET /api/v1/messages error:", error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/v1/messages/mark-read - Mark multiple messages as read
+router.post("/mark-read", async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.json({ success: true });
+    }
+    
+    const validUUIDs = ids.filter(id => id && id.length > 20);
+    const validLegacy = ids.filter(id => id && id.length <= 20);
+    
+    if (validUUIDs.length > 0) {
+      const { error } = await getSupabase(req)
+        .from('messages')
+        .update({ is_read: true })
+        .in('id', validUUIDs);
+      if (error) console.error("Error updating UUID messages:", error);
+    }
+    
+    if (validLegacy.length > 0) {
+      const { error: legacyError } = await getSupabase(req)
+        .from('messages')
+        .update({ is_read: true })
+        .in('legacy_id', validLegacy);
+      if (legacyError) console.error("Error updating legacy messages:", legacyError);
+    }
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("POST /api/v1/messages/mark-read error:", error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });

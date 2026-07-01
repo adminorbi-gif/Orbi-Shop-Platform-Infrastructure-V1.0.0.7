@@ -6,7 +6,7 @@ const router = Router();
 // GET /api/v1/customers - Fetch customer registers
 router.get("/", async (req, res) => {
   try {
-    let selectRes = await getSupabase(req).from('customers').select('*').order('registered_at', { ascending: false });
+    let selectRes = await getSupabase(req).from('customers').select('*').order('registered_at', { ascending: false }).limit(1000);
     if (selectRes.error) throw selectRes.error;
     const data = selectRes.data;
 
