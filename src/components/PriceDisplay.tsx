@@ -5,6 +5,7 @@ interface PriceDisplayProps {
   className?: string;
   size?: "xs" | "sm" | "base" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
   colorClass?: string;
+  showDecimals?: boolean;
 }
 
 export const PriceDisplay: React.FC<PriceDisplayProps> = ({
@@ -12,13 +13,14 @@ export const PriceDisplay: React.FC<PriceDisplayProps> = ({
   className = "",
   size,
   colorClass = "text-slate-900",
+  showDecimals = false,
 }) => {
   const val = typeof amount === "number" ? amount : Number(amount) || 0;
 
-  // Format with exactly 2 decimal places: e.g. "120,500.00"
+  // Tanzanian shilling marketplace prices read cleaner without cents.
   const formatted = new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: showDecimals ? 2 : 0,
+    maximumFractionDigits: showDecimals ? 2 : 0,
   }).format(val);
 
   const parts = formatted.split(".");
@@ -61,7 +63,9 @@ export const PriceDisplay: React.FC<PriceDisplayProps> = ({
     >
       <span className="text-[0.75em] font-black mr-0.5 opacity-70 select-none">TSh</span>
       <span>{integerPart}</span>
-      <span className="text-[0.65em] font-extrabold opacity-60">.{decimalPart}</span>
+      {showDecimals && (
+        <span className="text-[0.65em] font-extrabold opacity-60">.{decimalPart}</span>
+      )}
     </span>
   );
 };

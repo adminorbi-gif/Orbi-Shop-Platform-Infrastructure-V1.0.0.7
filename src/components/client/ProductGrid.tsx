@@ -116,7 +116,7 @@ export function ProductGrid({
               </div>
 
               {/* Hover Actions */}
-              <div className="absolute inset-x-0 bottom-0 flex justify-center gap-2 p-3 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+              <div className="absolute inset-x-0 bottom-0 hidden justify-center gap-2 p-3 opacity-0 transition-opacity sm:flex sm:group-hover:opacity-100">
                 <div className="rounded-full bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-lg ring-1 ring-slate-200">
                   {lang === "sw" ? "Tazama" : "Quick view"}
                 </div>
@@ -131,12 +131,10 @@ export function ProductGrid({
                   {lang === "sw" ? (p.nameSw || p.name) : p.name}
                 </h4>
                 
-                {/* Rating (Placeholder for now) */}
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center rounded-full bg-amber-50 px-2 py-1 ring-1 ring-amber-100">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <Star key={s} size={10} className={s <= 4 ? "fill-amber-400 text-amber-400" : "fill-slate-200 text-slate-200"} />
-                    ))}
+                  <div className="flex items-center rounded-full bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-400 ring-1 ring-slate-100">
+                    <Package size={10} />
+                    <span>{lang === "sw" ? "Bidhaa" : "Product"}</span>
                   </div>
                   <span className="text-[10px] font-bold text-slate-400">
                     {p.stock > 0 ? (lang === "sw" ? `${p.stock} zipo` : `${p.stock} left`) : (lang === "sw" ? "Imeisha" : "Sold out")}

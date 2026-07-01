@@ -3661,7 +3661,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             </button>
           )}
 
-          <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-slate-600 shadow-sm ring-1 ring-slate-200/70">
+          <div className="absolute bottom-2 left-2 z-20 hidden items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-slate-600 opacity-0 shadow-sm ring-1 ring-slate-200/70 transition-opacity group-hover:opacity-100 sm:flex">
             <Eye size={10} />
             {lang === "sw" ? "Tazama" : "Quick view"}
           </div>
@@ -3754,8 +3754,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5 rounded-full bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-400 ring-1 ring-slate-100">
-                  <Star size={11} />
-                  <span>{lang === "sw" ? "Mpya" : "New"}</span>
+                  <MessageCircle size={11} />
+                  <span>{lang === "sw" ? "Hakuna maoni" : "No reviews"}</span>
                 </div>
               )}
               {p.stock > 0 && (
