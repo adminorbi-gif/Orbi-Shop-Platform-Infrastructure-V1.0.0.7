@@ -32,7 +32,10 @@ export const apiFetch = async (url: string, options: RequestInit = {}) => {
       ...(options.headers || {})
     }
   };
-  try {
+  const isGet = !finalOptions.method || finalOptions.method.toUpperCase() === 'GET';
+  const cacheKey = isGet ? `orbi_swr_${fullUrl}` : null;
+
+  const performFetch = async () => {
     const res = await fetch(fullUrl, finalOptions);
     if (!res.ok) {
       const textErr = await res.text();
@@ -54,7 +57,37 @@ export const apiFetch = async (url: string, options: RequestInit = {}) => {
     if (json && json.success === false) {
       throw new Error(json.error || 'API execution returned failed status');
     }
+
+    if (cacheKey && typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(json));
+        window.dispatchEvent(new CustomEvent('swr-update', { detail: { url, data: json } }));
+      } catch (e) {
+        // Ignore quota errors
+      }
+    }
+
     return json;
+  };
+
+  if (cacheKey && typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsedData = JSON.parse(cached);
+        // Kick off background fetch silently
+        performFetch().catch(err => {
+          console.warn(`[apiFetch] Background revalidation failed for ${url}:`, err.message || err);
+        });
+        return parsedData;
+      }
+    } catch (e) {
+      // Ignore parse errors, just fall through to network fetch
+    }
+  }
+
+  try {
+    return await performFetch();
   } catch (error: any) {
     console.warn(`[apiFetch] API Error on ${url}:`, error.message || error);
     throw error;

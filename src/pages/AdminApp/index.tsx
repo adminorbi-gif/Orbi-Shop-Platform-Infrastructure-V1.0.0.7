@@ -3448,8 +3448,6 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             {tab === "products" && (
               <div className="flex-1">
                 <ProductsAdmin
-                  products={displayedProducts}
-                  setProducts={setProducts}
                   currentSeller={currentSeller}
                 />
               </div>
@@ -3457,11 +3455,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             {tab === "orders" && (
               <div className="flex-1">
                 <OrdersAdmin
-                  orders={displayedOrders}
-                  setOrders={setOrders}
-                  products={products}
-                  setProducts={setProducts}
                   currentStaff={currentStaff}
+                  currentSeller={currentSeller}
                 />
               </div>
             )}

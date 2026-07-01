@@ -1,11 +1,21 @@
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App.tsx';
 import './index.css';
 import { DialogProvider } from './components/CustomDialogContext.tsx';
 import { aiPilotEngine } from './engine/AIPilotEngine';
 import { HelmetProvider } from 'react-helmet-async';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Safe LocalStorage polyfill for sandboxed iframes
 try {
@@ -63,11 +73,13 @@ setTimeout(() => {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <HelmetProvider>
-      <DialogProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </DialogProvider>
+      <QueryClientProvider client={queryClient}>
+        <DialogProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </DialogProvider>
+      </QueryClientProvider>
     </HelmetProvider>
   </StrictMode>,
 );

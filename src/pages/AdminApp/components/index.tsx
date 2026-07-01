@@ -76,6 +76,7 @@ import {
   ArrowUpRight,
   Truck,
   ShieldCheck,
+  Shield,
   Smartphone,
   Shirt,
   Sofa,
@@ -2167,15 +2168,31 @@ export function StockNotificationsAdmin() {
 }
 
 // ---------------- PRODUCTS ADMIN ---------------- //
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+
 export function ProductsAdmin({
-  products,
-  setProducts,
   currentSeller,
 }: {
-  products: Product[];
-  setProducts: any;
   currentSeller?: SellerProfile | null;
 }) {
+  const queryClient = useQueryClient();
+  const { data: rawProducts = [] } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => db.getProducts(),
+    staleTime: 60000,
+  });
+
+  const products = React.useMemo(() => {
+    if (currentSeller) {
+      return rawProducts.filter((p: any) => p.sellerId === currentSeller.id);
+    }
+    return rawProducts;
+  }, [rawProducts, currentSeller]);
+
+  const setProducts = (newProducts: any) => {
+    const updated = typeof newProducts === 'function' ? newProducts(rawProducts) : newProducts;
+    queryClient.setQueryData(['products'], updated);
+  };
   const { lang } = useI18n();
   const { showAlert, showConfirm } = useDialog();
   const [search, setSearch] = useState("");
@@ -5367,18 +5384,63 @@ export function ProductsAdmin({
 
 // ---------------- ORDERS ADMIN ---------------- //
 export function OrdersAdmin({
-  orders,
-  setOrders,
-  products,
-  setProducts,
   currentStaff,
+  currentSeller,
 }: {
-  orders: Order[];
-  setOrders: any;
-  products: Product[];
-  setProducts: any;
   currentStaff?: any;
+  currentSeller?: any;
 }) {
+  const queryClient = useQueryClient();
+  const { data: products = [] } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => db.getProducts(),
+    staleTime: 60000,
+  });
+  
+  const { data: rawOrders = [] } = useQuery({
+    queryKey: ['orders'],
+    queryFn: () => db.getOrders(),
+    staleTime: 60000,
+  });
+
+  const orders = useMemo(() => {
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    let processed = rawOrders.map((o: any) => {
+      if (
+        [
+          "delivered",
+          "cancelled",
+          "customer_confirmed",
+          "released",
+          "refunded",
+        ].includes(String(o.status || "").toLowerCase()) &&
+        o.date < thirtyDaysAgo
+      ) {
+        return { ...o, status: "archived" as const };
+      }
+      return o;
+    });
+    
+    if (currentSeller) {
+      processed = processed.filter((o: any) =>
+        o.items.some((item: any) => {
+          const prod = products.find((p: any) => p.id === item.productId);
+          return prod?.sellerId === currentSeller.id;
+        }),
+      );
+    }
+    
+    return processed;
+  }, [rawOrders, currentSeller, products]);
+
+  const setOrders = (newOrders: any) => {
+    const updated = typeof newOrders === 'function' ? newOrders(orders) : newOrders;
+    queryClient.setQueryData(['orders'], updated);
+  };
+  const setProducts = (newProducts: any) => {
+    const updated = typeof newProducts === 'function' ? newProducts(products) : newProducts;
+    queryClient.setQueryData(['products'], updated);
+  };
   const { lang } = useI18n();
   const { showAlert, showConfirm } = useDialog();
   const [viewInvoiceOrder, setViewInvoiceOrder] = useState<Order | null>(null);
