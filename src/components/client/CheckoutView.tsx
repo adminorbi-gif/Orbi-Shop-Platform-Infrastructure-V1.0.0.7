@@ -206,6 +206,8 @@ export function CheckoutView({
                         <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                         <input
                           type="text"
+                          name="checkout_name"
+                          autoComplete="name"
                           value={details.name}
                           onChange={(e) => setDetails({ ...details, name: e.target.value })}
                           placeholder="John Doe"
@@ -219,6 +221,8 @@ export function CheckoutView({
                         <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                         <input
                           type="tel"
+                          name="checkout_phone"
+                          autoComplete="tel"
                           value={details.phone}
                           onChange={(e) => setDetails({ ...details, phone: e.target.value })}
                           placeholder="+255 000 000 000"
@@ -234,6 +238,8 @@ export function CheckoutView({
                       <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                       <input
                         type="text"
+                        name="checkout_address"
+                        autoComplete="street-address"
                         value={details.address}
                         onChange={(e) => setDetails({ ...details, address: e.target.value })}
                         placeholder="e.g. Mwanza, Rock City, Mtaa wa Pamba"

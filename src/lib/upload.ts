@@ -115,3 +115,25 @@ export const uploadFileToSupabase = async (
     throw error;
   }
 };
+
+export const deleteFileFromSupabase = async (storagePath: string): Promise<void> => {
+  try {
+    const res = await fetch("/api/v1/storage/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ storagePath }),
+    });
+    
+    if (!res.ok) {
+      throw new Error(`Failed to delete file: ${res.statusText}`);
+    }
+    
+    const resJson = await res.json();
+    if (!resJson.success) {
+      throw new Error(resJson.message || "Failed to delete file");
+    }
+  } catch (error) {
+    console.error("Storage Delete Error:", error);
+    throw error;
+  }
+};

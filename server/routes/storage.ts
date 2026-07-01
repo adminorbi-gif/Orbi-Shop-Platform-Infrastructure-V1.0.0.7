@@ -1,16 +1,14 @@
 import { Router, Request, Response } from "express";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import multer from "multer";
 import path from "path";
 import { randomUUID } from "crypto";
+import { getAdminSupabase, getSupabase } from "../lib/supabase.js";
 
 const router = Router();
 
-// Robust upload size parsing and defaults
 const DEFAULT_UPLOAD_MB = 10;
 const MIN_UPLOAD_MB = 1;
-const MAX_UPLOAD_MB_ALLOWED = 1024; // 1 GB upper bound (adjust if needed)
+const MAX_UPLOAD_MB_ALLOWED = 1024; 
 
 function safeParseMb(value: unknown): number {
   if (value == null) return DEFAULT_UPLOAD_MB;
@@ -22,13 +20,10 @@ function safeParseMb(value: unknown): number {
   return int;
 }
 
-// Read configured value from ORBI-specific env var first, then generic, then default
 const configuredMb = safeParseMb(process.env.MAX_UPLOAD_MB ?? process.env.ORBI_MAX_UPLOAD_MB ?? undefined);
 export const MAX_UPLOAD_MB = configuredMb;
 export const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 
-// Multer configuration (memory storage kept for compatibility). If you expect larger or many concurrent uploads,
-// replace this with diskStorage or a streaming approach to avoid buffering in memory.
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -37,109 +32,9 @@ const upload = multer({
   },
 });
 
-function getR2Config() {
-  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID || process.env.R2_ACCOUNT_ID || "";
-  const accessKeyId = process.env.CLOUDFLARE_ACCESS_KEY_ID || process.env.R2_ACCESS_KEY_ID || "";
-  const secretAccessKey = process.env.CLOUDFLARE_SECRET_ACCESS_KEY || process.env.R2_SECRET_ACCESS_KEY || "";
-  const bucketName = process.env.CLOUDFLARE_BUCKET_NAME || process.env.R2_BUCKET_NAME || "";
-  const publicUrlPrefix = (
-    process.env.CLOUDFLARE_PUBLIC_URL_PREFIX ||
-    process.env.R2_PUBLIC_URL_PREFIX ||
-    ""
-  ).replace(/\/$/, "");
-
-  return { accountId, accessKeyId, secretAccessKey, bucketName, publicUrlPrefix };
-}
-
-function validateR2Config() {
-  const config = getR2Config();
-
-  const missing = Object.entries(config)
-    .filter(([key, value]) => key !== "publicUrlPrefix" && !value)
-    .map(([key]) => key);
-
-  if (missing.length > 0) {
-    throw new Error(
-      `Cloudflare R2 is not fully configured. Missing: ${missing.join(
-        ", "
-      )}. Required env vars: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_ACCESS_KEY_ID, CLOUDFLARE_SECRET_ACCESS_KEY, CLOUDFLARE_BUCKET_NAME.`
-    );
-  }
-
-  if (!config.publicUrlPrefix) {
-    throw new Error(
-      "Cloudflare R2 public URL prefix is not configured. Set CLOUDFLARE_PUBLIC_URL_PREFIX or R2_PUBLIC_URL_PREFIX."
-    );
-  }
-
-  return config;
-}
-
-function getS3Client() {
-  const { accountId, accessKeyId, secretAccessKey } = validateR2Config();
-
-  return new S3Client({
-    region: "auto",
-    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-    credentials: { accessKeyId, secretAccessKey },
-  });
-}
-
-function sanitizeFolder(folder: unknown) {
-  const rawFolder = typeof folder === "string" && folder.trim() ? folder.trim() : "products";
-
-  const cleanFolder = rawFolder
-    .replace(/\\/g, "/")
-    .split("/")
-    .map((part) =>
-      part
-        .replace(/[^a-zA-Z0-9_-]/g, "_")
-        .replace(/_+/g, "_")
-        .replace(/^_+|_+$/g, "")
-    )
-    .filter(Boolean)
-    .join("/");
-
-  return cleanFolder || "products";
-}
-
-function sanitizeBaseName(fileName: string) {
-  const parsed = path.parse(fileName || "upload");
-
-  return (
-    (parsed.name || "upload")
-      .replace(/[^a-zA-Z0-9_-]/g, "_")
-      .replace(/_+/g, "_")
-      .replace(/^_+|_+$/g, "")
-      .substring(0, 80) || "upload"
-  );
-}
-
-function normalizeExtension(fileName: string, fileType?: string) {
-  const ext = path.extname(fileName || "").replace(".", "").toLowerCase();
-
-  if (ext && /^[a-z0-9]{1,10}$/.test(ext)) return ext;
-
-  if (fileType?.startsWith("image/")) {
-    const subtype = fileType.split("/")[1]?.split(";")[0]?.toLowerCase();
-    if (subtype === "jpeg") return "jpg";
-    if (subtype && /^[a-z0-9]{1,10}$/.test(subtype)) return subtype;
-  }
-
-  return "bin";
-}
-
-function buildObjectKey(fileName: string, fileType: string | undefined, folder: unknown) {
-  const safeFolder = sanitizeFolder(folder);
-  const cleanName = sanitizeBaseName(fileName);
-  const ext = normalizeExtension(fileName, fileType);
-
-  return `${safeFolder}/${Date.now()}-${randomUUID()}-${cleanName}.${ext}`;
-}
-
 function multerSingleFile(req: Request, res: Response) {
   return new Promise<void>((resolve, reject) => {
-    // @ts-ignore - multer augments req with file
+    // @ts-ignore
     upload.single("file")(req as any, res as any, (error: any) => {
       if (error) reject(error);
       else resolve();
@@ -173,23 +68,11 @@ function handleStorageError(res: Response, error: any, fallbackMessage: string) 
   });
 }
 
-// TTL for presigned URLs, configurable via env
-const DEFAULT_PRESIGN_TTL = 3600; // seconds
-function getPresignTtl(): number {
-  const raw = process.env.ORBI_PRESIGN_TTL_SEC ?? process.env.PRESIGN_TTL_SEC ?? undefined;
-  const n = Number(raw);
-  if (!raw || Number.isNaN(n) || !Number.isFinite(n) || n <= 0) return DEFAULT_PRESIGN_TTL;
-  // cap to a reasonable maximum (24 hours)
-  return Math.min(Math.floor(n), 24 * 3600);
-}
-
 router.post("/upload", async (req: Request, res: Response) => {
   try {
     await multerSingleFile(req, res);
 
-    // Multer attaches file to req as any
     const file = (req as any).file as Express.Multer.File | undefined;
-
     if (!file) {
       return res.status(400).json({
         success: false,
@@ -197,34 +80,35 @@ router.post("/upload", async (req: Request, res: Response) => {
       });
     }
 
-    const { bucketName, publicUrlPrefix } = validateR2Config();
+    const folder = ((req as any).body?.folder as string) || "products";
     const fileName = file.originalname || "upload";
-    const fileType = file.mimetype || "application/octet-stream";
-    const objectKey = buildObjectKey(fileName, fileType, (req as any).body?.folder);
+    const ext = path.extname(fileName) || "";
+    const baseName = path.basename(fileName, ext).replace(/[^a-zA-Z0-9_-]/g, "_");
+    const objectKey = `${folder}/${Date.now()}-${randomUUID()}-${baseName}${ext}`;
 
-    console.log(
-      `[STORAGE] Uploading ${file.size} bytes to Cloudflare R2 bucket: "${bucketName}", key: "${objectKey}"`
-    );
+    const supabase = getAdminSupabase();
+    
+    const { data, error } = await supabase.storage
+      .from("orbi-shop-images")
+      .upload(objectKey, file.buffer, {
+        contentType: file.mimetype,
+        upsert: false,
+      });
 
-    const command = new PutObjectCommand({
-      Bucket: bucketName,
-      Key: objectKey,
-      ContentType: fileType,
-      Body: file.buffer,
-    });
+    if (error) {
+      throw error;
+    }
 
-    const s3 = getS3Client();
-    await s3.send(command);
-
-    const publicUrl = `${publicUrlPrefix}/${objectKey}`;
-    console.log("[STORAGE] Cloudflare R2 upload successful:", publicUrl);
+    const { data: publicUrlData } = supabase.storage
+      .from("orbi-shop-images")
+      .getPublicUrl(objectKey);
 
     return res.json({
       success: true,
-      publicUrl,
+      publicUrl: publicUrlData.publicUrl,
       objectKey,
       size: file.size,
-      contentType: fileType,
+      contentType: file.mimetype,
       maxUploadMb: MAX_UPLOAD_MB,
     });
   } catch (error: any) {
@@ -232,46 +116,33 @@ router.post("/upload", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/presigned-url", async (req: Request, res: Response) => {
+router.post("/delete", async (req: Request, res: Response) => {
   try {
-    const { fileName, fileType, folder } = req.body as {
-      fileName?: string;
-      fileType?: string;
-      folder?: unknown;
-    };
-
-    if (!fileName || !fileType) {
+    const { storagePath } = req.body;
+    if (!storagePath) {
       return res.status(400).json({
         success: false,
-        message: "Missing fileName or fileType",
+        message: "storagePath is required",
       });
     }
 
-    const { bucketName, publicUrlPrefix } = validateR2Config();
-    const objectKey = buildObjectKey(fileName, fileType, folder);
+    const supabase = getAdminSupabase();
+    
+    const { error } = await supabase.storage
+      .from("orbi-shop-images")
+      .remove([storagePath]);
 
-    const command = new PutObjectCommand({
-      Bucket: bucketName,
-      Key: objectKey,
-      ContentType: fileType,
-    });
-
-    const s3 = getS3Client();
-    const expiresIn = getPresignTtl();
-    const uploadUrl = await getSignedUrl(s3, command, { expiresIn });
-    const publicUrl = `${publicUrlPrefix}/${objectKey}`;
+    if (error) {
+      throw error;
+    }
 
     return res.json({
       success: true,
-      uploadUrl,
-      publicUrl,
-      objectKey,
-      maxUploadMb: MAX_UPLOAD_MB,
-      presignTtlSec: expiresIn,
     });
   } catch (error: any) {
-    return handleStorageError(res, error, "Failed to generate upload URL");
+    return handleStorageError(res, error, "Failed to delete file");
   }
 });
 
 export default router;
+

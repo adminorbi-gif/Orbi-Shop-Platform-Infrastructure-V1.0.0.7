@@ -221,6 +221,7 @@ import {
   Waves,
   Webcam,
   Wheat,
+  CreditCard,
 } from "lucide-react";
 import { Lang, t } from "../../../lib/i18nClient";
 import {
@@ -1467,7 +1468,9 @@ export function ContactSection({ lang, user }: { lang: Lang; user: Customer | nu
         />
         <input
           required
-          type="text"
+          type="tel"
+          name="contact_phone"
+          autoComplete="tel"
           placeholder={t(lang, "contact.form.phone")}
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
@@ -1492,6 +1495,51 @@ export function ContactSection({ lang, user }: { lang: Lang; user: Customer | nu
   );
 }
 
+const DELIVERY_HUBS = [
+  {
+    id: "dar-kariakoo",
+    shortLabelSw: "Kariakoo",
+    shortLabelEn: "Kariakoo Hub",
+    address: "Kariakoo Hub - Dar es Salaam, Mtaa wa Swahili, Plot 42",
+    cost: 2000,
+  },
+  {
+    id: "dar-mbezi",
+    shortLabelSw: "Mbezi Mwisho",
+    shortLabelEn: "Mbezi Terminal",
+    address: "Mbezi Terminal Hub - Dar es Salaam, Morogoro Road",
+    cost: 4000,
+  },
+  {
+    id: "posta-mpya",
+    shortLabelSw: "Posta Mpya",
+    shortLabelEn: "Posta Mpya Hub",
+    address: "Posta Mpya Hub - Dar es Salaam, Ghorofa ya Makumbusho",
+    cost: 3000,
+  },
+  {
+    id: "arusha-clock",
+    shortLabelSw: "Arusha Town",
+    shortLabelEn: "Arusha Clock",
+    address: "Clocktower Hub - Arusha Town, Boma Road Roundabout",
+    cost: 6000,
+  },
+  {
+    id: "mwanza-capri",
+    shortLabelSw: "Mwanza Town",
+    shortLabelEn: "Mwanza Capri",
+    address: "Capri Point Hub - Mwanza City, Lake Zone Area",
+    cost: 8000,
+  },
+  {
+    id: "dodoma-cath",
+    shortLabelSw: "Dodoma Hub",
+    shortLabelEn: "Dodoma Capital",
+    address: "Capital Cathedral Hub - Dodoma, Cathedral Hill, Uhuru Way",
+    cost: 5000,
+  },
+];
+
 export function CheckoutModal({
   cart,
   total,
@@ -1502,17 +1550,28 @@ export function CheckoutModal({
   lang,
   availableCoupons,
   onRefresh,
+  updateQuantity,
+  removeFromCart,
 }: any) {
+  const { showAlert } = useDialog();
   const [invSettings, setInvSettings] = useState<any>(null);
   const options = invSettings?.paymentOptions || [];
 
+  const defaultPhone = (user?.phone || "").includes("@") ? "" : (user?.phone || "");
   const [name, setName] = useState(user?.name || "");
-  const [phone, setPhone] = useState(user?.phone || "");
+  const [phone, setPhone] = useState(defaultPhone);
   const [customerTin, setCustomerTin] = useState(user?.tin || "");
   const [address, setAddress] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("mno_tz");
   const [step, setStep] = useState(1);
   const [loadingMsg, setLoadingMsg] = useState("");
+  const [gatewayResponse, setGatewayResponse] = useState<any>(null);
+
+  // Card Payment States
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardName, setCardName] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
 
   // Option 2: Payment Proof Uploader States
   const [lastCreatedOrderId, setLastCreatedOrderId] = useState("");
@@ -1528,7 +1587,7 @@ export function CheckoutModal({
   const [couponError, setCouponError] = useState("");
 
   // USSD Mobile Money Push-to-Pay Integration States
-  const [ussdPhone, setUssdPhone] = useState(user?.phone || phone || "");
+  const [ussdPhone, setUssdPhone] = useState(defaultPhone);
   const [ussdCarrier, setUssdCarrier] = useState("M-Pesa");
   const [ussdPin, setUssdPin] = useState("");
   const [ussdStatus, setUssdStatus] = useState<
@@ -1633,7 +1692,12 @@ export function CheckoutModal({
     );
   }, [pointsToRedeem, pointsRequiredPerTzsDiscount, cartThresholds]);
 
-  const finalTotal = Math.max(0, total - discountAmount - pointsDiscount);
+  const deliveryCost = useMemo(() => {
+    const hub = DELIVERY_HUBS.find(h => h.address === address);
+    return hub ? hub.cost : 0;
+  }, [address]);
+
+  const finalTotal = Math.max(0, total - discountAmount - pointsDiscount) + deliveryCost;
 
   useEffect(() => {
     db.getInvoiceSettings().then((res) => {
@@ -1641,13 +1705,24 @@ export function CheckoutModal({
       if (res.paymentOptions && res.paymentOptions.length > 0) {
         setPaymentMethod(res.paymentOptions[0].id);
       } else {
-        setPaymentMethod("mobile");
+        setPaymentMethod("mno_tz");
       }
     });
   }, []);
 
   const confirm = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (paymentMethod === "tz_bank" && (!cardNumber || !cardExpiry || !cardCvv)) {
+      showAlert(lang === "sw" ? "Tafadhali jaza taarifa zote za kadi" : "Please fill all card details", "error");
+      return;
+    }
+    
+    if (paymentMethod !== "tz_bank" && !ussdPhone) {
+      showAlert(lang === "sw" ? "Tafadhali jaza namba ya simu au kumbukumbu kwa usahihi" : "Please enter phone number or reference correctly", "error");
+      return;
+    }
+
     setLoadingMsg(t(lang, "checkout.loading"));
 
     let paymentCategory = "mobile_money";
@@ -1671,6 +1746,8 @@ export function CheckoutModal({
           paymentMethod,
           paymentCategory,
           paymentRail,
+          paymentAccount: paymentMethod === 'tz_bank' ? cardNumber : (ussdPhone || phone),
+          operation: "paysafe",
           appliedCoupon,
           finalTotal,
           name,
@@ -1690,18 +1767,6 @@ export function CheckoutModal({
       }
 
       if (resp.ok && data.success) {
-        if (user) {
-          const currentPoints = getLoyaltyPoints(user.id);
-          const pointsEarned = Math.floor(
-            (finalTotal * currentPointsRate) / 1000,
-          );
-          const nextPointsBalance = Math.max(
-            0,
-            currentPoints - pointsToRedeem + pointsEarned,
-          );
-          saveLoyaltyPoints(user.id, nextPointsBalance);
-        }
-
         // Track checkout completion event
         const sid =
           localStorage.getItem("orbi_visitor_session_id") ||
@@ -1732,16 +1797,19 @@ export function CheckoutModal({
         );
 
         setLastCreatedOrderId(data.baseOrderId);
+        setGatewayResponse(data.gatewayResponse || { status: 'success', message: 'Payment confirmed.' });
         setLoadingMsg("");
-        setStep(2);
+        setStep(3);
       } else {
-        alert(data?.error || "Failed to process order securely.");
+        setGatewayResponse({ status: "failed", message: data?.error || "Failed to process order securely." });
         setLoadingMsg("");
+        setStep(3);
       }
     } catch (e: any) {
       console.error(e);
-      alert(`Error processing checkout: ${e.message || e}`);
+      setGatewayResponse({ status: "failed", message: `Error processing checkout: ${e.message || e}` });
       setLoadingMsg("");
+      setStep(3);
     }
   };
 
@@ -1804,7 +1872,40 @@ export function CheckoutModal({
 
         {step === 1 ? (
           <div className="p-6">
-            <h2 className="text-xl font-bold mb-4">Malizia Oda</h2>
+            <h2 className="text-xl font-bold mb-4">{lang === "sw" ? "Hakiki Oda & Malizia" : "Preview Order & Checkout"}</h2>
+
+            {/* Order Items Preview */}
+            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 mb-6 space-y-3">
+              <h3 className="text-xs font-black uppercase text-slate-500 tracking-wider mb-2">
+                {lang === "sw" ? "Bidhaa Zako" : "Your Items"}
+              </h3>
+              {cart.map((item: any, idx: number) => (
+                <div key={idx} className="flex gap-3 bg-white p-2.5 rounded-lg border border-slate-100 shadow-sm items-center">
+                  <div className="w-12 h-12 bg-slate-50 rounded-lg flex-shrink-0 border border-slate-100 overflow-hidden">
+                    {item.product.images[0] && (
+                      <MediaRenderer src={item.product.images[0]} className="w-full h-full object-cover" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-[11px] line-clamp-1 text-slate-800">{item.product.name}</h4>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <PriceDisplay amount={getProductPriceForQty(item.product, item.quantity)} colorClass="text-accent" className="text-[11px] font-black" />
+                      {getProductPriceForQty(item.product, item.quantity) < item.product.price && (
+                        <span className="bg-emerald-50 text-emerald-700 text-[8px] font-extrabold px-1 py-0.5 rounded-sm">{lang === "sw" ? "Jumla" : "Wholesale"}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg p-0.5">
+                    <button type="button" onClick={() => updateQuantity(item.product.id, -1)} className="w-6 h-6 flex items-center justify-center text-slate-500 hover:bg-white rounded transition disabled:opacity-50" disabled={item.quantity <= 1}>-</button>
+                    <span className="text-[10px] font-bold w-5 text-center">{item.quantity}</span>
+                    <button type="button" onClick={() => updateQuantity(item.product.id, 1)} className="w-6 h-6 flex items-center justify-center text-slate-500 hover:bg-white rounded transition disabled:opacity-50" disabled={item.quantity >= item.product.stock}>+</button>
+                  </div>
+                  <button type="button" onClick={() => removeFromCart(item.product.id)} className="text-red-400 hover:text-red-600 p-1 rounded-md hover:bg-red-50">
+                    <Trash size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
 
             {/* Coupon Field */}
             <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-4 flex gap-2">
@@ -2259,7 +2360,9 @@ export function CheckoutModal({
                 </label>
                 <input
                   required
-                  type="text"
+                  type="tel"
+                  name="seller_phone"
+                  autoComplete="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full border p-2.5 rounded-lg outline-none"
@@ -2446,56 +2549,7 @@ export function CheckoutModal({
 
                   {/* Option pills list */}
                   <div className="grid grid-cols-3 gap-1">
-                    {[
-                      {
-                        id: "dar-kariakoo",
-                        shortLabelSw: "Kariakoo",
-                        shortLabelEn: "Kariakoo Hub",
-                        address:
-                          "Kariakoo Hub - Dar es Salaam, Mtaa wa Swahili, Plot 42",
-                        cost: 2000,
-                      },
-                      {
-                        id: "dar-mbezi",
-                        shortLabelSw: "Mbezi Mwisho",
-                        shortLabelEn: "Mbezi Terminal",
-                        address:
-                          "Mbezi Terminal Hub - Dar es Salaam, Morogoro Road",
-                        cost: 4000,
-                      },
-                      {
-                        id: "posta-mpya",
-                        shortLabelSw: "Posta Mpya",
-                        shortLabelEn: "Posta Mpya Hub",
-                        address:
-                          "Posta Mpya Hub - Dar es Salaam, Ghorofa ya Makumbusho",
-                        cost: 3000,
-                      },
-                      {
-                        id: "arusha-clock",
-                        shortLabelSw: "Arusha Town",
-                        shortLabelEn: "Arusha Clock",
-                        address:
-                          "Clocktower Hub - Arusha Town, Boma Road Roundabout",
-                        cost: 6000,
-                      },
-                      {
-                        id: "mwanza-capri",
-                        shortLabelSw: "Mwanza Town",
-                        shortLabelEn: "Mwanza Capri",
-                        address:
-                          "Capri Point Hub - Mwanza City, Lake Zone Area",
-                        cost: 8000,
-                      },
-                      {
-                        id: "dodoma-cath",
-                        shortLabelSw: "Dodoma Hub",
-                        shortLabelEn: "Dodoma Capital",
-                        address:
-                          "Capital Cathedral Hub - Dodoma, Cathedral Hill, Uhuru Way",
-                        cost: 5000,
-                      },
-                    ].map((opt) => {
+                    {DELIVERY_HUBS.map((opt) => {
                       const isSelected = address === opt.address;
                       return (
                         <button
@@ -2522,58 +2576,19 @@ export function CheckoutModal({
                   </div>
                 </div>
               </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-black mb-3 text-slate-800 uppercase tracking-widest">
-                    {lang === "sw" ? "Chagua Njia ya Malipo" : "Choose Payment Option"}
-                  </label>
-                  <div className="space-y-2.5">
-                    <label className={`block w-full p-4 border-2 rounded-2xl transition-all cursor-pointer shadow-sm ${paymentMethod === 'orbi_wallet' ? 'border-amber-500 bg-amber-50 shadow-amber-100' : 'border-slate-100 bg-white hover:border-slate-200'}`}>
-                      <input type="radio" className="hidden" checked={paymentMethod === 'orbi_wallet'} onChange={() => setPaymentMethod('orbi_wallet')} />
-                      <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === 'orbi_wallet' ? 'bg-amber-500 text-white' : 'bg-slate-50 text-slate-400'}`}>
-                          <Wallet size={20} />
-                        </div>
-                        <div className="flex-1 text-left">
-                          <h4 className="text-sm font-black text-slate-800">{lang === "sw" ? "Lipa na ORBI Wallet" : "Pay with ORBI Wallet"}</h4>
-                          <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-tight">{lang === "sw" ? "Malipo ya haraka ndani ya mfumo." : "Fast internal payment."}</p>
-                        </div>
-                      </div>
-                    </label>
-
-                    <label className={`block w-full p-4 border-2 rounded-2xl transition-all cursor-pointer shadow-sm ${paymentMethod === 'mno_tz' ? 'border-amber-500 bg-amber-50 shadow-amber-100' : 'border-slate-100 bg-white hover:border-slate-200'}`}>
-                      <input type="radio" className="hidden" checked={paymentMethod === 'mno_tz'} onChange={() => setPaymentMethod('mno_tz')} />
-                      <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === 'mno_tz' ? 'bg-amber-500 text-white' : 'bg-slate-50 text-slate-400'}`}>
-                          <Phone size={20} />
-                        </div>
-                        <div className="flex-1 text-left">
-                          <h4 className="text-sm font-black text-slate-800">{lang === "sw" ? "Lipa kwa Simu" : "Pay with Mobile Money"}</h4>
-                          <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-tight">{lang === "sw" ? "M-Pesa, Tigo Pesa, nk." : "M-Pesa, Tigo Pesa, etc."}</p>
-                        </div>
-                      </div>
-                    </label>
-
-                    <label className={`block w-full p-4 border-2 rounded-2xl transition-all cursor-pointer shadow-sm ${paymentMethod === 'tz_bank' ? 'border-amber-500 bg-amber-50 shadow-amber-100' : 'border-slate-100 bg-white hover:border-slate-200'}`}>
-                      <input type="radio" className="hidden" checked={paymentMethod === 'tz_bank'} onChange={() => setPaymentMethod('tz_bank')} />
-                      <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === 'tz_bank' ? 'bg-amber-500 text-white' : 'bg-slate-50 text-slate-400'}`}>
-                          <Building size={20} />
-                        </div>
-                        <div className="flex-1 text-left">
-                          <h4 className="text-sm font-black text-slate-800">{lang === "sw" ? "Lipa kwa Benki" : "Pay with Bank"}</h4>
-                          <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-tight">{lang === "sw" ? "Uhamisho wa kibenki (CRDB, NMB)" : "Direct bank transfer (CRDB, NMB)"}</p>
-                        </div>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-              </div>
               <button
-                type="submit"
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!name.trim() || !phone.trim() || !address.trim()) {
+                    showAlert(lang === "sw" ? "Tafadhali jaza jina, namba ya simu na chagua kituo" : "Please fill name, phone number and select a delivery hub", "error");
+                    return;
+                  }
+                  setStep(2);
+                }}
                 className="w-full bg-primary text-white py-3 rounded-lg font-bold mt-2"
               >
-                {t(lang, "checkout.form.btn_confirm")}
+                {lang === "sw" ? "Endelea kwenye Malipo" : "Continue to Payment"}
               </button>
 
               <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col gap-2 items-center text-center">
@@ -2610,269 +2625,325 @@ export function CheckoutModal({
               </div>
             </form>
           </div>
-        ) : (
-          <div className="p-6 text-center space-y-4 max-h-[85vh] overflow-y-auto">
-            <div className="w-14 h-14 bg-emerald-500/20 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-2 animate-bounce">
-              <Check size={28} />
-            </div>
-
-            <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">
-              {t(lang, "checkout.success")}
+        ) : step === 2 ? (
+          <div className="p-6 space-y-4 max-h-[85vh] overflow-y-auto">
+            <h2 className="text-xl font-bold mb-4">
+              {lang === "sw" ? "Malipo" : "Payment"}
             </h2>
-            <p className="text-slate-500 text-xs">
-              {t(lang, "checkout.success_desc")}
-            </p>
 
-            <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl text-left text-xs space-y-2">
-              <p className="font-extrabold text-slate-700 tracking-wide border-b pb-1.5 flex items-center justify-between uppercase">
-                <span>{t(lang, "checkout.payment_inst")}</span>
-                <span className="text-[10px] text-orange-600 font-mono">
-                  ID: {lastCreatedOrderId}
-                </span>
-              </p>
-
-              <div className="space-y-1 text-slate-600 font-medium">
-                <p className="flex justify-between">
-                  <span>
-                    {lang === "sw" ? "Jumla ya Agizo:" : "Order Total:"}
-                  </span>
-                  <strong className="text-sm text-slate-800 font-black">
-                    <PriceDisplay
-                      amount={finalTotal}
-                      size="sm"
-                      colorClass="text-slate-800"
-                    />
-                  </strong>
-                </p>
-                <div className="pt-2 text-[11px] leading-relaxed text-slate-500 whitespace-pre-wrap font-sans border-t border-slate-100 mt-1">
-                  {(() => {
-                    const method = options.find(
-                      (po: any) => po.id === paymentMethod,
-                    );
-                    if (method) return method.details;
-
-                    const methodByName = options.find(
-                      (po: any) => po.name === paymentMethod,
-                    );
-                    if (methodByName) return methodByName.details;
-
-                    if (paymentMethod === "bank")
-                      return (
-                        invSettings?.bankPaymentDetails ||
-                        "Benki details zitawekwa hapa."
-                      );
-                    if (paymentMethod === "mobile")
-                      return (
-                        invSettings?.mobilePaymentDetails ||
-                        "Simu details zitawekwa hapa."
-                      );
-
-                    return "Tutawasiliana nawe hivi punde kufanikisha malipo.";
-                  })()}
+            <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl space-y-2 text-sm text-slate-700">
+              <div className="flex justify-between">
+                <span>{lang === "sw" ? "Jumla ya Bidhaa:" : "Items Total:"}</span>
+                <span className="font-bold"><PriceDisplay amount={total} size="sm" /></span>
+              </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>{lang === "sw" ? "Punguzo (Kuponi):" : "Discount:"}</span>
+                  <span className="font-bold">-<PriceDisplay amount={discountAmount} size="sm" /></span>
                 </div>
+              )}
+              {pointsDiscount > 0 && (
+                <div className="flex justify-between text-amber-600">
+                  <span>{lang === "sw" ? "Punguzo (Alama):" : "Points Discount:"}</span>
+                  <span className="font-bold">-<PriceDisplay amount={pointsDiscount} size="sm" /></span>
+                </div>
+              )}
+              {deliveryCost > 0 && (
+                <div className="flex justify-between text-blue-600">
+                  <span>{lang === "sw" ? "Gharama ya Usafiri:" : "Delivery Cost:"}</span>
+                  <span className="font-bold">+<PriceDisplay amount={deliveryCost} size="sm" /></span>
+                </div>
+              )}
+              <div className="pt-2 border-t border-slate-200 flex justify-between font-black text-lg text-slate-900 mt-2">
+                <span>{lang === "sw" ? "Jumla Kuu:" : "Final Total:"}</span>
+                <span><PriceDisplay amount={finalTotal} size="md" /></span>
               </div>
             </div>
 
-            {/* Option 2: Payment Proof submission section */}
-            <div className="bg-gradient-to-tr from-amber-500/10 to-orange-500/5 border border-orange-500/20 p-4 rounded-2xl text-left space-y-3 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 text-orange-500/10 pointer-events-none">
-                <Coins size={80} />
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-orange-500 text-white flex items-center justify-center font-bold text-xs">
-                  💰
-                </div>
-                <div>
-                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
-                    {lang === "sw"
-                      ? "Uhakiki wa Malipo Haraka"
-                      : "Express Payment Verification"}
-                  </h4>
-                  <p className="text-[10px] text-slate-500">
-                    {lang === "sw"
-                      ? "Weka uthibitisho upate idhini mara moja"
-                      : "Upload proof to instantly verify your ledger"}
-                  </p>
-                </div>
-              </div>
+            <div className="space-y-4 mt-4">
+              <label className="block text-xs font-black mb-3 text-slate-800 uppercase tracking-widest">
+                {lang === "sw" ? "Chagua Njia ya Malipo" : "Choose Payment Option"}
+              </label>
+              <div className="space-y-2.5">
+                <label className={`block w-full p-4 border-2 rounded-2xl transition-all cursor-pointer shadow-sm ${paymentMethod === 'orbi_wallet' ? 'border-amber-500 bg-amber-50 shadow-amber-100' : 'border-slate-100 bg-white hover:border-slate-200'}`}>
+                  <input type="radio" className="hidden" checked={paymentMethod === 'orbi_wallet'} onChange={() => setPaymentMethod('orbi_wallet')} />
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === 'orbi_wallet' ? 'bg-amber-500 text-white' : 'bg-slate-50 text-slate-400'}`}>
+                      <Wallet size={20} />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <h4 className="text-sm font-black text-slate-800">{lang === "sw" ? "Lipa na ORBI Wallet" : "Pay with ORBI Wallet"}</h4>
+                      <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-tight">{lang === "sw" ? "Malipo ya haraka ndani ya mfumo." : "Fast internal payment."}</p>
+                    </div>
+                  </div>
+                </label>
 
-              {!proofSubmitted ? (
-                <div className="space-y-3 pt-1">
-                  <div className="relative">
+                <label className={`block w-full p-4 border-2 rounded-2xl transition-all cursor-pointer shadow-sm ${paymentMethod === 'mno_tz' ? 'border-amber-500 bg-amber-50 shadow-amber-100' : 'border-slate-100 bg-white hover:border-slate-200'}`}>
+                  <input type="radio" className="hidden" checked={paymentMethod === 'mno_tz'} onChange={() => setPaymentMethod('mno_tz')} />
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === 'mno_tz' ? 'bg-amber-500 text-white' : 'bg-slate-50 text-slate-400'}`}>
+                      <Phone size={20} />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <h4 className="text-sm font-black text-slate-800">{lang === "sw" ? "Lipa kwa Simu" : "Pay with Mobile Money"}</h4>
+                      <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-tight">{lang === "sw" ? "M-Pesa, Tigo Pesa, nk." : "M-Pesa, Tigo Pesa, etc."}</p>
+                    </div>
+                  </div>
+                </label>
+
+                <label className={`block w-full p-4 border-2 rounded-2xl transition-all cursor-pointer shadow-sm ${paymentMethod === 'tz_bank' ? 'border-amber-500 bg-amber-50 shadow-amber-100' : 'border-slate-100 bg-white hover:border-slate-200'}`}>
+                  <input type="radio" className="hidden" checked={paymentMethod === 'tz_bank'} onChange={() => setPaymentMethod('tz_bank')} />
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === 'tz_bank' ? 'bg-amber-500 text-white' : 'bg-slate-50 text-slate-400'}`}>
+                      <CreditCard size={20} />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <h4 className="text-sm font-black text-slate-800">{lang === "sw" ? "Lipa kwa Kadi" : "Pay with Card"}</h4>
+                      <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-tight">{lang === "sw" ? "Visa, Mastercard, Amex" : "Visa, Mastercard, Amex"}</p>
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+            
+            <div className="mt-4">
+              {paymentMethod === 'tz_bank' ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1 flex justify-between">
+                      <span>{lang === "sw" ? "Namba ya Kadi" : "Card Number"}</span>
+                      {cardNumber && (
+                        <span className="text-amber-600 font-bold uppercase">
+                          {(() => {
+                            const clean = cardNumber.replace(/\D/g, '');
+                            if (clean.startsWith('4')) return 'VISA';
+                            if (/^5[1-5]/.test(clean) || /^2(?:2(?:2[1-9]|[3-9]\d)|[3-6]\d\d|7(?:[01]\d|20))/.test(clean)) return 'MASTERCARD';
+                            if (/^3[47]/.test(clean)) return 'AMEX';
+                            return '';
+                          })()}
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="text"
-                      placeholder={
-                        lang === "sw"
-                          ? "Mfano: PP26061109403 au Kumbukumbu ID"
-                          : "e.g. PP26061109403 or Reference ID"
-                      }
-                      value={txId}
-                      onChange={(e) => setTxId(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-3 pr-16 text-xs outline-none focus:border-amber-500 font-mono uppercase font-bold"
+                      autoComplete="cc-number"
+                      placeholder="0000 0000 0000 0000"
+                      className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:border-amber-500 outline-none font-mono"
+                      value={cardNumber}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '').substring(0, 16);
+                        const formatted = val.match(/.{1,4}/g)?.join(' ') || val;
+                        setCardNumber(formatted || "");
+                      }}
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowSMSModal(true)}
-                      className="absolute right-1.5 top-1.5 bg-amber-50 hover:bg-amber-100 text-orange-600 font-bold px-2 py-1 rounded-lg text-[9px] border border-orange-200 transition-all flex items-center gap-1 cursor-pointer"
-                    >
-                      <Sparkles size={10} className="animate-pulse" />
-                      {lang === "sw" ? "Soma SMS" : "SMS AI"}
-                    </button>
                   </div>
-
-                  {showSMSModal && (
-                    <div className="bg-slate-900 text-white p-3.5 rounded-xl space-y-2.5 text-xs animate-in slide-in-from-top-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-extrabold tracking-wide uppercase text-[10px] text-amber-400">
-                          {lang === "sw"
-                            ? "Bandika SMS ya Malipo (AI OCR)"
-                            : "Paste Payment SMS Receipt"}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setShowSMSModal(false)}
-                          className="text-slate-400 hover:text-white font-extrabold text-[10px]"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                      <textarea
-                        rows={2}
-                        placeholder={
-                          lang === "sw"
-                            ? "Bandika meseji ya M-Pesa au benki hapa ..."
-                            : "Paste your mobile money SMS transcript here..."
-                        }
-                        value={pasteSMSText}
-                        onChange={(e) => setPasteSMSText(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 font-mono text-[10px] outline-none text-slate-200"
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">{lang === "sw" ? "Jina Kwenye Kadi" : "Cardholder Name"}</label>
+                    <input
+                      type="text"
+                      autoComplete="cc-name"
+                      placeholder="JOHN DOE"
+                      className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:border-amber-500 outline-none uppercase"
+                      value={cardName}
+                      onChange={(e) => setCardName(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <label className="block text-xs font-bold text-slate-700 mb-1">{lang === "sw" ? "Tarehe Kuisha" : "Expiry (MM/YY)"}</label>
+                      <input
+                        type="text"
+                        autoComplete="cc-exp"
+                        placeholder="MM/YY"
+                        className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:border-amber-500 outline-none font-mono"
+                        value={cardExpiry}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').substring(0, 4);
+                          if (val.length >= 3) {
+                            setCardExpiry(`${val.substring(0,2)}/${val.substring(2,4)}`);
+                          } else {
+                            setCardExpiry(val);
+                          }
+                        }}
                       />
-                      <div className="flex justify-end items-center text-[9px]">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!pasteSMSText.trim()) return;
-                            setIsOcrLoading(true);
-                            setTimeout(() => {
-                              const match = pasteSMSText.match(
-                                /\b([A-Z0-9]{10,12})\b/i,
-                              );
-                              if (match) {
-                                setTxId(match[1].toUpperCase());
-                              } else {
-                                const fallback =
-                                  pasteSMSText.match(/\b([A-Z0-9]{8,15})\b/i);
-                                if (fallback) {
-                                  setTxId(fallback[1].toUpperCase());
-                                }
-                              }
-                              setIsOcrLoading(false);
-                              setShowSMSModal(false);
-                            }, 800);
-                          }}
-                          disabled={isOcrLoading}
-                          className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-2.5 py-1 rounded text-[10px] transition disabled:opacity-50"
-                        >
-                          {isOcrLoading ? "Parsing..." : "Extract ID"}
-                        </button>
-                      </div>
                     </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (!txId.trim()) return;
-                      const proofs = JSON.parse(
-                        localStorage.getItem("orbi_payment_proofs") || "{}",
-                      );
-                      proofs[lastCreatedOrderId] = {
-                        transactionId: txId.trim().toUpperCase(),
-                        timestamp: Date.now(),
-                        amount: finalTotal,
-                        method: paymentMethod,
-                        status: "pending_verification",
-                      };
-                      localStorage.setItem(
-                        "orbi_payment_proofs",
-                        JSON.stringify(proofs),
-                      );
-                      setProofSubmitted(true);
-                      try {
-                        await db.saveOrder({
-                          id: lastCreatedOrderId,
-                          paymentReference: txId.trim().toUpperCase(),
-                        });
-                        if (onRefresh) onRefresh();
-                      } catch (err) {
-                        console.error(
-                          "Failed to save payment reference to DB at checkout:",
-                          err,
-                        );
-                      }
-                    }}
-                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-extrabold text-[11px] py-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-orange-500/10"
-                  >
-                    <CheckCircle2 size={13} />
-                    {lang === "sw"
-                      ? "Wasilisha Ushahidi sasa"
-                      : "Submit Reference Proof"}
-                  </button>
+                    <div className="flex-1">
+                      <label className="block text-xs font-bold text-slate-700 mb-1">CVV</label>
+                      <input
+                        type="password"
+                        autoComplete="cc-csc"
+                        placeholder="123"
+                        maxLength={4}
+                        className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:border-amber-500 outline-none font-mono"
+                        value={cardCvv}
+                        onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ''))}
+                      />
+                    </div>
+                  </div>
                 </div>
               ) : (
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs space-y-1 text-emerald-800 animate-in zoom-in-95 font-medium">
-                  <div className="flex items-center gap-1.5 font-bold text-emerald-700">
-                    <Sparkles
-                      size={14}
-                      className="text-emerald-600 animate-spin"
-                    />
-                    <span>
-                      {lang === "sw"
-                        ? "Ushahidi Umepokewa!"
-                        : "Verification Submitted!"}
-                    </span>
-                  </div>
-                  <p className="text-[10px] leading-relaxed text-emerald-600">
-                    {lang === "sw"
-                      ? "Namba ya muamala imerekodiwa (" +
-                        txId.toUpperCase() +
-                        "). Wasimamizi wetu wanahakiki salio kufungulia oda yako sasa hivi."
-                      : "Transaction ID recorded (" +
-                        txId.toUpperCase() +
-                        "). Cash holds are audited before dispatching your package."}
-                  </p>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    {paymentMethod === 'orbi_wallet' ? (lang === "sw" ? "PaySafe ID au Namba ya Simu" : "PaySafe ID or Account Phone Number") : (lang === "sw" ? "Namba ya Simu au Kumbukumbu" : "Mobile Number or Reference")}
+                  </label>
+                  <input
+                    type={paymentMethod === 'orbi_wallet' ? 'text' : 'tel'}
+                    id="tx_ref_input"
+                    name="tx_ref_input"
+                    autoComplete={paymentMethod === 'orbi_wallet' ? 'off' : 'tel'}
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
+                    data-form-type="other"
+                    inputMode={paymentMethod === 'orbi_wallet' ? 'text' : 'numeric'}
+                    placeholder={paymentMethod === 'orbi_wallet' ? (lang === "sw" ? "Namba au mfano: ORB123" : "Number or e.g. ORB123") : (lang === "sw" ? "Mfano: 0712345678" : "e.g. 0712345678")}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:border-amber-500 outline-none"
+                    value={ussdPhone}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (paymentMethod === 'mno_tz') {
+                        setUssdPhone(val.replace(/\D/g, ''));
+                      } else {
+                        const upperVal = val.toUpperCase();
+                        if (upperVal === '' || upperVal === 'O' || upperVal === 'OR' || upperVal === 'ORB' || upperVal.startsWith('ORB') || /^\d+$/.test(val)) {
+                          setUssdPhone(upperVal.startsWith('O') ? upperVal : val.replace(/\D/g, ''));
+                        }
+                      }
+                    }}
+                  />
                 </div>
               )}
             </div>
 
-            {user && (
-              <div className="bg-amber-50/70 border border-amber-200/35 p-3.5 rounded-xl text-center flex flex-col gap-1 shadow-sm max-w-sm mx-auto my-3 animate-in fade-in duration-300">
-                <span className="text-[10px] uppercase font-black text-amber-700 tracking-wider leading-none">
-                  {lang === "sw" ? "Zawadi za Loyalty" : "Loyalty Rewards"}
-                </span>
-                <span className="text-lg font-black text-amber-900 leading-none my-1">
-                  +{Math.floor((finalTotal * currentPointsRate) / 1000)}{" "}
-                  {lang === "sw" ? "Alama Mpya!" : "New Points!"}
-                </span>
-                <p className="text-[11px] text-amber-800">
-                  {lang === "sw"
-                    ? `Sasa unazo jumla ya alama ${getLoyaltyPoints(user.id)} za uaminifu kwenye akaunti yako.`
-                    : `You now have a total of ${getLoyaltyPoints(user.id)} loyalty points in your account.`}
+            <button
+              onClick={confirm}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-bold mt-6 shadow-md transition-all flex items-center justify-center gap-2"
+            >
+              <ShieldCheck size={18} />
+              {lang === "sw" ? "Thibitisha & Lipa Sasa" : "Confirm & Pay Now"}
+            </button>
+
+            <button
+              onClick={() => setStep(1)}
+              className="w-full text-slate-500 hover:text-slate-800 py-3 rounded-lg font-bold mt-2 text-sm transition-all"
+            >
+              {lang === "sw" ? "Rudi Nyuma" : "Go Back"}
+            </button>
+          </div>
+        ) : step === 3 ? (
+          <div className="p-6 text-center space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-2 ${
+              gatewayResponse?.status === "success" 
+                ? "bg-emerald-500/20 text-emerald-500" 
+                : gatewayResponse?.status === "failed" 
+                  ? "bg-red-500/20 text-red-500" 
+                  : "bg-amber-500/20 text-amber-500 animate-pulse"
+            }`}>
+              {gatewayResponse?.status === "success" ? <CheckCircle2 size={28} /> : gatewayResponse?.status === "failed" ? <X size={28} /> : <ShieldCheck size={28} />}
+            </div>
+
+            <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">
+              {gatewayResponse?.status === "success" 
+                ? (lang === "sw" ? "Malipo Yamefanikiwa" : "Payment Successful")
+                : gatewayResponse?.status === "failed"
+                  ? (lang === "sw" ? "Malipo Yameshindikana" : "Payment Failed")
+                  : (lang === "sw" ? "Agizo Limepokelewa" : "Order Received")}
+            </h2>
+            <p className="text-slate-500 text-xs px-2 leading-relaxed">
+              {gatewayResponse?.message || (lang === "sw" ? "Tunasubiri uthibitisho wa malipo yako kupitia njia uliyochagua. Fedha zako zinashikiliwa kwa usalama na Orbi PaySafe." : "Awaiting payment confirmation via your selected method. Your funds are held securely by Orbi PaySafe.")}
+            </p>
+
+            {gatewayResponse?.status !== "failed" && (
+              <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl text-left text-xs space-y-2">
+                <p className="font-extrabold text-slate-700 tracking-wide border-b pb-1.5 flex items-center justify-between uppercase">
+                  <span>{lang === "sw" ? "Maelezo ya Malipo" : "Payment Details"}</span>
+                  <span className="text-[10px] text-orange-600 font-mono">
+                    ID: {lastCreatedOrderId}
+                  </span>
                 </p>
+
+                <div className="space-y-1 text-slate-600 font-medium">
+                  <p className="flex justify-between">
+                    <span>{lang === "sw" ? "Jumla ya Agizo:" : "Order Total:"}</span>
+                    <strong className="text-sm text-slate-800 font-black">
+                      <PriceDisplay amount={finalTotal} size="sm" colorClass="text-slate-800" />
+                    </strong>
+                  </p>
+                </div>
               </div>
             )}
 
-            <button
-              onClick={() => {
-                onClose();
-                onSuccess();
-              }}
-              className="mt-4 w-full bg-slate-200 hover:bg-slate-300 text-slate-800 py-3 rounded-2xl font-bold transition text-sm cursor-pointer"
-            >
-              {t(lang, "checkout.success_btn")}
-            </button>
+            {gatewayResponse?.status === "failed" ? (
+               <button
+                 onClick={() => setStep(2)}
+                 className="w-full bg-slate-900 text-white py-3 rounded-lg font-bold mt-4 shadow-md transition-all"
+               >
+                 {lang === "sw" ? "Jaribu Tena" : "Try Again"}
+               </button>
+            ) : (
+              <>
+                <div className={`border p-4 rounded-2xl text-left space-y-3 relative overflow-hidden mt-4 ${
+                  gatewayResponse?.status === "success" 
+                    ? "bg-emerald-50/50 border-emerald-500/20" 
+                    : "bg-gradient-to-tr from-sky-500/10 to-blue-500/5 border-sky-500/20"
+                }`}>
+                  <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                    <ShieldCheck size={80} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs text-white ${
+                      gatewayResponse?.status === "success" ? "bg-emerald-500" : "bg-sky-500"
+                    }`}>
+                      {gatewayResponse?.status === "success" ? <ShieldCheck size={16} /> : <Clock size={16} />}
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                        {gatewayResponse?.status === "success"
+                          ? (lang === "sw" ? "Imelipwa kwa Usalama" : "Paid Securely")
+                          : (lang === "sw" ? "Inasubiri Malipo Yako" : "Awaiting Your Payment")}
+                      </h4>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight mt-0.5">
+                        Secure PaySafe Checkout
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <p className="text-xs text-slate-600 font-medium leading-relaxed relative z-10">
+                    {lang === "sw" 
+                      ? "Fedha zako zinashikiliwa kwa usalama na Orbi PaySafe. Zitatolewa kwa muuzaji mara utakapothibitisha kupokea mzigo."
+                      : "Your funds are held securely by Orbi PaySafe. They will be released to the merchant once you confirm receipt."}
+                  </p>
+                </div>
+
+                {pointsToRedeem > 0 && gatewayResponse?.status !== "failed" && (
+                  <div className="bg-amber-50/50 border border-amber-100 p-3 rounded-xl mt-4 text-left flex items-start gap-2">
+                    <Star size={16} className="text-amber-500 shrink-0 mt-0.5 fill-amber-500/20" />
+                    <div>
+                      <p className="text-xs font-bold text-amber-800">
+                        {lang === "sw" ? "Alama Zimetumika!" : "Points Redeemed!"}
+                      </p>
+                      <p className="text-[10px] text-amber-600 font-medium mt-0.5">
+                        {lang === "sw"
+                          ? `Umetumia alama ${pointsToRedeem.toLocaleString()} na kupata punguzo la TZS ${pointsDiscount.toLocaleString()}.`
+                          : `You redeemed ${pointsToRedeem.toLocaleString()} points for a discount of TZS ${pointsDiscount.toLocaleString()}.`}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => {
+                    onClose();
+                    onSuccess();
+                  }}
+                  className="mt-4 w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-2xl font-bold transition text-sm cursor-pointer"
+                >
+                  {lang === "sw" ? "Sawa, Nimeelewa" : "Understood, Close"}
+                </button>
+              </>
+            )}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -3533,7 +3604,9 @@ export function AuthModal({
                   className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl outline-none focus:border-orange-500 focus:bg-white font-medium text-xs"
                 />
                 <input
-                  type="text"
+                  type="tel"
+                  name="user_phone"
+                  autoComplete="tel"
                   placeholder={
                     lang === "sw"
                       ? "Namba ya Simu (Hiari)"
@@ -3570,6 +3643,8 @@ export function AuthModal({
               <input
                 required
                 type={selectedRole === "buyer" ? "text" : "email"}
+                name="auth_email_or_phone"
+                autoComplete={selectedRole === "buyer" ? "username" : "email"}
                 placeholder={
                   selectedRole === "buyer"
                     ? lang === "sw"
@@ -5273,6 +5348,8 @@ export function CustomerProfile({
                   </label>
                   <input
                     type="tel"
+                    name="edit_phone"
+                    autoComplete="tel"
                     value={editPhone}
                     onChange={(e) => setEditPhone(e.target.value)}
                     className="bg-slate-50 border border-slate-200 text-slate-800 px-3.5 py-2 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
@@ -5285,6 +5362,8 @@ export function CustomerProfile({
                   </label>
                   <input
                     type="email"
+                    name="edit_email"
+                    autoComplete="email"
                     value={editEmail}
                     onChange={(e) => setEditEmail(e.target.value)}
                     className="bg-slate-50 border border-slate-200 text-slate-800 px-3.5 py-2 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"

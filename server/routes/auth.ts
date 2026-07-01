@@ -273,4 +273,29 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
+router.post('/update', async (req, res) => {
+  const attributes = req.body;
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
+  if (!token) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+
+  try {
+    const { data: user, error: userError } = await supabase.auth.getUser(token);
+    
+    if (userError || !user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+
+    const { data, error } = await supabase.auth.updateUser(attributes);
+    if (error) {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 export default router;

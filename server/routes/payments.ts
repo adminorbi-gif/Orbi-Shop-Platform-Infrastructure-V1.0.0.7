@@ -59,82 +59,6 @@ export function writePaymentLedgerLog(log: {
   }
 }
 
-type PaySafePaymentCategory = "orbi" | "mobile_money" | "bank" | "card";
-type PaySafePaymentRail = "orbi_wallet" | "mno_tz" | "bank_transfer_tz" | "card_gateway";
-
-const railForCategory: Record<PaySafePaymentCategory, PaySafePaymentRail> = {
-  orbi: "orbi_wallet",
-  mobile_money: "mno_tz",
-  bank: "bank_transfer_tz",
-  card: "card_gateway",
-};
-
-const categoryForRail: Record<PaySafePaymentRail, PaySafePaymentCategory> = {
-  orbi_wallet: "orbi",
-  mno_tz: "mobile_money",
-  bank_transfer_tz: "bank",
-  card_gateway: "card",
-};
-
-const allowedPaymentCategories = new Set(Object.keys(railForCategory));
-const allowedPaymentRails = new Set(Object.keys(categoryForRail));
-
-function badPaySafeRoute(message: string) {
-  const error = new Error(message);
-  (error as any).status = 400;
-  return error;
-}
-
-function resolvePaySafeRoute(input: {
-  paymentCategory?: string;
-  paymentRail?: string;
-  providerCode?: string;
-  buyer?: any;
-  customerPhone?: string;
-  accountNumber?: string;
-}) {
-  const paymentCategory = String(input.paymentCategory || "").trim().toLowerCase();
-  const paymentRail = String(input.paymentRail || "").trim().toLowerCase();
-  const providerCode = String(input.providerCode || "").trim();
-
-  if (!paymentCategory || !paymentRail) {
-    throw badPaySafeRoute("PaySafe checkout requires paymentCategory and paymentRail.");
-  }
-
-  if (!allowedPaymentCategories.has(paymentCategory)) {
-    throw badPaySafeRoute(`Unsupported PaySafe paymentCategory: ${paymentCategory}`);
-  }
-
-  if (!allowedPaymentRails.has(paymentRail)) {
-    throw badPaySafeRoute(`Unsupported PaySafe paymentRail: ${paymentRail}`);
-  }
-
-  const category = paymentCategory as PaySafePaymentCategory;
-  const rail = paymentRail as PaySafePaymentRail;
-  if (railForCategory[category] !== rail || categoryForRail[rail] !== category) {
-    throw badPaySafeRoute("PaySafe paymentCategory and paymentRail do not match.");
-  }
-
-  if (category !== "orbi" && !providerCode) {
-    throw badPaySafeRoute("External PaySafe rails require providerCode.");
-  }
-
-  const phone = String(input.buyer?.phone || input.customerPhone || "").trim();
-  if (category === "mobile_money" && !phone) {
-    throw badPaySafeRoute("Mobile-money PaySafe checkout requires buyer phone.");
-  }
-
-  if (category === "bank" && !String(input.accountNumber || "").trim()) {
-    throw badPaySafeRoute("Bank PaySafe checkout requires accountNumber.");
-  }
-
-  return {
-    paymentCategory: category,
-    paymentRail: rail,
-    providerCode: providerCode || undefined,
-  };
-}
-
 const stableJson = (value: unknown): string => {
   if (value === null || value === undefined) return "null";
   if (typeof value !== "object") return JSON.stringify(value);
@@ -308,9 +232,6 @@ async function initiatePaySafeEscrow(req: any) {
   const {
     amount,
     orderId,
-    paymentCategory,
-    paymentRail,
-    providerCode,
     customerId,
     customerName,
     customerEmail,
@@ -328,15 +249,6 @@ async function initiatePaySafeEscrow(req: any) {
     throw error;
   }
 
-  const route = resolvePaySafeRoute({
-    paymentCategory,
-    paymentRail,
-    providerCode,
-    buyer,
-    customerPhone,
-    accountNumber: req.body.accountNumber,
-  });
-
   console.log(`Initiating live ORBI PaySafe escrow for Order ${orderId} of ${currency} ${amount}`);
 
   const result = await callOrbiPayGateway("/v1/paysafe/escrows", {
@@ -346,9 +258,6 @@ async function initiatePaySafeEscrow(req: any) {
       reference: String(orderId),
       amount: Number(amount),
       currency,
-      paymentCategory: route.paymentCategory,
-      paymentRail: route.paymentRail,
-      providerCode: route.providerCode,
       confirm: true,
       description: description || "ORBI Shop protected checkout",
       buyer: buyer || {
@@ -364,10 +273,6 @@ async function initiatePaySafeEscrow(req: any) {
       metadata: {
         source: "orbi-shop",
         shopOrderId: orderId,
-        paymentCategory: route.paymentCategory,
-        paymentRail: route.paymentRail,
-        providerCode: route.providerCode,
-        settlementPolicy: "paysafe_hold_required",
         customerId,
         sellerId,
         holdMinutes: getPaySafeHoldMinutes(),
@@ -512,12 +417,12 @@ router.post("/verify-payment-auto", async (req: Request, res: Response) => {
           isValid = false;
         }
       } catch (gatewayErr: any) {
-        console.warn("[PAYMENTS AUTO VERIFY] Live Orbi Gateway check error, falling back to secure simulated local verify:", gatewayErr.message);
-        isValid = true; // Safe fallback for local/dev mock compatibility when API key is not fully provisioned
+        console.error("[PAYMENTS AUTO VERIFY] Live Orbi Gateway check error:", gatewayErr.message);
+        isValid = false;
       }
     } else {
-      // In development/local sandbox, we automatically verify
-      isValid = true;
+      console.error("[PAYMENTS AUTO VERIFY] Gateway URL not configured.");
+      isValid = false;
     }
 
     if (!isValid) {

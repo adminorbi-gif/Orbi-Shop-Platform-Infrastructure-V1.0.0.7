@@ -6,7 +6,7 @@ import { getStoragePath, extractMediaFromText, isImage, isVideo } from '../../..
 import { getLoyaltyPoints, saveLoyaltyPoints, formatOrderNumber, getOrderNumber } from "../../../lib/helpers";
 import { useI18n } from "../index";
 import { useDialog } from "../../../components/CustomDialogContext";
-import { uploadFileToSupabase } from "../../../lib/upload";
+import { uploadFileToSupabase, deleteFileFromSupabase } from "../../../lib/upload";
 import React, {
   useState,
   useEffect,
@@ -3157,9 +3157,7 @@ export function ProductsAdmin({
         for (const imgUrl of removedImages) {
           const storagePath = getStoragePath(imgUrl);
           if (storagePath) {
-            await supabase.storage
-              .from("orbi-shop-images")
-              .remove([storagePath]);
+            await deleteFileFromSupabase(storagePath);
           }
         }
       }
@@ -3239,9 +3237,7 @@ export function ProductsAdmin({
         for (const imgUrl of prodToDelete.images) {
           const storagePath = getStoragePath(imgUrl);
           if (storagePath) {
-            await supabase.storage
-              .from("orbi-shop-images")
-              .remove([storagePath]);
+            await deleteFileFromSupabase(storagePath);
           }
         }
       }
@@ -3345,9 +3341,7 @@ export function ProductsAdmin({
           for (const imgUrl of prodToDelete.images) {
             const storagePath = getStoragePath(imgUrl);
             if (storagePath) {
-              await supabase.storage
-                .from("orbi-shop-images")
-                .remove([storagePath]);
+              await deleteFileFromSupabase(storagePath);
             }
           }
         }
@@ -7286,9 +7280,7 @@ export function PromosAdmin({
         for (const imgUrl of removedPromoImages) {
           const storagePath = getStoragePath(imgUrl);
           if (storagePath) {
-            await supabase.storage
-              .from("orbi-shop-images")
-              .remove([storagePath]);
+            await deleteFileFromSupabase(storagePath);
           }
         }
       }
@@ -7320,7 +7312,7 @@ export function PromosAdmin({
       for (const imgUrl of promoImages) {
         const storagePath = getStoragePath(imgUrl);
         if (storagePath) {
-          await supabase.storage.from("orbi-shop-images").remove([storagePath]);
+          await deleteFileFromSupabase(storagePath);
         }
       }
     }

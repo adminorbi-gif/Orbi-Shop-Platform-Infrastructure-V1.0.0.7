@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { supabase, encrypt } from "../lib/supabase.js";
+import { callOrbiPayGateway, getPayServiceKey } from "../lib/orbiPayGateway.js";
 
 const router = Router();
 
@@ -65,12 +66,19 @@ const isValidUUID = (id: any): boolean => {
 
 router.post("/", async (req, res) => {
   try {
-    const { cart, user, paymentMethod, paymentCategory, paymentRail, appliedCoupon, finalTotal, name, phone, address, options, tin, lang } = req.body;
+    const { cart, user, paymentMethod, paymentCategory, paymentRail, paymentAccount, operation, appliedCoupon, finalTotal, name, phone, address, options, tin, lang } = req.body;
 
-    // Gateway validation simulation (strict contract)
-    if (!paymentCategory || !paymentRail) {
-      return res.status(400).json({ success: false, error: "Gateway Error: Missing paymentCategory or paymentRail. Every request must declare these fields." });
+    // Gateway contract validation
+    if (!paymentCategory || !paymentRail || !operation) {
+      return res.status(400).json({ success: false, error: "Gateway Error: Missing paymentCategory, paymentRail, or operation. Every request must declare these fields." });
     }
+
+    if (operation !== "paysafe") {
+      return res.status(400).json({ success: false, error: "Gateway Error: Only 'paysafe' operation is supported for this checkout." });
+    }
+
+    let gatewayStatus = "pending";
+    let gatewayMessage = "Processing transaction...";
 
     if (!cart || !Array.isArray(cart) || cart.length === 0) {
       return res.status(400).json({ success: false, error: "Cart is empty." });
@@ -132,7 +140,7 @@ router.post("/", async (req, res) => {
       // Construct the normalized payment intent as required by Gateway
       const paymentIntent = {
         serviceCode: "orbi-shop",
-        operation: "paysafe", // Always held/escrowed before release
+        operation: operation, // Validated to be 'paysafe'
         reference: oId,
         amount: sellerTotal,
         currency: "TZS",
@@ -153,7 +161,45 @@ router.post("/", async (req, res) => {
           checkoutMode: "secure_escrow"
         }
       };
-      console.log("[GATEWAY_SIMULATION] Normalized Payment Intent ->", JSON.stringify(paymentIntent, null, 2));
+
+      const serviceKey = getPayServiceKey();
+      if (serviceKey) {
+        try {
+          const result = await callOrbiPayGateway("/v1/paysafe/escrows", {
+            method: "POST",
+            body: {
+              reference: String(oId),
+              amount: Number(sellerTotal),
+              currency: "TZS",
+              confirm: true,
+              description: "ORBI Shop protected checkout",
+              buyer: {
+                userId: dbCustomerId,
+                name: name,
+                phone: phone,
+                email: user?.email || ""
+              },
+              seller: {
+                userId: sellerId,
+                walletId: "paysafe"
+              },
+              metadata: paymentIntent.metadata
+            }
+          });
+          console.log(`[PAYSAFE_GATEWAY] Live Escrow Created for ${oId} ->`, result);
+          if (result && result.status) {
+            gatewayStatus = (result.status === 'held' || result.status === 'completed') ? 'success' : result.status;
+            gatewayMessage = result.message || "Payment processed via live Orbi Pay Gateway.";
+          }
+        } catch (e: any) {
+          console.error(`[PAYSAFE_GATEWAY] Live Orbi Pay Error for ${oId}:`, e.message);
+          // If the gateway hard fails, we must abort the transaction safely
+          return res.status(e.status || 400).json({ success: false, error: e.message || "Payment Gateway failed to process transaction." });
+        }
+      } else {
+        console.error("[PAYSAFE_GATEWAY] ORBI_SHOP_PAY_API_KEY is not configured in the environment.");
+        return res.status(500).json({ success: false, error: "Payment Gateway configuration error. Please contact support." });
+      }
 
       const { data: oRow, error: oError } = await supabase
         .from("orders")
@@ -212,7 +258,15 @@ router.post("/", async (req, res) => {
       } catch (e) {}
     }, 0);
 
-    res.json({ success: true, baseOrderId: oIdBase, successfulOrders: oIds });
+    res.json({ 
+      success: true, 
+      baseOrderId: oIdBase, 
+      successfulOrders: oIds,
+      gatewayResponse: {
+        status: gatewayStatus,
+        message: gatewayMessage
+      }
+    });
   } catch (err: any) {
     res.status(400).json({ success: false, error: err.message });
   }

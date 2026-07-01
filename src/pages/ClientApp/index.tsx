@@ -3177,6 +3177,8 @@ export default function ClientApp() {
             }}
             availableCoupons={coupons}
             onRefresh={() => loadData(true)}
+            updateQuantity={updateQuantity}
+            removeFromCart={(id: string) => setCart(cart.filter((c) => c.product.id !== id))}
           />
         )}
 

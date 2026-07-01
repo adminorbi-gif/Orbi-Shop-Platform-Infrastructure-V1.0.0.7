@@ -1719,20 +1719,26 @@ Zawadi ya Alama za Uaminifu zilizoongezwa kwenye kibeti chako: +${earned} Points
       ]);
 
       // 1. Process Products
-      const allProducts = productsRes.status === 'fulfilled' ? productsRes.value : [];
-      const visibleProducts = allProducts.filter((p: any) => p.visible !== false);
-      setProducts(visibleProducts);
+      let visibleProducts: any[] = [];
+      if (productsRes.status === 'fulfilled') {
+        const allProducts = productsRes.value;
+        visibleProducts = allProducts.filter((p: any) => p.visible !== false);
+        setProducts(visibleProducts);
+      }
 
       // 2. Process Promotions
-      const allPromos = promosRes.status === 'fulfilled' ? promosRes.value : [];
-      const visiblePromos = allPromos.filter((p: any) => p.visible);
-      setPromos(visiblePromos);
+      let visiblePromos: any[] = [];
+      if (promosRes.status === 'fulfilled') {
+        const allPromos = promosRes.value;
+        visiblePromos = allPromos.filter((p: any) => p.visible);
+        setPromos(visiblePromos);
+      }
 
       // 3. Process Promotional Banners
-      const activeBanners = (bannersRes.status === 'fulfilled' ? bannersRes.value : []).filter(
-        (b: any) => b.visible,
-      );
-      setPromotionalBanners(activeBanners);
+      if (bannersRes.status === 'fulfilled') {
+        const activeBanners = bannersRes.value.filter((b: any) => b.visible);
+        setPromotionalBanners(activeBanners);
+      }
 
       // 6. Process Shuffle Weights
       if (!isBackground) {
@@ -1770,53 +1776,62 @@ Zawadi ya Alama za Uaminifu zilizoongezwa kwenye kibeti chako: +${earned} Points
         db.getAds()
       ]).then(([ordersRes, reviewsRes, couponsRes, nichesRes, sellersRes, adsRes]) => {
         // 4. Process Orders
-        const allOrders = ordersRes.status === 'fulfilled' ? ordersRes.value : [];
-        setOrders(allOrders);
+        if (ordersRes.status === 'fulfilled') {
+          setOrders(ordersRes.value);
+        }
 
         // 5. Process Reviews
-        const revsData = reviewsRes.status === 'fulfilled' ? reviewsRes.value : [];
-        const mappedRevs: Record<string, any[]> = {};
-        if (revsData) {
-          revsData.forEach((r: any) => {
-            if (r.productId) {
-              if (!mappedRevs[r.productId]) mappedRevs[r.productId] = [];
-              mappedRevs[r.productId].push({
-                id: r.id,
-                userName: r.userName,
-                rating: r.rating,
-                comment: r.comment,
-                createdAt: r.createdAt,
-              });
-            }
-          });
+        if (reviewsRes.status === 'fulfilled') {
+          const revsData = reviewsRes.value;
+          const mappedRevs: Record<string, any[]> = {};
+          if (revsData) {
+            revsData.forEach((r: any) => {
+              if (r.productId) {
+                if (!mappedRevs[r.productId]) mappedRevs[r.productId] = [];
+                mappedRevs[r.productId].push({
+                  id: r.id,
+                  userName: r.userName,
+                  rating: r.rating,
+                  comment: r.comment,
+                  createdAt: r.createdAt,
+                });
+              }
+            });
+          }
+          setAllReviews(mappedRevs);
         }
-        setAllReviews(mappedRevs);
 
         // 7. Process Coupons, Niches, Sellers, Ads
-        const allCoupons = couponsRes.status === 'fulfilled' ? couponsRes.value : [];
-        setCoupons(allCoupons);
+        if (couponsRes.status === 'fulfilled') {
+          setCoupons(couponsRes.value);
+        }
 
-        const allNiches = nichesRes.status === 'fulfilled' ? nichesRes.value : [];
-        setSystemNiches(allNiches);
+        if (nichesRes.status === 'fulfilled') {
+          setSystemNiches(nichesRes.value);
+        }
 
-        const allSellers = sellersRes.status === 'fulfilled' ? sellersRes.value : [];
-        setSellers(allSellers);
+        if (sellersRes.status === 'fulfilled') {
+          const allSellers = sellersRes.value;
+          setSellers(allSellers);
+          
+          const params = new URLSearchParams(window.location.search);
+          const sellerId = params.get("seller");
+          if (sellerId) {
+            const seller = allSellers.find((s: any) => s.id === sellerId);
+            if (seller) setViewSeller(seller);
+          }
+        }
 
-        const allAds = adsRes.status === 'fulfilled' ? adsRes.value : [];
-        setMarketplaceAds(allAds);
+        if (adsRes.status === 'fulfilled') {
+          setMarketplaceAds(adsRes.value);
+        }
 
         // 8. Handle initial URL selection (if any)
         const params = new URLSearchParams(window.location.search);
         const prodId = params.get("product");
-        if (prodId) {
-          const prod = allProducts.find((p: any) => p.id === prodId);
+        if (prodId && visibleProducts.length > 0) {
+          const prod = visibleProducts.find((p: any) => p.id === prodId);
           if (prod) setSelectedProduct(prod);
-        }
-
-        const sellerId = params.get("seller");
-        if (sellerId) {
-          const seller = allSellers.find((s: any) => s.id === sellerId);
-          if (seller) setViewSeller(seller);
         }
 
         const orderIdParam = params.get("order") || params.get("order_id");
