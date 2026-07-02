@@ -1685,13 +1685,36 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       if (norm === "cancelled" || norm === "archived") return;
 
       o.items.forEach((item) => {
-        const prod = products.find((p) => p.id === item.productId);
+        const itemProductId = String(
+          item.productId || (item as any).id || (item as any).product?.id || "",
+        )
+          .trim()
+          .toLowerCase();
+        const itemSku = String((item as any).sku || (item as any).product?.sku || "")
+          .trim()
+          .toLowerCase();
+        const itemName = String(item.name || (item as any).product?.name || "")
+          .trim()
+          .toLowerCase();
+        const prod = products.find((p) => {
+          const productId = String(p.id || "").trim().toLowerCase();
+          const productSku = String(p.sku || "").trim().toLowerCase();
+          const productName = String(p.name || "").trim().toLowerCase();
+          return (
+            (!!itemProductId && productId === itemProductId) ||
+            (!!itemSku && productSku === itemSku) ||
+            (!!itemName && productName === itemName)
+          );
+        });
+        const productCategoryParts = String((prod as any)?.category || "").split("::");
         const nicheKey =
           normalizeNicheKey((prod as any)?.nicheId) ||
           normalizeNicheKey(prod?.niche) ||
+          normalizeNicheKey(productCategoryParts[0]) ||
           normalizeNicheKey(prod?.category) ||
           normalizeNicheKey((item as any)?.nicheId) ||
           normalizeNicheKey((item as any)?.niche) ||
+          normalizeNicheKey(String((item as any)?.category || "").split("::")[0]) ||
           normalizeNicheKey((item as any)?.category) ||
           "other";
 

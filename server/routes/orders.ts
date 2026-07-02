@@ -153,6 +153,7 @@ router.get("/", requireAuth, async (req, res) => {
         id: o.id,
         items: o.items.map((i: any) => ({
           id: i.product_id,
+          productId: i.product_id,
           name: i.name,
           price: i.price,
           quantity: i.quantity,
