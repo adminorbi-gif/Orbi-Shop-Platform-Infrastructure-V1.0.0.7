@@ -599,14 +599,15 @@ export default function ProductDetailPage({
       </header>
 
       {/* Main Content Area */}
-      <div className="orbi-product-detail-shell flex-1 overflow-y-auto w-full pb-24 md:pb-12">
+      <div className="orbi-product-detail-shell flex-1 overflow-y-auto w-full pb-36 md:pb-12" style={{ touchAction: "pan-y" }}>
         <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8">
         <div className="orbi-product-detail-hero rounded-[2rem] lg:rounded-[2.5rem] border border-white/70 p-3 sm:p-5 lg:p-7 grid grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(24rem,0.95fr)] gap-6 lg:gap-9 items-start">
           
           {/* Left Column: Images */}
-          <div className="w-full flex flex-col gap-4 lg:sticky lg:top-24">
+          <div className="w-full flex flex-col gap-4">
             <div 
               className="orbi-product-detail-media relative aspect-square sm:aspect-[4/3] rounded-[1.75rem] lg:rounded-[2rem] overflow-hidden shrink-0 border border-slate-200/70 flex items-center justify-center cursor-zoom-in group"
+              style={{ touchAction: "pan-y" }}
               onClick={() => setShowFullImage(true)}
               onMouseMove={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
@@ -626,7 +627,7 @@ export default function ProductDetailPage({
               <img
                 src={product.images[imgIdx]}
                 alt={product.name}
-                className="w-full h-full object-contain p-5 sm:p-7 lg:p-8 transition-transform duration-200 ease-out group-hover:scale-[2.2]"
+                className="w-full h-full object-contain p-5 sm:p-7 lg:p-8 transition-transform duration-200 ease-out lg:group-hover:scale-[2.2]"
                 style={{ transformOrigin: 'var(--zoom-x, 50%) var(--zoom-y, 50%)' }}
               />
               <div className="absolute left-4 top-4 z-20 flex flex-wrap gap-2">
@@ -871,7 +872,7 @@ export default function ProductDetailPage({
             </div>
 
             {/* Pricing Card with Font Auto-Adjust PriceDisplay */}
-            <div className="orbi-product-buy-panel rounded-[1.75rem] p-5 md:p-6 mb-6 flex flex-col gap-4 lg:sticky lg:top-24 z-20">
+            <div className="orbi-product-buy-panel rounded-[1.75rem] p-5 md:p-6 mb-6 flex flex-col gap-4">
               <div className="flex flex-col">
                 <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">
                   {lang === "sw" ? "BEI YA BIDHAA (KIPANDE)" : "PRICE PER PIECE"}
@@ -1002,25 +1003,25 @@ export default function ProductDetailPage({
                 </div>
               )}
 
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2">
+              <div className="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                 {isOutOfStock ? (
                   <button
                     onClick={() => setShowNotify(true)}
-                    className="flex-1 h-12 md:h-14 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-black transition-all hover:shadow-md hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 shadow-xs text-sm cursor-pointer"
+                    className="min-h-12 md:min-h-14 w-full bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-black transition-all hover:shadow-md active:scale-[0.98] flex items-center justify-center gap-2 px-4 py-3 shadow-xs text-sm cursor-pointer"
                   >
                     <Bell size={18} />
                     <span>{lang === "sw" ? "Nijulishe ikipatikana" : "Notify Me"}</span>
                   </button>
                 ) : (
-                  <div className="flex flex-1 flex-col xs:flex-row gap-3">
+                  <div className="grid w-full grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:gap-3">
                     <button
                       onClick={() => {
                         onAdd(product, false, qty);
                       }}
-                      className="flex-1 h-12 md:h-14 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl font-black transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 shadow-xs text-sm sm:text-base cursor-pointer"
+                      className="min-h-12 md:min-h-14 w-full bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl font-black transition-all active:scale-[0.98] flex items-center justify-center gap-2 px-4 py-3 shadow-xs text-sm sm:text-base cursor-pointer"
                     >
                       <ShoppingCart size={18} />
-                      <span>{lang === "sw" ? "Weka Kikapuni" : "Add to Cart"}</span>
+                      <span className="text-center leading-tight">{lang === "sw" ? "Weka Kikapuni" : "Add to Cart"}</span>
                     </button>
 
                     <button
@@ -1028,10 +1029,10 @@ export default function ProductDetailPage({
                         onAdd(product, true, qty);
                         onClose();
                       }}
-                      className="flex-1 h-12 md:h-14 bg-[#ff4c00] hover:bg-[#e04300] text-white rounded-2xl font-black transition-all hover:shadow-lg hover:shadow-orange-500/20 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 shadow-xs text-sm sm:text-base cursor-pointer"
+                      className="min-h-12 md:min-h-14 w-full bg-[#ff4c00] hover:bg-[#e04300] text-white rounded-2xl font-black transition-all hover:shadow-lg hover:shadow-orange-500/20 active:scale-[0.98] flex items-center justify-center gap-2 px-4 py-3 shadow-xs text-sm sm:text-base cursor-pointer"
                     >
                       <Zap size={18} />
-                      <span>{lang === "sw" ? "Nunua Sasa" : "Buy Now"}</span>
+                      <span className="text-center leading-tight">{lang === "sw" ? "Nunua Sasa" : "Buy Now"}</span>
                     </button>
                   </div>
                 )}
@@ -1042,7 +1043,7 @@ export default function ProductDetailPage({
                       e.stopPropagation();
                       onLikeToggle(product.id, product.niche);
                     }}
-                    className={`h-12 md:h-14 px-5 rounded-2xl font-black transition-all border shrink-0 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 shadow-xs text-sm cursor-pointer ${
+                    className={`min-h-12 md:min-h-14 w-full px-5 py-3 rounded-2xl font-black transition-all border shrink-0 flex items-center justify-center gap-2 active:scale-[0.98] shadow-xs text-sm cursor-pointer sm:w-auto ${
                       isLiked
                         ? "bg-rose-50 border-rose-300 text-rose-500 hover:bg-rose-100"
                         : "bg-white border-slate-200 text-slate-500 hover:text-rose-500 hover:bg-slate-50"
@@ -1050,7 +1051,7 @@ export default function ProductDetailPage({
                     title={lang === "sw" ? "Sajili Pendwa yako" : "Add to Preferences"}
                   >
                     <Heart size={18} fill={isLiked ? "currentColor" : "none"} />
-                    <span className="hidden sm:inline">
+                    <span className="leading-tight">
                       {isLiked
                         ? (lang === "sw" ? "Imependwa" : "Favored")
                         : (lang === "sw" ? "Penda" : "Favorite")}
@@ -1122,7 +1123,7 @@ export default function ProductDetailPage({
             )}
 
             {/* Sharing Block */}
-            <div className="flex flex-col sm:flex-row gap-2 mb-8">
+            <div className="grid grid-cols-1 gap-2 mb-8 sm:grid-cols-[minmax(0,1fr)_auto]">
               <a
                 href={`https://wa.me/?text=${encodeURIComponent(
                   lang === "sw" 
@@ -1131,16 +1132,16 @@ export default function ProductDetailPage({
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 h-11 bg-[#25D366] hover:bg-[#20ba5a] text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-xs transition-all hover:scale-[1.02] active:scale-95 text-sm cursor-pointer"
+                className="min-h-11 bg-[#25D366] hover:bg-[#20ba5a] text-white rounded-xl font-bold flex items-center justify-center gap-2 px-4 py-2.5 shadow-xs transition-all active:scale-[0.98] text-sm cursor-pointer"
               >
                 <MessageCircle size={16} />
-                <span>{lang === "sw" ? "Shiriki Kupitia WhatsApp" : "Share on WhatsApp"}</span>
+                <span className="text-center leading-tight">{lang === "sw" ? "Shiriki Kupitia WhatsApp" : "Share on WhatsApp"}</span>
               </a>
               
-              <div className="flex gap-2">
+              <div className="grid grid-cols-[1fr_44px_44px] gap-2 sm:flex">
                 <button
                   onClick={handleShare}
-                  className={`flex-1 sm:flex-initial h-11 px-4 rounded-xl font-bold flex items-center justify-center gap-1.5 transition shadow-xs text-sm border cursor-pointer ${
+                  className={`min-h-11 px-4 rounded-xl font-bold flex items-center justify-center gap-1.5 transition shadow-xs text-sm border cursor-pointer active:scale-[0.98] ${
                     copied 
                       ? "bg-green-50 border-green-200 text-green-700" 
                       : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300"
@@ -1148,11 +1149,11 @@ export default function ProductDetailPage({
                   title={lang === "sw" ? "Nakili Kiungo" : "Copy Link"}
                 >
                   {copied ? (
-                    <span className="text-sm px-2 whitespace-nowrap">{lang === "sw" ? "Imenakiliwa!" : "Copied!"}</span>
+                    <span className="text-sm px-2 text-center leading-tight">{lang === "sw" ? "Imenakiliwa!" : "Copied!"}</span>
                   ) : (
                     <>
                       <Share2 size={15} />
-                      <span className="inline sm:hidden md:inline ml-1">{lang === "sw" ? "Nakili" : "Copy"}</span>
+                      <span className="ml-1 text-center leading-tight">{lang === "sw" ? "Nakili" : "Copy"}</span>
                     </>
                   )}
                 </button>
@@ -1160,7 +1161,7 @@ export default function ProductDetailPage({
                   href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(product.name)}&url=${encodeURIComponent(`${window.location.origin}/?product=${product.id}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-11 w-11 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl shadow-xs hover:scale-105 transition flex items-center justify-center shrink-0"
+                  className="h-11 w-11 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl shadow-xs active:scale-[0.98] transition flex items-center justify-center shrink-0"
                 >
                   <Twitter size={15} />
                 </a>
@@ -1168,7 +1169,7 @@ export default function ProductDetailPage({
                   href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${window.location.origin}/?product=${product.id}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-11 w-11 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl shadow-xs hover:scale-105 transition flex items-center justify-center shrink-0"
+                  className="h-11 w-11 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl shadow-xs active:scale-[0.98] transition flex items-center justify-center shrink-0"
                 >
                   <Facebook size={15} />
                 </a>
@@ -1261,63 +1262,6 @@ export default function ProductDetailPage({
               </div>
             )}
 
-            {/* Description & Technical Specifications Grid Tab */}
-            <div className="orbi-product-detail-card rounded-[1.75rem] overflow-hidden mb-8">
-              <div className="border-b border-slate-200/70 bg-slate-50/70 px-5 py-4">
-                <h3 className="font-black text-slate-900 flex items-center gap-2">
-                  <Info size={16} className="text-orange-500" />
-                  {lang === "sw" ? "Ufafanuzi na Taarifa za Bidhaa" : "Specifications & Description"}
-                </h3>
-              </div>
-              <div className="p-5 space-y-6">
-                
-                {/* Unified Professional Two-Column Key Attributes Specifications Table */}
-                {keyAttributes.length > 0 && (
-                  <div className="space-y-3">
-                    <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest flex items-center gap-1.5">
-                      <Sliders size={12} className="text-slate-400" />
-                      {lang === "sw" ? "Sifa na Vigezo vya Bidhaa" : "Key Product Attributes"}
-                    </h4>
-                    
-                    <div className="border border-slate-200/80 rounded-2xl overflow-hidden bg-white shadow-sm divide-y divide-slate-100">
-                      {(showAllSpecs ? keyAttributes : keyAttributes.slice(0, 8)).map((attr, idx) => (
-                        <div key={idx} className="grid grid-cols-12 text-xs hover:bg-slate-50/50 transition duration-75">
-                          <div className="col-span-5 bg-slate-50/60 p-3 font-semibold text-slate-500 capitalize border-r border-slate-100/80 flex items-center select-none">
-                            {attr.key}
-                          </div>
-                          <div className="col-span-7 p-3 font-bold text-slate-800 break-words flex items-center">
-                            {attr.value}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {keyAttributes.length > 8 && (
-                      <div className="flex justify-center pt-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setShowAllSpecs(!showAllSpecs)}
-                          className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-slate-700 bg-slate-100 hover:bg-slate-200/80 px-4 py-2 rounded-xl transition cursor-pointer select-none active:scale-95 border border-slate-200"
-                        >
-                          <span>{showAllSpecs ? (lang === "sw" ? "Onyesha Chache" : "Show Less") : (lang === "sw" ? "Onyesha Zote" : "Show More")}</span>
-                          {showAllSpecs ? <ChevronUp size={12} className="text-slate-500" /> : <ChevronDown size={12} className="text-slate-500" />}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                <div>
-                  <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-2 mt-4 border-t border-slate-100 pt-4">
-                    {lang === "sw" ? "Maelezo ya Kina" : "Detailed Description"}
-                  </h4>
-                  <p className="whitespace-pre-wrap text-slate-600 leading-relaxed text-sm">
-                    {product.description || (lang === "sw" ? "Hakuna maelezo ya ziada yalioandikwa kuhusu bidhaa hii." : "No additional description provided for this product.")}
-                  </p>
-                </div>
-              </div>
-            </div>
-
             {/* Reviews Section */}
             <div id="reviews" className="orbi-product-detail-card rounded-[1.75rem] overflow-hidden mb-8">
               <div className="border-b border-slate-200/70 bg-slate-50/70 px-5 py-4 flex justify-between items-center">
@@ -1387,6 +1331,84 @@ export default function ProductDetailPage({
           </div>
         </div>
 
+        {/* Full-width Product Information: never sits under the buy panel */}
+        <section id="description" className="mt-6 lg:mt-8 scroll-mt-28">
+          <div className="orbi-product-detail-card rounded-[1.75rem] overflow-hidden">
+            <div className="border-b border-slate-200/70 bg-white/80 px-5 py-4 sm:px-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-orange-500">
+                  {lang === "sw" ? "Taarifa za bidhaa" : "Product information"}
+                </p>
+                <h3 className="mt-1 font-black text-xl text-slate-950 tracking-tight flex items-center gap-2">
+                  <Info size={18} className="text-orange-500" />
+                  {lang === "sw" ? "Maelezo, sifa na vigezo" : "Description, specs and details"}
+                </h3>
+              </div>
+              <div className="flex flex-wrap gap-2 text-[11px] font-black">
+                <a href="#description" className="rounded-full bg-slate-950 px-3 py-1.5 text-white transition hover:bg-orange-600">
+                  {lang === "sw" ? "Maelezo" : "Description"}
+                </a>
+                {keyAttributes.length > 0 && (
+                  <a href="#specs" className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-600 transition hover:border-orange-300 hover:text-orange-600">
+                    {lang === "sw" ? "Specs" : "Specs"}
+                  </a>
+                )}
+                <a href="#reviews" className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-600 transition hover:border-orange-300 hover:text-orange-600">
+                  {lang === "sw" ? "Maoni" : "Reviews"}
+                </a>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)] lg:gap-8">
+              <div className="min-w-0">
+                <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-3">
+                  {lang === "sw" ? "Maelezo ya kina" : "Detailed description"}
+                </h4>
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5">
+                  <p className="whitespace-pre-wrap break-words text-[15px] leading-7 text-slate-700">
+                    {product.description || (lang === "sw" ? "Hakuna maelezo ya ziada yalioandikwa kuhusu bidhaa hii." : "No additional description provided for this product.")}
+                  </p>
+                </div>
+              </div>
+
+              {keyAttributes.length > 0 && (
+                <div id="specs" className="min-w-0 scroll-mt-28 space-y-3">
+                  <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest flex items-center gap-1.5">
+                    <Sliders size={12} className="text-slate-400" />
+                    {lang === "sw" ? "Sifa na vigezo" : "Key attributes"}
+                  </h4>
+
+                  <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+                    {(showAllSpecs ? keyAttributes : keyAttributes.slice(0, 8)).map((attr, idx) => (
+                      <div key={idx} className="grid grid-cols-1 border-b border-slate-100 last:border-b-0 text-xs sm:grid-cols-12 hover:bg-slate-50/60 transition duration-75">
+                        <div className="bg-slate-50/75 p-3 font-semibold text-slate-500 capitalize sm:col-span-5 sm:border-r sm:border-slate-100/80">
+                          {attr.key}
+                        </div>
+                        <div className="p-3 font-bold text-slate-800 break-words sm:col-span-7">
+                          {attr.value}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {keyAttributes.length > 8 && (
+                    <div className="flex justify-center pt-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setShowAllSpecs(!showAllSpecs)}
+                        className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-slate-700 bg-slate-100 hover:bg-slate-200/80 px-4 py-2 rounded-xl transition cursor-pointer select-none active:scale-95 border border-slate-200"
+                      >
+                        <span>{showAllSpecs ? (lang === "sw" ? "Onyesha Chache" : "Show Less") : (lang === "sw" ? "Onyesha Zote" : "Show More")}</span>
+                        {showAllSpecs ? <ChevronUp size={12} className="text-slate-500" /> : <ChevronDown size={12} className="text-slate-500" />}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
         {/* Related Similar Products Section (Full Width, Bottom) */}
         {relatedProducts && relatedProducts.length > 0 && (
           <div className="w-full py-12 mt-4">
@@ -1446,7 +1468,7 @@ export default function ProductDetailPage({
                       <img
                         src={rp.images[0]}
                         alt={rp.name}
-                        className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500"
+                        className="w-full h-full object-contain p-4 transition-transform duration-500 sm:group-hover:scale-105"
                         loading="lazy"
                       />
                     </div>
@@ -1472,23 +1494,23 @@ export default function ProductDetailPage({
 
       {/* Sticky Bottom Action Bar for Mobile Screens (hides on desktop) */}
       {!isOutOfStock && (
-        <div className="fixed bottom-0 inset-x-0 z-[9999999] bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-4 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] flex items-center justify-between gap-3 md:hidden animate-in slide-in-from-bottom duration-300 select-none">
-          <div className="flex flex-col min-w-0">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate max-w-[120px] xs:max-w-[150px]">
+        <div className="fixed bottom-0 inset-x-0 z-[9999999] bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-3 py-2.5 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] md:hidden animate-in slide-in-from-bottom duration-300 select-none">
+          <div className="mb-2 flex min-w-0 items-center justify-between gap-3">
+            <span className="min-w-0 flex-1 break-words text-[10px] font-black text-slate-400 uppercase tracking-[0.12em] leading-tight">
               {product.name}
             </span>
-            <div className="flex items-center gap-1">
-              <PriceDisplay amount={product.price} size="lg" colorClass="text-[#ff4c00]" />
+            <div className="shrink-0 text-right">
+              <PriceDisplay amount={product.price} size="base" colorClass="text-[#ff4c00]" truncate={false} />
             </div>
           </div>
           
-          <div className="flex flex-1 items-center gap-2 justify-end">
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => onAdd(product, false)}
-              className="flex-1 max-w-[140px] h-11 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold transition-all flex items-center justify-center gap-1.5 text-xs xs:text-sm cursor-pointer"
+              className="min-h-11 w-full bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs cursor-pointer"
             >
               <ShoppingCart size={15} />
-              <span>{lang === "sw" ? "Kikapu" : "Cart"}</span>
+              <span className="text-center leading-tight">{lang === "sw" ? "Kikapu" : "Cart"}</span>
             </button>
             
             <button
@@ -1496,10 +1518,10 @@ export default function ProductDetailPage({
                 onAdd(product, true);
                 onClose();
               }}
-              className="flex-1 max-w-[160px] h-11 bg-[#ff4c00] hover:bg-[#ff4c00]/90 text-white rounded-xl font-black transition-all flex items-center justify-center gap-1.5 text-xs xs:text-sm shadow-md cursor-pointer"
+              className="min-h-11 w-full bg-[#ff4c00] hover:bg-[#ff4c00]/90 text-white rounded-xl font-black transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs shadow-md cursor-pointer"
             >
               <Zap size={14} className="fill-current" />
-              <span>{lang === "sw" ? "Nunua" : "Buy Now"}</span>
+              <span className="text-center leading-tight">{lang === "sw" ? "Nunua" : "Buy Now"}</span>
             </button>
           </div>
         </div>
@@ -1534,6 +1556,7 @@ export default function ProductDetailPage({
 
           <div 
             className="relative w-full max-w-5xl h-[85vh] flex items-center justify-center p-4 cursor-zoom-out group overflow-hidden"
+            style={{ touchAction: "pan-y" }}
             onClick={() => setShowFullImage(false)}
             onMouseMove={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
@@ -1553,7 +1576,7 @@ export default function ProductDetailPage({
             <img
               src={product.images[imgIdx]}
               alt={product.name}
-              className="max-w-full max-h-full object-contain select-none transition-transform duration-200 ease-out group-hover:scale-[2.5]"
+              className="max-w-full max-h-full object-contain select-none transition-transform duration-200 ease-out lg:group-hover:scale-[2.5]"
               style={{ transformOrigin: 'var(--zoom-x, 50%) var(--zoom-y, 50%)' }}
               onClick={(e) => e.stopPropagation()}
             />
