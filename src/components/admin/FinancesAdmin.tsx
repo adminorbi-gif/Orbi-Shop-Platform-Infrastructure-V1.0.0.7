@@ -19,6 +19,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { formatCurrency } from "../../lib/storage";
 
 export function FinancesAdmin({ orders }: { orders: Order[] }) {
   const { lang, t } = useI18n();
@@ -88,10 +89,6 @@ export function FinancesAdmin({ orders }: { orders: Order[] }) {
     return dataWithProjection;
   }, [monthlyRevenueData]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US").format(amount);
-  };
-
   return (
     <div className="flex flex-col h-full bg-slate-50 overflow-y-auto w-full" id="finances-admin-panel">
       <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 max-w-7xl mx-auto w-full">
@@ -123,8 +120,8 @@ export function FinancesAdmin({ orders }: { orders: Order[] }) {
             <div className="orbi-admin-label text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 relative">
               Released Payouts
             </div>
-            <div className="orbi-admin-metric-value font-black text-slate-900 relative">
-              TZS {formatCurrency(totalPaid)}
+            <div className="orbi-admin-metric-value font-black text-slate-900 relative min-w-0 max-w-full overflow-hidden" title={formatCurrency(totalPaid)}>
+              {formatCurrency(totalPaid, { compact: true })}
             </div>
             <p className="text-xs text-emerald-600 mt-2 font-medium relative flex items-center gap-1">
               <ArrowUpRight size={14} /> Funds cleared to seller account.
@@ -139,8 +136,8 @@ export function FinancesAdmin({ orders }: { orders: Order[] }) {
             <div className="orbi-admin-label text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 relative">
               In PaySafe (Pending)
             </div>
-            <div className="orbi-admin-metric-value font-black text-slate-900 relative">
-              TZS {formatCurrency(totalPending)}
+            <div className="orbi-admin-metric-value font-black text-slate-900 relative min-w-0 max-w-full overflow-hidden" title={formatCurrency(totalPending)}>
+              {formatCurrency(totalPending, { compact: true })}
             </div>
             <p className="text-xs text-orange-600 mt-2 font-medium relative flex items-center gap-1">
               <Lock size={14} /> Awaiting customer delivery confirmation.
@@ -211,8 +208,8 @@ export function FinancesAdmin({ orders }: { orders: Order[] }) {
                     <td className="p-4 font-bold text-slate-700">
                       {o.customerDetails?.name || "Unknown"}
                     </td>
-                    <td className="p-4 font-black text-slate-900 text-base">
-                      TZS {formatCurrency(o.total)}
+                    <td className="p-4 font-black text-slate-900 text-base max-w-[150px] truncate" title={formatCurrency(o.total)}>
+                      {formatCurrency(o.total, { compact: true })}
                     </td>
                     <td className="p-4">
                       {o.status === "confirmed" ? (

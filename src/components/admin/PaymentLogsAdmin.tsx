@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Database
 } from "lucide-react";
+import { formatCurrency } from "../../lib/storage";
 
 interface PaymentLog {
   id: string;
@@ -119,12 +120,6 @@ export function PaymentLogsAdmin({ lang = "en" }: PaymentLogsAdminProps) {
     return matchesSearch && matchesStatus;
   });
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
-
   const getStatusBadge = (status: "success" | "failed" | "pending") => {
     switch (status) {
       case "success":
@@ -204,8 +199,8 @@ export function PaymentLogsAdmin({ lang = "en" }: PaymentLogsAdminProps) {
             <span className="orbi-admin-label text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
               {lang === "sw" ? "Jumla ya Thamani ya Escrow" : "Total Escrow Volume"}
             </span>
-            <span className="orbi-admin-compact-value font-black text-slate-900 block mt-1.5">
-              TZS {formatCurrency(totalVolume)}
+            <span className="orbi-admin-compact-value font-black text-slate-900 block mt-1.5 min-w-0 max-w-full overflow-hidden truncate" title={formatCurrency(totalVolume)}>
+              {formatCurrency(totalVolume, { compact: true })}
             </span>
             <span className="text-[10px] text-emerald-500 font-bold flex items-center gap-0.5 mt-1">
               <ArrowUpRight size={12} /> {lang === "sw" ? "Imethibitishwa kikamilifu" : "Fully secured & settled"}
@@ -379,8 +374,8 @@ export function PaymentLogsAdmin({ lang = "en" }: PaymentLogsAdminProps) {
                       </span>
                     </td>
                     <td className="p-4">
-                      <span className="font-black text-slate-900 text-sm">
-                        TZS {formatCurrency(log.amount)}
+                      <span className="font-black text-slate-900 text-sm block max-w-[130px] truncate" title={formatCurrency(log.amount)}>
+                        {formatCurrency(log.amount, { compact: true })}
                       </span>
                       <span className="block text-[9px] text-slate-400 font-medium uppercase">
                         {log.paymentMethod || "Mobile Money"}
@@ -441,8 +436,8 @@ export function PaymentLogsAdmin({ lang = "en" }: PaymentLogsAdminProps) {
                         {lang === "sw" ? "HALI YA MALIPO" : "TRANSACTION STATUS"}
                       </span>
                       {getStatusBadge(selectedLog.status)}
-                      <span className="text-2xl font-black text-slate-900 mt-4 block">
-                        TZS {formatCurrency(selectedLog.amount)}
+                      <span className="text-2xl font-black text-slate-900 mt-4 block max-w-full truncate" title={formatCurrency(selectedLog.amount)}>
+                        {formatCurrency(selectedLog.amount, { compact: true })}
                       </span>
                       <span className="text-[10px] text-slate-400 font-medium block mt-1 uppercase">
                         {selectedLog.paymentMethod || "Mobile Money"}

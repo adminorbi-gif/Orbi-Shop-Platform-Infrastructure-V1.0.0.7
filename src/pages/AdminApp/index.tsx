@@ -2849,7 +2849,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   <StatCard
                     onClick={() => setTab("invoice")}
                     title={t(lang, "dash.tot_sales")}
-                    value={<PriceDisplay amount={totalSales} />}
+                    value={<PriceDisplay amount={totalSales} compact="auto" />}
                     icon={<DollarSign size={20} className="text-emerald-500" />}
                   />
                   <StatCard
@@ -2857,7 +2857,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     title={
                       lang === "sw" ? "Malipo Kusubiri" : "Pending Payouts"
                     }
-                    value={<PriceDisplay amount={pendingPayoutsSum} />}
+                    value={<PriceDisplay amount={pendingPayoutsSum} compact="auto" />}
                     icon={<Wallet size={20} className="text-indigo-500" />}
                   />
                   <StatCard
@@ -2867,7 +2867,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         ? "Mauzo ya Mwezi Huu"
                         : "Revenue This Month"
                     }
-                    value={<PriceDisplay amount={totalRevenueThisMonth} />}
+                    value={<PriceDisplay amount={totalRevenueThisMonth} compact="auto" />}
                     icon={<Calendar size={20} className="text-pink-500" />}
                   />
                   <StatCard

@@ -2150,14 +2150,14 @@ export function StatCard({
   return (
     <div
       onClick={onClick}
-      className={`orbi-admin-card p-5 sm:p-6 rounded-[1.75rem] border border-slate-200/80 flex items-start justify-between gap-4 overflow-visible @container ${onClick ? "cursor-pointer hover:border-slate-400 hover:shadow-[0_20px_45px_rgba(15,23,42,0.10)] transition-all duration-300 transform hover:-translate-y-0.5 group" : ""}`}
+      className={`orbi-admin-card p-5 sm:p-6 rounded-[1.75rem] border border-slate-200/80 flex items-start justify-between gap-4 overflow-hidden @container ${onClick ? "cursor-pointer hover:border-slate-400 hover:shadow-[0_20px_45px_rgba(15,23,42,0.10)] transition-all duration-300 transform hover:-translate-y-0.5 group" : ""}`}
     >
       <div className="space-y-2 min-w-0 flex-1">
         <p className="orbi-admin-label text-[10px] sm:text-[11px] text-zinc-500 font-extrabold uppercase tracking-[0.16em] transition leading-snug max-w-full">
           {title}
         </p>
         <div
-          className="orbi-admin-metric-value font-black text-slate-900 max-w-full"
+          className="orbi-admin-metric-value font-black text-slate-900 min-w-0 max-w-full overflow-hidden text-ellipsis"
           title={typeof value === "string" || typeof value === "number" ? String(value) : undefined}
         >
           {value}

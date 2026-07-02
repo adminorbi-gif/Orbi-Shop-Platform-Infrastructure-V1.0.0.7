@@ -25,6 +25,7 @@ import {
   Tooltip,
   CartesianGrid
 } from "recharts";
+import { formatCurrency as formatSharedCurrency } from "../lib/storage";
 
 interface SearchLog {
   query: string;
@@ -122,9 +123,7 @@ export default function VisitorsAnalyticsView({ lang }: { lang: "sw" | "en" }) {
     return () => clearInterval(interval);
   }, []);
 
-  const formatCurrency = (amt: number) => {
-    return "TSh " + amt.toLocaleString();
-  };
+  const formatCurrency = (amt: number) => formatSharedCurrency(amt, { compact: true });
 
   if (loading && !data) {
     return (
@@ -357,7 +356,7 @@ export default function VisitorsAnalyticsView({ lang }: { lang: "sw" | "en" }) {
                 <span>{lang === "sw" ? "Jumla ya Mauzo ya Visitors" : "Attributed Revenue"}</span>
                 <Award size={16} className="text-accent" />
               </div>
-              <h3 className="text-xl mt-2 font-black text-slate-900 tracking-tight leading-none" style={{ fontFamily: "Roboto Mono, monospace" }}>
+              <h3 className="text-xl mt-2 font-black text-slate-900 tracking-tight leading-none max-w-full truncate" title={formatSharedCurrency(stats.totalSales)} style={{ fontFamily: "Roboto Mono, monospace" }}>
                 {formatCurrency(stats.totalSales)}
               </h3>
               <p className="text-[10px] text-slate-500 mt-1">
