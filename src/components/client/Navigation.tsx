@@ -78,7 +78,7 @@ export function Navigation({
           <span className="text-slate-600">|</span>
           <div className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer">
             <Zap size={10} className="text-amber-400" />
-            <span>Orbi PaySafe Escrow Active</span>
+            <span>{lang === "sw" ? "Ofa mpya na usafirishaji salama" : "Fresh deals and reliable delivery"}</span>
           </div>
         </div>
         <div className="flex items-center gap-4">

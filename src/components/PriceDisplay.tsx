@@ -20,7 +20,9 @@ export const PriceDisplay: React.FC<PriceDisplayProps> = ({
   truncate = true,
 }) => {
   const val = typeof amount === "number" ? amount : Number(amount) || 0;
-  const shouldCompact = compact === true || (compact === "auto" && Math.abs(val) >= 1_000_000);
+  const rawCompact = compact as boolean | "auto";
+  const compactMode: boolean | "auto" = rawCompact === true ? true : rawCompact === "auto" ? "auto" : false;
+  const shouldCompact = compactMode === true || (compactMode === "auto" && Math.abs(val) >= 1_000_000);
 
   // Tanzanian shilling marketplace prices read cleaner without cents.
   const displayValue = shouldCompact

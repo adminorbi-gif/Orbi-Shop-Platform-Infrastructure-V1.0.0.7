@@ -36,6 +36,7 @@ export interface InvoiceSettings {
 export interface SellerProfile {
   id: string;
   name: string;
+  storeName?: string;
   description: string;
   avatar?: string;
   banner?: string;

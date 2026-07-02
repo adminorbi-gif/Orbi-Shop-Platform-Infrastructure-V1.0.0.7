@@ -3560,12 +3560,28 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const isLowStock = p.stock > 0 && p.stock <= 5;
   const hasActivePro = Boolean(seller?.isPro && seller?.proUntil && seller.proUntil > Date.now());
   const sellerName = seller?.storeName || seller?.name;
+  const sellerLocation = seller?.location || (lang === "sw" ? "Tanzania" : "Tanzania");
+  const deliveryPromise = p.stock > 0
+    ? (lang === "sw" ? "Delivery ipo" : "Delivery available")
+    : (lang === "sw" ? "Haipatikani sasa" : "Currently unavailable");
 
   const avgRating = useMemo(() => {
     if (!reviews || reviews.length === 0) return 0;
     const total = reviews.reduce((sum, r) => sum + r.rating, 0);
     return parseFloat((total / reviews.length).toFixed(1));
   }, [reviews]);
+
+  const trustSignals = [
+    seller?.isVerifiedSeller
+      ? { icon: ShieldCheck, label: lang === "sw" ? "Verified" : "Verified", className: "text-blue-700 bg-blue-50 ring-blue-100" }
+      : null,
+    hasActivePro
+      ? { icon: Crown, label: "Pro", className: "text-amber-700 bg-amber-50 ring-amber-100" }
+      : null,
+    avgRating > 0
+      ? { icon: Star, label: `${avgRating}`, className: "text-orange-700 bg-orange-50 ring-orange-100" }
+      : null,
+  ].filter(Boolean) as Array<{ icon: React.ElementType; label: string; className: string }>;
 
   const nextImg = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -3597,11 +3613,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
   return (
     <>
       <div
-        className="orbi-market-product-card flex h-full cursor-pointer flex-col overflow-hidden rounded-[1.4rem] border border-slate-200/80 transition-all duration-300 hover:-translate-y-1 hover:border-orange-300/70"
+        className="orbi-market-product-card group flex h-full cursor-pointer flex-col overflow-hidden rounded-[1.35rem] border border-slate-200/80 transition-all duration-300 hover:-translate-y-1 hover:border-orange-300/70"
         onClick={() => onSelect(p)}
       >
         <div
-          className="orbi-product-image-stage relative aspect-[1/1.08] overflow-hidden cursor-pointer"
+          className="orbi-product-image-stage relative aspect-[1/1.02] overflow-hidden cursor-pointer"
           onClick={(e) => {
             e.stopPropagation();
             if (onInteract) onInteract();
@@ -3614,31 +3630,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 -{discountPercent}%
               </div>
             )}
-            {hasActivePro && (
-              <div className="flex items-center gap-1 rounded-full bg-slate-950/90 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white shadow-lg">
-                <Crown size={10} className="text-amber-300" />
-                Pro seller
-              </div>
-            )}
             {isLowStock && !isOutOfStock && (
               <div className="rounded-full bg-amber-500 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white shadow-lg">
                 {lang === "sw" ? "Chache" : "Low stock"}
-              </div>
-            )}
-          </div>
-
-          <div className="absolute right-2 top-2 z-20 flex flex-col items-end gap-1.5">
-            {seller?.isVerifiedSeller && (
-              <div className="flex w-fit items-center gap-1 rounded-full border border-blue-100/70 bg-white/95 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-blue-600 shadow-sm backdrop-blur">
-                <ShieldCheck size={10} className="shrink-0 text-blue-500" />
-                {lang === "sw" ? "Imethib." : "Verified"}
-              </div>
-            )}
-
-            {p.warranty && (
-              <div className="flex w-fit items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500 px-2 py-1 text-[8px] font-extrabold uppercase tracking-wider text-white shadow-sm">
-                <Award size={9} className="text-white" />
-                <span>{p.warranty}</span>
               </div>
             )}
           </div>
@@ -3650,7 +3644,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 if (onInteract) onInteract();
                 onLikeToggle(p.id, p.niche);
               }}
-              className={`absolute bottom-2 right-2 z-30 rounded-full p-2.5 shadow-md backdrop-blur transition hover:scale-110 active:scale-95 ${
+              className={`absolute right-2 top-2 z-30 rounded-full p-2.5 shadow-md backdrop-blur transition hover:scale-110 active:scale-95 ${
                 isLiked
                   ? "bg-rose-500 text-white ring-1 ring-rose-500"
                   : "bg-white/90 text-slate-500 ring-1 ring-slate-200 hover:bg-white hover:text-rose-500"
@@ -3671,7 +3665,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
               <MediaRenderer
                 src={p.images[imgIdx]}
                 alt={displayName}
-                className="h-full w-full object-contain p-4 transition duration-700 ease-out group-hover:scale-[1.055]"
+                className="h-full w-full object-contain p-3.5 transition duration-700 ease-out group-hover:scale-[1.045] sm:p-4"
                 autoPlay
               />
               {p.images.length > 1 && (
@@ -3721,10 +3715,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
           )}
         </div>
 
-        <div className="flex flex-1 flex-col justify-between gap-3 p-3.5 sm:p-4">
-          <div className="space-y-2.5">
+        <div className="flex flex-1 flex-col justify-between gap-3 p-3 sm:p-3.5">
+          <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <span className="min-w-0 truncate text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+              <span className="min-w-0 break-words text-[8.5px] font-black uppercase tracking-[0.14em] text-slate-400">
                 {p.category || p.niche || "ORBI MARKET"}
               </span>
               {!isOutOfStock && (
@@ -3735,15 +3729,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
               )}
             </div>
             <h3
-              className="orbi-product-title line-clamp-2 text-[13px] font-black leading-[1.35] text-slate-950 transition-colors group-hover:text-[#ff4c00] sm:text-[15px]"
+              className="orbi-product-title text-[12px] font-black leading-[1.2] text-slate-950 transition-colors group-hover:text-[#ff4c00] sm:text-[14px]"
               title={displayName}
             >
               {displayName}
             </h3>
 
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2 text-[10px]">
               {avgRating > 0 ? (
-                <div className="flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-1 text-[10px] font-black text-slate-800 ring-1 ring-amber-100">
+                <div className="flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-1 font-black text-slate-800 ring-1 ring-amber-100">
                   <Star fill="currentColor" size={11} strokeWidth={0} className="text-amber-500" />
                   <span>
                     {avgRating}
@@ -3753,7 +3747,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   </span>
                 </div>
               ) : (
-                <div className="flex items-center gap-1.5 rounded-full bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-400 ring-1 ring-slate-100">
+                <div className="flex items-center gap-1.5 rounded-full bg-slate-50 px-2 py-1 font-bold text-slate-400 ring-1 ring-slate-100">
                   <MessageCircle size={11} />
                   <span>{lang === "sw" ? "Hakuna maoni" : "No reviews"}</span>
                 </div>
@@ -3766,57 +3760,89 @@ const ProductCard: React.FC<ProductCardProps> = ({
             </div>
 
             <div className="space-y-1.5">
-              <div className="flex flex-wrap items-baseline gap-1.5">
+              <div className="flex min-w-0 flex-wrap items-baseline gap-1.5">
                 <PriceDisplay
                   amount={p.price}
                   colorClass="text-[#ff4c00]"
                   className="orbi-product-price font-black"
+                  truncate={false}
                 />
                 {hasDiscount && (
                   <PriceDisplay
                     amount={p.oldPrice}
                     colorClass="text-slate-400/90 line-through font-medium"
                     className="text-[11px] sm:text-xs"
+                    truncate={false}
                   />
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-1.5 text-[9px] font-bold text-slate-500">
-                <span className="flex items-center gap-1 rounded-xl bg-slate-50 px-2 py-1 ring-1 ring-slate-100">
-                  <ShieldCheck size={10} className="shrink-0 text-emerald-500" />
-                  {lang === "sw" ? "Secure pay" : "Secure pay"}
+              <div className="flex min-w-0 flex-wrap items-center justify-between gap-1.5 rounded-2xl bg-slate-50 px-2.5 py-2 text-[9.5px] font-bold leading-tight text-slate-500 ring-1 ring-slate-100">
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <Truck size={11} className="shrink-0 text-blue-500" />
+                  <span className="min-w-0 break-words">{deliveryPromise}</span>
                 </span>
-                <span className="flex items-center gap-1 rounded-xl bg-slate-50 px-2 py-1 ring-1 ring-slate-100">
-                  <Truck size={10} className="shrink-0 text-blue-500" />
-                  {lang === "sw" ? "Delivery" : "Delivery"}
-                </span>
+                {sellerLocation && (
+                  <span className="hidden min-w-0 items-center gap-1 text-slate-400 sm:flex">
+                    <MapPin size={10} className="shrink-0" />
+                    <span className="min-w-0 break-words">{sellerLocation}</span>
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
           <div className="flex w-full flex-col gap-2">
+            {seller && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewSeller && onViewSeller(seller);
+                }}
+                className="flex w-full min-w-0 flex-wrap items-center justify-between gap-1.5 rounded-2xl border border-slate-200 bg-white px-2.5 py-2 text-[9.5px] font-bold leading-tight text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                title={seller.name}
+              >
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <Store size={11} className="shrink-0 text-slate-400" />
+                  <span className="min-w-0 break-words">{sellerName}</span>
+                </span>
+                {trustSignals.length > 0 && (
+                  <span className="flex shrink-0 flex-wrap items-center gap-1">
+                    {trustSignals.slice(0, 2).map((signal) => {
+                      const Icon = signal.icon;
+                      return (
+                        <span key={signal.label} className={`flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase ring-1 ${signal.className}`}>
+                          <Icon size={8} className="shrink-0" />
+                          {signal.label}
+                        </span>
+                      );
+                    })}
+                  </span>
+                )}
+              </button>
+            )}
+
             {!isOutOfStock ? (
-              <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="grid w-full grid-cols-[44px_1fr] gap-2">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onAdd(false);
                   }}
-                  className="flex min-w-0 items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-2 py-2.5 text-[11px] font-black text-slate-700 transition-colors hover:border-[#ff4c00]/60 hover:text-[#ff4c00] sm:text-xs"
+                  className="flex min-w-0 items-center justify-center rounded-2xl border border-slate-200 bg-white px-2 py-2.5 text-slate-700 transition-colors hover:border-[#ff4c00]/60 hover:text-[#ff4c00]"
                   title={lang === "sw" ? "Weka kwenye kikapu" : "Add to Cart"}
                 >
-                  <ShoppingCart size={13} className="shrink-0" />
-                  <span className="truncate">{lang === "sw" ? "Ongeza" : "Add cart"}</span>
+                  <ShoppingCart size={15} className="shrink-0" />
                 </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onAdd(true);
                   }}
-                  className="flex min-w-0 items-center justify-center gap-1.5 rounded-2xl bg-slate-950 px-2 py-2.5 text-[11px] font-black text-white shadow-lg shadow-slate-900/10 transition-colors hover:bg-[#ff4c00] sm:text-xs"
+                  className="flex min-w-0 items-center justify-center gap-1.5 rounded-2xl bg-slate-950 px-3 py-2.5 text-[11px] font-black text-white shadow-lg shadow-slate-900/10 transition-colors hover:bg-[#ff4c00] sm:text-xs"
                   title={lang === "sw" ? "Nunua Sasa" : "Buy Now"}
                 >
                   <Zap size={13} className="shrink-0 fill-current" />
-                  <span className="truncate">{lang === "sw" ? "Nunua sasa" : "Buy now"}</span>
+                  <span className="min-w-0 break-words leading-tight">{lang === "sw" ? "Nunua sasa" : "Buy now"}</span>
                 </button>
               </div>
             ) : (
@@ -3824,7 +3850,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 disabled
                 className="flex w-full items-center justify-center rounded-2xl border border-slate-200 px-3 py-2.5 text-[11px] font-bold text-slate-400 sm:text-xs"
               >
-                <span className="truncate">{lang === "sw" ? "Imeisha" : "Sold Out"}</span>
+                <span className="min-w-0 break-words">{lang === "sw" ? "Imeisha" : "Sold Out"}</span>
               </button>
             )}
 
@@ -3852,23 +3878,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   <span className="truncate">{lang === "sw" ? "Call" : "Call"}</span>
                 </a>
               </div>
-            )}
-
-            {seller && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onViewSeller && onViewSeller(seller);
-                }}
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 text-[10px] font-bold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
-                title={seller.name}
-              >
-                <Store size={10} />
-                <span className="min-w-0 truncate">{sellerName}</span>
-                {seller.isVerifiedSeller && (
-                  <ShieldCheck size={10} className="text-blue-500 shrink-0 fill-current" />
-                )}
-              </button>
             )}
           </div>
         </div>

@@ -1,5 +1,5 @@
 import React from "react";
-import { Package, ArrowUpDown, Zap, Star, Tag, History, ShoppingCart, Eye, ExternalLink } from "lucide-react";
+import { Package, ArrowUpDown, Zap, ShoppingCart, Truck } from "lucide-react";
 import { PriceDisplay } from "../PriceDisplay";
 
 interface ProductGridProps {
@@ -84,14 +84,14 @@ export function ProductGrid({
           <div
             key={p.id}
             onClick={() => handleProductSelect(p)}
-            className="orbi-market-product-card group flex cursor-pointer flex-col overflow-hidden rounded-[1.4rem] border border-slate-200/80 text-left transition-all duration-300 hover:-translate-y-1 hover:border-orange-300/70 active:scale-[0.99]"
+            className="orbi-market-product-card group flex cursor-pointer flex-col overflow-hidden rounded-[1.35rem] border border-slate-200/80 text-left transition-all duration-300 hover:-translate-y-1 hover:border-orange-300/70 active:scale-[0.99]"
           >
             {/* Image Container */}
-            <div className="orbi-product-image-stage relative aspect-[1/1.08] overflow-hidden">
+            <div className="orbi-product-image-stage relative aspect-[1/1.02] overflow-hidden">
               {p.images?.[0] ? (
                 <img 
                   src={p.images[0]} 
-                  className="h-full w-full object-contain p-4 transition-transform duration-700 group-hover:scale-[1.055]"
+                  className="h-full w-full object-contain p-3.5 transition-transform duration-700 group-hover:scale-[1.045] sm:p-4"
                   alt={p.name}
                   referrerPolicy="no-referrer"
                 />
@@ -124,17 +124,17 @@ export function ProductGrid({
             </div>
 
             {/* Content */}
-            <div className="flex flex-1 flex-col justify-between gap-3 p-3.5 sm:p-4">
-              <div className="space-y-2.5">
-                <p className="truncate text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">{p.category || "General"}</p>
-                <h4 className="orbi-product-title line-clamp-2 text-[13px] font-black leading-[1.35] text-slate-950 transition-colors group-hover:text-[#ff4c00] sm:text-[15px]">
+            <div className="flex flex-1 flex-col justify-between gap-3 p-3 sm:p-3.5">
+              <div className="space-y-2">
+                <p className="break-words text-[8.5px] font-black uppercase tracking-[0.14em] text-slate-400">{p.category || "General"}</p>
+                <h4 className="orbi-product-title text-[12px] font-black leading-[1.2] text-slate-950 transition-colors group-hover:text-[#ff4c00] sm:text-[14px]">
                   {lang === "sw" ? (p.nameSw || p.name) : p.name}
                 </h4>
                 
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center rounded-full bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-400 ring-1 ring-slate-100">
-                    <Package size={10} />
-                    <span>{lang === "sw" ? "Bidhaa" : "Product"}</span>
+                  <div className="flex min-w-0 items-center rounded-full bg-slate-50 px-2 py-1 text-[9.5px] font-bold leading-tight text-slate-400 ring-1 ring-slate-100">
+                    <Truck size={10} className="shrink-0 text-blue-500" />
+                    <span className="min-w-0 break-words">{p.stock > 0 ? (lang === "sw" ? "Delivery ipo" : "Delivery available") : (lang === "sw" ? "Haipatikani" : "Unavailable")}</span>
                   </div>
                   <span className="text-[10px] font-bold text-slate-400">
                     {p.stock > 0 ? (lang === "sw" ? `${p.stock} zipo` : `${p.stock} left`) : (lang === "sw" ? "Imeisha" : "Sold out")}
@@ -144,16 +144,16 @@ export function ProductGrid({
 
               <div className="space-y-2.5">
                 <div className="flex flex-wrap items-baseline gap-1.5">
-                  <PriceDisplay amount={p.price} size="lg" colorClass="text-[#ff4c00] font-black" className="orbi-product-price" />
+                  <PriceDisplay amount={p.price} size="lg" colorClass="text-[#ff4c00] font-black" className="orbi-product-price" truncate={false} />
                   {p.oldPrice && p.oldPrice > p.price && (
-                    <span className="text-[11px] text-slate-400 line-through font-bold">{formatCurrency(p.oldPrice)}</span>
+                    <PriceDisplay amount={p.oldPrice} colorClass="text-slate-400/90 line-through font-medium" className="text-[11px] sm:text-xs" truncate={false} />
                   )}
                 </div>
 
                 <div className="grid grid-cols-[1fr_auto] items-center gap-2 border-t border-slate-100 pt-2.5">
                   <div className="flex min-w-0 items-center gap-1.5">
                     <div className={`h-2 w-2 rounded-full ${p.stock > 0 ? "bg-emerald-500" : "bg-slate-300"}`}></div>
-                    <span className="truncate text-[10px] font-bold uppercase tracking-tighter text-slate-500">
+                    <span className="min-w-0 break-words text-[10px] font-bold uppercase tracking-tighter text-slate-500">
                       {p.stock > 0 ? (lang === "sw" ? "Tayari kununua" : "Ready to buy") : (lang === "sw" ? "Haipatikani" : "Unavailable")}
                     </span>
                   </div>
@@ -168,10 +168,4 @@ export function ProductGrid({
       </div>
     </div>
   );
-}
-
-function formatCurrency(num: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "decimal",
-  }).format(num);
 }
