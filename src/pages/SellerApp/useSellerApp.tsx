@@ -325,6 +325,17 @@ const [tab, setTab] = useState<
     // Dynamic Client-side Quality Checker to auto-cancel and reject low quality images for sellers
     const validationResults = await Promise.all(
       slicedFiles.map(async (file) => {
+        if (!file.type.startsWith("image/")) {
+          return {
+            file,
+            valid: false,
+            reason:
+              lang === "sw"
+                ? "Aina hii ya faili haikubaliki. Tafadhali pakia picha pekee."
+                : "Unsupported file type. Please upload images only.",
+          };
+        }
+
         if (file.type.startsWith("video/")) {
           if (file.size > 45 * 1024 * 1024) {
             return {
@@ -617,7 +628,7 @@ const [tab, setTab] = useState<
         setProdPricingMode("retail");
         setProdWholesaleTiers([]);
       }
-    } else {
+  } else {
       setEditingProduct(null);
       setProdName("");
       const randNum = Math.floor(100000 + Math.random() * 900000);
@@ -631,10 +642,8 @@ const [tab, setTab] = useState<
       setProdStock("10");
       setProdDescription("");
       setProdFeatures([]);
-      setProdImages([
-        "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&q=80",
-      ]);
-      setProdVisible(true);
+      setProdImages([]);
+      setProdVisible(false);
       setProdTaxCode(1);
       setProdArrangeTier("all");
       setProdVibe("all");
@@ -654,6 +663,9 @@ const [tab, setTab] = useState<
       prodPricingMode === "wholesale"
         ? prodWholesaleTiers.filter((t) => t.minQty > 0 && t.price > 0)
         : [];
+    finalWholesaleTiers = [...finalWholesaleTiers].sort(
+      (a, b) => a.minQty - b.minQty,
+    );
 
     if (
       prodPricingMode === "wholesale" &&
@@ -666,26 +678,84 @@ const [tab, setTab] = useState<
       priceNum = sorted[0].price;
     }
 
+    const cleanImages = prodImages
+      .map((img) => String(img || "").trim())
+      .filter((img) => img && !img.includes("photo-1546868871-7041f2a55e12"));
+    const cleanCategory = prodCategory.trim();
+    const cleanDescription = prodDescription.trim();
+
+    if (prodVisible) {
+      if (!cleanImages.length) {
+        displayAlert(
+          lang === "sw"
+            ? "Huwezi kuchapisha bidhaa live bila angalau picha moja halisi ya bidhaa."
+            : "You cannot publish a live product without at least one real product image.",
+          "error",
+        );
+        return;
+      }
+      if (!prodNiche || !cleanCategory) {
+        displayAlert(
+          lang === "sw"
+            ? "Chagua niche na category kabla ya kuchapisha bidhaa live."
+            : "Select both niche and category before publishing the product live.",
+          "error",
+        );
+        return;
+      }
+      if (cleanDescription.length < 20) {
+        displayAlert(
+          lang === "sw"
+            ? "Maelezo ya bidhaa ni mafupi sana. Ongeza maelezo ya kutosha kabla ya kuchapisha live."
+            : "Product description is too short. Add enough detail before publishing live.",
+          "error",
+        );
+        return;
+      }
+    }
+
+    if (prodOldPrice && Number(prodOldPrice) > 0 && Number(prodOldPrice) <= priceNum) {
+      displayAlert(
+        lang === "sw"
+          ? "Bei ya zamani lazima iwe kubwa kuliko bei ya kuuza ili ionyeshe punguzo sahihi."
+          : "Old price must be greater than the selling price to show a valid discount.",
+        "error",
+      );
+      return;
+    }
+
+    if (prodPricingMode === "wholesale") {
+      const duplicateMinQty = finalWholesaleTiers.some(
+        (tier, index) =>
+          finalWholesaleTiers.findIndex((item) => item.minQty === tier.minQty) !==
+          index,
+      );
+      if (duplicateMinQty) {
+        displayAlert(
+          lang === "sw"
+            ? "Bei za jumla haziwezi kuwa na kiwango cha idadi kinachojirudia."
+            : "Wholesale tiers cannot have duplicate minimum quantities.",
+          "error",
+        );
+        return;
+      }
+    }
+
     const payload: Partial<Product> = {
       name: prodName.trim(),
       sku: prodSku.trim(),
       warranty: prodWarranty.trim(),
       niche: prodNiche,
-      category: prodCategory.trim() || prodNiche,
+      category: cleanCategory || prodNiche,
       family: prodFamily.trim(),
       price: priceNum,
       oldPrice: prodOldPrice ? parseFloat(prodOldPrice) : undefined,
       stock: stockNum,
-      description: prodDescription.trim(),
+      description: cleanDescription,
       features: prodFeatures.filter(
         (f) => f.name.trim() && f.description.trim(),
       ),
-      images:
-        prodImages.length > 0
-          ? prodImages
-          : [
-              "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&q=80",
-            ],
+      images: cleanImages,
       visible: prodVisible,
       taxCode: prodTaxCode,
       arrangeTier: prodArrangeTier,

@@ -1,5 +1,5 @@
 import { useSellerApp, sendStockAlert } from "./useSellerApp";
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useToast } from "../../components/Toast";
 import { db } from "../../lib/db";
 import { SchemaValidator } from "../../utils/schemaValidation";
@@ -170,6 +170,7 @@ import {
   Bot,
   Camera,
   Share2,
+  Clock,
 } from "lucide-react";
 import { SellerMarketing } from "../../components/seller/SellerMarketing";
 import { OrderHeatmap } from "../../components/seller/OrderHeatmap";
@@ -209,6 +210,9 @@ export default function SellerApp({
   const [dashboardPeriod, setDashboardPeriod] = useState<
     "daily" | "weekly" | "monthly" | "yearly"
   >("yearly");
+  const [productFormSection, setProductFormSection] = useState<
+    "basics" | "pricing" | "media" | "specs" | "publish"
+  >("basics");
   const {
     tab,
     setTab,
@@ -440,6 +444,110 @@ export default function SellerApp({
 
     return buckets;
   }, [dashboardPeriod, sellerOrders, products, seller.id, lang]);
+
+  useEffect(() => {
+    if (productModalOpen) setProductFormSection("basics");
+  }, [productModalOpen]);
+
+  const realProductImages = useMemo(
+    () =>
+      prodImages.filter(
+        (img) => img && !img.includes("photo-1546868871-7041f2a55e12"),
+      ),
+    [prodImages],
+  );
+  const selectedNiche = nichesList.find((n) => n.name === prodNiche);
+  const selectedCategory = selectedNiche?.categories?.find(
+    (category) => category.name === prodCategory,
+  );
+  const oldPriceNumber = Number(prodOldPrice || 0);
+  const priceNumber = Number(prodPrice || 0);
+  const readinessItems = [
+    {
+      id: "identity",
+      label: lang === "sw" ? "Jina na SKU" : "Name and SKU",
+      ready: prodName.trim().length >= 2 && prodSku.trim().length >= 3,
+    },
+    {
+      id: "taxonomy",
+      label: lang === "sw" ? "Niche na category" : "Niche and category",
+      ready: Boolean(prodNiche && prodCategory),
+    },
+    {
+      id: "pricing",
+      label: lang === "sw" ? "Bei na stock" : "Price and stock",
+      ready:
+        priceNumber > 0 &&
+        Number.isInteger(Number(prodStock || 0)) &&
+        Number(prodStock || 0) >= 0 &&
+        (!prodOldPrice || oldPriceNumber > priceNumber),
+    },
+    {
+      id: "media",
+      label: lang === "sw" ? "Picha halisi" : "Real product photo",
+      ready: realProductImages.length > 0,
+    },
+    {
+      id: "description",
+      label: lang === "sw" ? "Maelezo ya kutosha" : "Clear description",
+      ready: prodDescription.trim().length >= 20,
+    },
+  ];
+  const publishReady = readinessItems.every((item) => item.ready);
+
+  const scrollProductSection = (
+    section: "basics" | "pricing" | "media" | "specs" | "publish",
+  ) => {
+    setProductFormSection(section);
+    window.setTimeout(() => {
+      document
+        .getElementById(`product-studio-${section}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 20);
+  };
+
+  const addProductImageUrl = (rawUrl: string) => {
+    const url = rawUrl.trim();
+    if (!url) return;
+    try {
+      const parsed = new URL(url);
+      if (!["http:", "https:"].includes(parsed.protocol)) {
+        throw new Error("Unsupported protocol");
+      }
+    } catch {
+      displayAlert(
+        lang === "sw"
+          ? "Kiungo cha picha si sahihi. Tumia URL inayoanza na https://"
+          : "Invalid image URL. Use a valid link starting with https://",
+        "error",
+      );
+      return;
+    }
+    if (realProductImages.length >= 5) {
+      displayAlert(
+        lang === "sw"
+          ? "Unaweza kuweka picha zisizozidi 5 kwa bidhaa moja."
+          : "You can add up to 5 images per product.",
+        "error",
+      );
+      return;
+    }
+    if (realProductImages.includes(url)) {
+      displayAlert(
+        lang === "sw" ? "Picha hii tayari imeongezwa." : "This image is already added.",
+        "error",
+      );
+      return;
+    }
+    setProdImages((prev) => [
+      ...prev.filter((img) => !img.includes("photo-1546868871-7041f2a55e12")),
+      url,
+    ]);
+  };
+
+  const removeProductImage = (targetUrl: string) => {
+    setProdImages((prev) => prev.filter((img) => img !== targetUrl));
+  };
 
   return (
     <div className="h-[100dvh] bg-slate-50 font-sans text-slate-800 flex flex-col md:flex-row overflow-hidden relative">
@@ -2773,7 +2881,7 @@ export default function SellerApp({
         {/* MODAL: CREATE / EDIT PRODUCT */}
         {productModalOpen && (
           <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-[999999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
-            <div className="bg-white w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90dvh] sm:rounded-[2.5rem] shadow-2xl border border-slate-200/80 flex flex-col relative overflow-hidden animate-in zoom-in-95 duration-155">
+            <div className="bg-white w-full h-full sm:h-auto sm:max-w-6xl sm:max-h-[92dvh] sm:rounded-[2.5rem] shadow-2xl border border-slate-200/80 flex flex-col relative overflow-hidden animate-in zoom-in-95 duration-155">
               {/* Sticky Header */}
               <div className="shrink-0 border-b border-slate-100 px-6 py-5 sm:px-8 flex items-center justify-between bg-white relative">
                 <div>
@@ -2803,12 +2911,115 @@ export default function SellerApp({
                 </button>
               </div>
 
+              <div className="shrink-0 border-b border-slate-100 bg-slate-50/80 px-4 py-3 sm:px-8">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                  {[
+                    { id: "basics", label: lang === "sw" ? "Msingi" : "Basics" },
+                    { id: "pricing", label: lang === "sw" ? "Bei & Stock" : "Pricing" },
+                    { id: "media", label: lang === "sw" ? "Picha" : "Media" },
+                    { id: "specs", label: lang === "sw" ? "Maelezo" : "Specs" },
+                    { id: "publish", label: lang === "sw" ? "Chapisha" : "Publish" },
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() =>
+                        scrollProductSection(
+                          item.id as "basics" | "pricing" | "media" | "specs" | "publish",
+                        )
+                      }
+                      className={`shrink-0 rounded-2xl px-4 py-2 text-[11px] font-black transition ${
+                        productFormSection === item.id
+                          ? "bg-slate-950 text-white shadow-sm"
+                          : "bg-white text-slate-500 border border-slate-200 hover:text-slate-950"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <form
                 onSubmit={handleSaveProduct}
-                className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6"
+                className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6 scroll-smooth"
               >
+                <div className="grid grid-cols-1 xl:grid-cols-[1fr_20rem] gap-5">
+                  <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50/70 p-4 sm:p-5">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h3 className="text-sm font-black text-slate-950">
+                          {lang === "sw" ? "Product Studio Readiness" : "Product Studio Readiness"}
+                        </h3>
+                        <p className="mt-1 text-[11px] font-medium text-slate-500">
+                          {lang === "sw"
+                            ? "Kagua mambo muhimu kabla bidhaa haijaonekana kwa wateja."
+                            : "Check the essentials before this listing becomes visible to customers."}
+                        </p>
+                      </div>
+                      <span
+                        className={`rounded-full px-3 py-1 text-[10px] font-black uppercase ${
+                          publishReady
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        {publishReady
+                          ? lang === "sw"
+                            ? "Tayari live"
+                            : "Ready"
+                          : lang === "sw"
+                            ? "Bado draft"
+                            : "Draft safe"}
+                      </span>
+                    </div>
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+                      {readinessItems.map((item) => (
+                        <div
+                          key={item.id}
+                          className={`flex items-center gap-2 rounded-2xl border px-3 py-2 ${
+                            item.ready
+                              ? "border-emerald-100 bg-white text-emerald-800"
+                              : "border-slate-200 bg-white text-slate-500"
+                          }`}
+                        >
+                          <span
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
+                              item.ready ? "bg-emerald-600 text-white" : "bg-slate-100"
+                            }`}
+                          >
+                            {item.ready ? <Check size={12} /> : <Clock size={12} />}
+                          </span>
+                          <span className="text-[10px] font-black leading-tight">
+                            {item.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[1.75rem] border border-slate-200 bg-white p-4 sm:p-5">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      {lang === "sw" ? "Hali ya media" : "Media status"}
+                    </div>
+                    <div className="mt-2 flex items-baseline gap-2">
+                      <span className="text-3xl font-black text-slate-950">
+                        {realProductImages.length}
+                      </span>
+                      <span className="text-xs font-bold text-slate-500">
+                        / 5 {lang === "sw" ? "picha" : "images"}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+                      {lang === "sw"
+                        ? "Picha ya kwanza itakuwa jalada kuu. Unaweza kupakia moja kwa moja kutoka simu."
+                        : "The first image becomes the cover. Upload directly from phone or desktop."}
+                    </p>
+                  </div>
+                </div>
+
                 {/* Product Name & SKU */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div id="product-studio-basics" className="scroll-mt-28 grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest">
                       {lang === "sw" ? "Jina la Bidhaa" : "Product Title"}
@@ -2954,6 +3165,34 @@ export default function SellerApp({
                         ))}
                     </select>
                   </div>
+
+                  <div className="sm:col-span-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] font-bold text-slate-500">
+                    {selectedNiche ? (
+                      selectedCategory ? (
+                        <span>
+                          {lang === "sw"
+                            ? `Imeunganishwa: ${selectedNiche.name} > ${selectedCategory.name}${
+                                prodFamily ? ` > ${prodFamily}` : ""
+                              }`
+                            : `Mapped: ${selectedNiche.name} > ${selectedCategory.name}${
+                                prodFamily ? ` > ${prodFamily}` : ""
+                              }`}
+                        </span>
+                      ) : (
+                        <span>
+                          {lang === "sw"
+                            ? "Chagua category ili bidhaa ipangwe vizuri kwenye soko na analytics."
+                            : "Select a category so the product is grouped correctly in storefront and analytics."}
+                        </span>
+                      )
+                    ) : (
+                      <span>
+                        {lang === "sw"
+                          ? "Hakuna niche zilizopakiwa. Wasiliana na admin kuongeza taxonomy."
+                          : "No niches loaded. Ask admin to configure product taxonomy."}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Arrangement Tier, Vibe, and Wrap */}
@@ -3063,7 +3302,7 @@ export default function SellerApp({
                 </div>
 
                 {/* Pricing Mode Selection Box */}
-                <div className="bg-slate-50 border border-slate-200/80 p-5 rounded-2xl space-y-4">
+                <div id="product-studio-pricing" className="scroll-mt-28 bg-slate-50 border border-slate-200/80 p-5 rounded-2xl space-y-4">
                   <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div>
                       <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest">
@@ -3316,7 +3555,7 @@ export default function SellerApp({
                 </div>
 
                 {/* Description */}
-                <div className="space-y-1.5">
+                <div id="product-studio-specs" className="scroll-mt-28 space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest">
                       {lang === "sw"
@@ -3647,7 +3886,7 @@ export default function SellerApp({
                 </div>
 
                 {/* Images Config */}
-                <div className="space-y-4">
+                <div id="product-studio-media" className="scroll-mt-28 space-y-4">
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between gap-2">
                       <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest">
@@ -3694,9 +3933,9 @@ export default function SellerApp({
                         <input
                           type="file"
                           multiple
-                          accept="image/*,video/*"
+                          accept="image/*"
                           onChange={handleImageUpload}
-                          disabled={prodImages.length >= 5 || isUploading}
+                          disabled={realProductImages.length >= 5 || isUploading}
                           className="w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                           title={
                             lang === "sw" ? "Pakia picha" : "Upload images"
@@ -3712,13 +3951,13 @@ export default function SellerApp({
                         <div className="px-4">
                           <p className="text-xs font-bold text-slate-700">
                             {lang === "sw"
-                              ? "Kokota picha/video hapa au bofya kuteua"
+                              ? "Kokota picha hapa au bofya kuteua"
                               : "Drag product files here or click to choose"}
                           </p>
                           <p className="text-[10px] text-slate-500 mt-0.5">
                             {lang === "sw"
                               ? "Unaweza kuweka hadi picha 5"
-                              : "You can upload up to 5 files"}
+                              : "You can upload up to 5 images"}
                           </p>
                           <div className="mt-2.5 max-w-md mx-auto p-2 bg-emerald-50/85 border border-emerald-100/60 rounded-lg text-[10px] text-emerald-900 leading-relaxed font-semibold text-left">
                             ⚠️{" "}
@@ -3739,8 +3978,8 @@ export default function SellerApp({
                                 : "File Limits:"}
                             </strong>{" "}
                             {lang === "sw"
-                              ? "Ukubwa usizidi 45MB. Picha zako zitabadilishwa na kubanwa kiotomatiki kuwa muundo wa kisasa wa kadi ya picha ya wavuti (WebP Web Image/Bitmap) ili kulinda nafasi ya hifadhi."
-                              : "Maximum size is 45MB. Uploaded photos are auto-optimized and converted to WebP bitmap format to save store catalog hosting storage."}
+                              ? "Ukubwa usizidi 45MB. Picha zako zitabadilishwa na kubanwa kiotomatiki kuwa WebP ili kulinda nafasi ya hifadhi."
+                              : "Maximum size is 45MB. Uploaded photos are auto-optimized and converted to WebP to save catalog hosting storage."}
                           </div>
                         </div>
                       </div>
@@ -3793,6 +4032,7 @@ export default function SellerApp({
                         type="text"
                         id="ip-new-image-url"
                         placeholder="https://images.unsplash.com/... or raw image URL"
+                        disabled={realProductImages.length >= 5}
                         className="flex-1 bg-slate-50 border border-slate-200/80 hover:border-slate-300 px-4 py-3 rounded-xl text-xs font-medium outline-none focus:border-emerald-600 focus:bg-white transition"
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
@@ -3801,15 +4041,7 @@ export default function SellerApp({
                               e.currentTarget as HTMLInputElement
                             ).value.trim();
                             if (val) {
-                              setProdImages((prev) => {
-                                const filtered = prev.filter(
-                                  (p) =>
-                                    !p.includes(
-                                      "photo-1546868871-7041f2a55e12",
-                                    ),
-                                );
-                                return [...filtered, val];
-                              });
+                              addProductImageUrl(val);
                               (e.currentTarget as HTMLInputElement).value = "";
                             }
                           }
@@ -3822,34 +4054,24 @@ export default function SellerApp({
                             "ip-new-image-url",
                           ) as HTMLInputElement;
                           if (el && el.value.trim()) {
-                            setProdImages((prev) => {
-                              const filtered = prev.filter(
-                                (p) =>
-                                  !p.includes("photo-1546868871-7041f2a55e12"),
-                              );
-                              return [...filtered, el.value.trim()];
-                            });
+                            addProductImageUrl(el.value.trim());
                             el.value = "";
                           }
                         }}
-                        className="bg-slate-900 text-white font-black text-[10px] uppercase px-4 py-3 rounded-xl cursor-pointer hover:bg-slate-800 transition active:scale-[0.98]"
+                        disabled={realProductImages.length >= 5}
+                        className="bg-slate-900 text-white font-black text-[10px] uppercase px-4 py-3 rounded-xl cursor-pointer hover:bg-slate-800 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         {lang === "sw" ? "Weka" : "Add"}
                       </button>
                     </div>
                   </div>
 
-                  {prodImages.filter(
-                    (p) => !p.includes("photo-1546868871-7041f2a55e12"),
-                  ).length > 0 && (
+                  {realProductImages.length > 0 && (
                     <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 pt-1">
-                      {prodImages
-                        .filter(
-                          (p) => !p.includes("photo-1546868871-7041f2a55e12"),
-                        )
+                      {realProductImages
                         .map((img, idx) => (
                           <div
-                            key={idx}
+                            key={img}
                             className="group relative aspect-square rounded-xl bg-slate-100 border border-slate-200 overflow-hidden"
                           >
                             <img
@@ -3860,9 +4082,7 @@ export default function SellerApp({
                             <button
                               type="button"
                               onClick={() => {
-                                setProdImages(
-                                  prodImages.filter((_, i) => i !== idx),
-                                );
+                                removeProductImage(img);
                               }}
                               className="absolute inset-0 bg-rose-600/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-150 rounded-xl"
                             >
@@ -3881,7 +4101,7 @@ export default function SellerApp({
                 </div>
 
                 {/* Visible Toggle */}
-                <div className="flex items-center justify-between bg-slate-50 p-4.5 rounded-xl border border-slate-200/40">
+                <div id="product-studio-publish" className="scroll-mt-28 flex items-center justify-between gap-4 bg-slate-50 p-4.5 rounded-xl border border-slate-200/40">
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="block text-xs font-black text-slate-800">
@@ -3903,7 +4123,18 @@ export default function SellerApp({
                   </div>
                   <button
                     type="button"
-                    onClick={() => setProdVisible(!prodVisible)}
+                    onClick={() => {
+                      if (!prodVisible && !publishReady) {
+                        displayAlert(
+                          lang === "sw"
+                            ? "Kamilisha checklist kwanza kabla ya kuchapisha bidhaa live. Unaweza kuihifadhi kama draft."
+                            : "Complete the readiness checklist before publishing live. You can still save as draft.",
+                          "error",
+                        );
+                        return;
+                      }
+                      setProdVisible(!prodVisible);
+                    }}
                     className={`w-12 h-6 rounded-full p-0.5 transition-colors duration-200 focus:outline-none cursor-pointer ${prodVisible ? "bg-emerald-600" : "bg-slate-300"}`}
                   >
                     <div
@@ -3942,8 +4173,12 @@ export default function SellerApp({
                           ? "Inahifadhi..."
                           : "Saving listing..."
                         : lang === "sw"
-                          ? "Hifadhi Mabadiliko"
-                          : "Save and Publish"}
+                          ? prodVisible
+                            ? "Hifadhi na Chapisha"
+                            : "Hifadhi Draft"
+                          : prodVisible
+                            ? "Save and Publish"
+                            : "Save Draft"}
                     </span>
                     <span className="sm:hidden">
                       {savingProduct
@@ -3951,8 +4186,12 @@ export default function SellerApp({
                           ? "Inahifadhi"
                           : "Saving"
                         : lang === "sw"
-                          ? "Hifadhi"
-                          : "Save"}
+                          ? prodVisible
+                            ? "Chapisha"
+                            : "Draft"
+                          : prodVisible
+                            ? "Publish"
+                            : "Draft"}
                     </span>
                   </button>
                 </div>

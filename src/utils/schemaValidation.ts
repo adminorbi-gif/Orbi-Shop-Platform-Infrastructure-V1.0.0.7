@@ -87,6 +87,46 @@ class SchemaValidator {
     }
 
     const cleanDesc = String(data.description || "").trim();
+    const images = Array.isArray(data.images)
+      ? data.images
+          .map((img: any) => String(img || "").trim())
+          .filter((img: string) => img && !img.includes("photo-1546868871-7041f2a55e12"))
+      : [];
+    const visible = typeof data.visible === "boolean" ? data.visible : true;
+    const oldPrice =
+      data.oldPrice !== undefined && data.oldPrice !== null && data.oldPrice !== ""
+        ? Number(data.oldPrice)
+        : undefined;
+
+    if (oldPrice !== undefined && (!Number.isFinite(oldPrice) || oldPrice <= price)) {
+      return {
+        success: false,
+        error:
+          lang === "sw"
+            ? "Bei ya zamani lazima iwe kubwa kuliko bei ya sasa ili punguzo liwe sahihi!"
+            : "Old price must be greater than the current selling price!"
+      };
+    }
+
+    if (visible && images.length === 0) {
+      return {
+        success: false,
+        error:
+          lang === "sw"
+            ? "Bidhaa haiwezi kuchapishwa live bila picha halisi ya bidhaa!"
+            : "A live product cannot be published without a real product image!"
+      };
+    }
+
+    if (visible && cleanDesc.length < 20) {
+      return {
+        success: false,
+        error:
+          lang === "sw"
+            ? "Maelezo ya bidhaa ni mafupi sana kwa bidhaa live!"
+            : "Product description is too short for a live listing!"
+      };
+    }
 
     const validated: Partial<Product> = {
       ...(data.id ? { id: String(data.id) } : {}),
@@ -95,12 +135,12 @@ class SchemaValidator {
       niche: String(data.niche || "Electronics").trim(),
       category,
       price,
-      oldPrice: data.oldPrice ? Number(data.oldPrice) : undefined,
+      oldPrice,
       stock,
       description: cleanDesc,
-      images: Array.isArray(data.images) ? data.images : [],
+      images,
       tags: Array.isArray(data.tags) ? data.tags : [],
-      visible: typeof data.visible === "boolean" ? data.visible : true,
+      visible,
       sellerId: data.sellerId ? String(data.sellerId) : undefined,
       createdAt: typeof data.createdAt === "number" ? data.createdAt : Date.now(),
       taxCode: typeof data.taxCode === "number" ? data.taxCode : 1,
