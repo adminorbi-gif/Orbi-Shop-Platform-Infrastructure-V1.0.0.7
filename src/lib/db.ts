@@ -2,11 +2,15 @@
 import { supabase } from './supabase';
 import { Product, Promotion, Order, Customer, Message, Niche, SellerProfile, SubscriptionPlan, MarketplaceAd, Review, PromotionalBanner, OrderStatusLog } from '../types';
 
+let sessionRefreshPromise: Promise<string> | null = null;
+
 // Helper for calling modular backend API endpoints with standard response wrappers
 export const apiFetch = async (url: string, options: RequestInit = {}) => {
   let token = "";
+  let session: any = null;
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data } = await supabase.auth.getSession();
+    session = data.session;
     if (session?.access_token) {
       token = session.access_token;
     }
@@ -24,20 +28,64 @@ export const apiFetch = async (url: string, options: RequestInit = {}) => {
   }
   const fullUrl = url.startsWith("http") ? url : `${baseUrl.replace(/\/$/, '')}${url}`;
 
-  const finalOptions = {
+  const buildOptions = (authToken: string) => ({
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
       ...(options.headers || {})
     }
-  };
+  });
+
+  let finalOptions = buildOptions(token);
   const isGet = !finalOptions.method || finalOptions.method.toUpperCase() === 'GET';
   const cacheKey = isGet ? `orbi_swr_${fullUrl}` : null;
 
-  const performFetch = async () => {
+  const refreshSession = async () => {
+    const refreshToken = session?.refresh_token;
+    if (!refreshToken) return "";
+
+    if (!sessionRefreshPromise) {
+      sessionRefreshPromise = (async () => {
+        try {
+          const res = await fetch(`${baseUrl.replace(/\/$/, '')}/api/auth/refresh`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refresh_token: refreshToken }),
+          });
+
+          if (!res.ok) return "";
+          const json = await res.json();
+          if (!json.success || !json.session?.access_token) return "";
+
+          await supabase.auth.setSession(json.session);
+          return json.session.access_token as string;
+        } finally {
+          sessionRefreshPromise = null;
+        }
+      })();
+    }
+
+    const refreshedToken = await sessionRefreshPromise;
+    if (refreshedToken) {
+      const { data } = await supabase.auth.getSession();
+      session = data.session;
+    }
+    return refreshedToken;
+  };
+
+  const performFetch = async (allowRefresh = true) => {
     const res = await fetch(fullUrl, finalOptions);
     if (!res.ok) {
+      if (res.status === 401 && allowRefresh) {
+        const refreshedToken = await refreshSession();
+        if (refreshedToken) {
+          token = refreshedToken;
+          finalOptions = buildOptions(token);
+          return performFetch(false);
+        }
+      }
+
       const textErr = await res.text();
       let errorMessage = textErr || `Server returned error status ${res.status}`;
       try {

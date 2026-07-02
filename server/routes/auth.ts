@@ -77,6 +77,31 @@ router.post('/logout', async (req, res) => {
   }
 });
 
+router.post('/refresh', async (req, res) => {
+  const { refresh_token } = req.body || {};
+
+  if (!refresh_token) {
+    return res.status(400).json({ success: false, error: 'Refresh token required' });
+  }
+
+  try {
+    const { data, error } = await supabase.auth.refreshSession({ refresh_token });
+
+    if (error || !data?.session) {
+      return res.status(401).json({ success: false, error: error?.message || 'Session refresh failed' });
+    }
+
+    res.json({
+      success: true,
+      data,
+      session: data.session,
+      user: data.user,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Endpoint to find account and return masked phone number and name
 router.post('/initiate', async (req, res) => {
   const { email } = req.body;
