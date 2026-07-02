@@ -2150,21 +2150,21 @@ export function StatCard({
   return (
     <div
       onClick={onClick}
-      className={`orbi-admin-card p-5 sm:p-6 rounded-[1.75rem] border border-slate-200/80 flex items-start justify-between gap-4 overflow-hidden @container ${onClick ? "cursor-pointer hover:border-slate-400 hover:shadow-[0_20px_45px_rgba(15,23,42,0.10)] transition-all duration-300 transform hover:-translate-y-0.5 group" : ""}`}
+      className={`orbi-admin-card p-4 rounded-[1.35rem] border border-slate-200/80 flex items-start justify-between gap-3 overflow-hidden @container bg-white/95 ${onClick ? "cursor-pointer hover:border-blue-300 hover:shadow-[0_16px_35px_rgba(15,23,42,0.08)] transition-all duration-300 transform hover:-translate-y-0.5 group" : ""}`}
     >
       <div className="space-y-2 min-w-0 flex-1">
-        <p className="orbi-admin-label text-[10px] sm:text-[11px] text-zinc-500 font-extrabold uppercase tracking-[0.16em] transition leading-snug max-w-full">
+        <p className="orbi-admin-label text-[9px] sm:text-[10px] text-zinc-500 font-extrabold uppercase tracking-[0.14em] transition leading-snug max-w-full">
           {title}
         </p>
         <div
-          className="orbi-admin-metric-value font-black text-slate-900 min-w-0 max-w-full overflow-hidden text-ellipsis"
+          className="orbi-admin-metric-value font-black text-slate-900 min-w-0 max-w-full overflow-hidden text-ellipsis leading-none"
           title={typeof value === "string" || typeof value === "number" ? String(value) : undefined}
         >
           {value}
         </div>
       </div>
       {icon && (
-        <div className="shrink-0 w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100 group-hover:bg-slate-100 transition duration-300">
+        <div className="shrink-0 w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100 group-hover:bg-blue-50 transition duration-300">
           {icon}
         </div>
       )}

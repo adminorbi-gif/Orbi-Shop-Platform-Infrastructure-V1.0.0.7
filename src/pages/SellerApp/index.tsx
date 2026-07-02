@@ -654,7 +654,7 @@ export default function SellerApp({
 
             {/* VIEW: DASHBOARD Overview */}
             {tab === "dashboard" && (
-              <div className="space-y-8 animate-in fade-in duration-200">
+              <div className="space-y-5 animate-in fade-in duration-200">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div>
                     <h1 className="text-2xl font-display font-black text-slate-900 leading-tight">
@@ -679,11 +679,11 @@ export default function SellerApp({
                 </div>
 
                 {/* Bento Grid Analytics */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {/* Sale Income Card */}
-                  <div className="bg-white p-5 rounded-3xl border border-slate-200/60 shadow-xs relative overflow-hidden group @container min-w-0">
+                  <div className="bg-white p-4 rounded-[1.35rem] border border-slate-200/70 shadow-sm relative overflow-hidden group @container min-w-0">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full translate-x-8 -translate-y-8 group-hover:scale-110 transition-transform"></div>
-                    <div className="bg-emerald-100 text-emerald-700 w-10 h-10 rounded-2xl flex items-center justify-center mb-4 shrink-0">
+                    <div className="bg-emerald-100 text-emerald-700 w-9 h-9 rounded-xl flex items-center justify-center mb-3 shrink-0">
                       <TrendingUp size={20} />
                     </div>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate">
@@ -710,9 +710,9 @@ export default function SellerApp({
                   </div>
 
                   {/* Items sold Count Card */}
-                  <div className="bg-white p-5 rounded-3xl border border-slate-200/60 shadow-xs relative overflow-hidden group @container min-w-0">
+                  <div className="bg-white p-4 rounded-[1.35rem] border border-slate-200/70 shadow-sm relative overflow-hidden group @container min-w-0">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full translate-x-8 -translate-y-8 group-hover:scale-110 transition-transform"></div>
-                    <div className="bg-amber-100 text-amber-700 w-10 h-10 rounded-2xl flex items-center justify-center mb-4 shrink-0">
+                    <div className="bg-amber-100 text-amber-700 w-9 h-9 rounded-xl flex items-center justify-center mb-3 shrink-0">
                       <Layers size={20} />
                     </div>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate">
@@ -732,9 +732,9 @@ export default function SellerApp({
                   </div>
 
                   {/* Stock Level Warning Card */}
-                  <div className="bg-white p-5 rounded-3xl border border-slate-200/60 shadow-xs relative overflow-hidden group @container min-w-0">
+                  <div className="bg-white p-4 rounded-[1.35rem] border border-slate-200/70 shadow-sm relative overflow-hidden group @container min-w-0">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full translate-x-8 -translate-y-8 group-hover:scale-110 transition-transform"></div>
-                    <div className="bg-rose-100 text-rose-700 w-10 h-10 rounded-2xl flex items-center justify-center mb-4 shrink-0">
+                    <div className="bg-rose-100 text-rose-700 w-9 h-9 rounded-xl flex items-center justify-center mb-3 shrink-0">
                       <BadgeAlert size={20} />
                     </div>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate">
@@ -766,10 +766,10 @@ export default function SellerApp({
                   </div>
 
                   {/* Wallet / Request Payout Card (Innovative Instant Draw-down) */}
-                  <div className="bg-gradient-to-br from-emerald-600 to-emerald-800 text-white p-5 rounded-3xl border border-emerald-700 shadow-sm relative overflow-hidden group @container min-w-0 flex flex-col justify-between">
+                  <div className="bg-gradient-to-br from-emerald-600 to-emerald-800 text-white p-4 rounded-[1.35rem] border border-emerald-700 shadow-sm relative overflow-hidden group @container min-w-0 flex flex-col justify-between">
                     <div>
                       <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full translate-x-12 -translate-y-12"></div>
-                      <div className="bg-white/10 text-white w-10 h-10 rounded-2xl flex items-center justify-center mb-4 shrink-0">
+                      <div className="bg-white/10 text-white w-9 h-9 rounded-xl flex items-center justify-center mb-3 shrink-0">
                         <Coins size={20} />
                       </div>
                       <p className="text-[10px] text-emerald-200 font-bold uppercase tracking-widest truncate">
@@ -796,7 +796,7 @@ export default function SellerApp({
                 </div>
 
                 {/* Daily Activity Heatmap */}
-                <div className="bg-white p-5 rounded-3xl border border-slate-200/60 shadow-xs">
+                <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200/70 shadow-sm">
                   <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">
                     {lang === "sw" ? "Mwenendo wa Oda (Heatmap)" : "Order Activity Heatmap"}
                   </h3>
@@ -902,8 +902,8 @@ export default function SellerApp({
 
                   {/* Graphic charts - Desktop */}
                 {isMdScreen && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-white p-4 sm:p-6 md:p-8 rounded-3xl border border-slate-200/60 shadow-sm space-y-6">
+                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                    <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200/70 shadow-sm space-y-4 xl:col-span-2">
                       <div>
                         <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
                           {lang === "sw"
@@ -916,10 +916,10 @@ export default function SellerApp({
                             : "Aesthetic metric showing verified completed earnings trend"}
                         </p>
                       </div>
-                      <div className="h-[300px] sm:h-[400px] w-full font-mono mt-2">
+                      <div className="h-56 w-full font-mono mt-1">
                         <ResponsiveContainer
                           width="100%"
-                          height={350}
+                          height={220}
                           minWidth={50}
                           minHeight={50}
                         >
@@ -992,7 +992,7 @@ export default function SellerApp({
                       </div>
                     </div>
                     {/* New Line Chart */}
-                    <div className="bg-white p-4 sm:p-6 md:p-8 rounded-3xl border border-slate-200/60 shadow-sm space-y-6">
+                    <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200/70 shadow-sm space-y-4">
                       <div>
                         <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
                           {lang === "sw" ? "Mtindo wa Mapato (Miezi 6)" : "Revenue Trend (6 Months)"}
@@ -1001,8 +1001,8 @@ export default function SellerApp({
                           {lang === "sw" ? "Muhtasari wa utendaji wa kifedha" : "Quick financial performance snapshot"}
                         </p>
                       </div>
-                      <div className="h-[300px] sm:h-[400px] w-full font-mono mt-2">
-                        <ResponsiveContainer width="100%" height={350} minWidth={50} minHeight={50}>
+                      <div className="h-56 w-full font-mono mt-1">
+                        <ResponsiveContainer width="100%" height={220} minWidth={50} minHeight={50}>
                           <LineChart data={computedStats.chartData} margin={{ top: 5, right: 0, left: -25, bottom: -5 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                             <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickMargin={8} />

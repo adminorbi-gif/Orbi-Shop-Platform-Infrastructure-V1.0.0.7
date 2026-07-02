@@ -2811,12 +2811,12 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
         {/* Main Content */}
         <main
-          className={`flex-1 p-6 sm:p-8 md:p-10 flex flex-col gap-6 items-center bg-white ${tab === "messages" ? "overflow-hidden h-full min-h-0" : "overflow-auto"}`}
+          className={`flex-1 p-4 sm:p-6 md:p-8 flex flex-col gap-5 items-center bg-[#f6f8fc] ${tab === "messages" ? "overflow-hidden h-full min-h-0" : "overflow-auto"}`}
         >
           <div className="w-full max-w-7xl flex flex-col flex-1 h-full min-h-0">
             {tab === "dashboard" && (
-              <div className="space-y-6 flex-1 flex flex-col">
-                <div className="bg-white border-b border-slate-200 pb-4 flex items-center justify-between">
+              <div className="space-y-4 flex-1 flex flex-col">
+                <div className="bg-white/90 border border-slate-200/70 rounded-[1.75rem] px-5 py-4 flex items-center justify-between shadow-sm">
                   <div>
                     <h2 className="text-2xl font-display font-black tracking-tight text-slate-800">
                       {t(lang, "dash.title")}
@@ -2827,7 +2827,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   </div>
                 </div>
 
-                <div className="orbi-admin-auto-grid">
+                <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
                   <StatCard
                     onClick={() => setTab("products")}
                     title={t(lang, "dash.tot_prod")}
@@ -2881,22 +2881,22 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="flex flex-wrap gap-3 mt-2">
+                <div className="flex flex-wrap gap-2 mt-1">
                   <button
                     onClick={() => setTab("products")}
-                    className="flex items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold text-slate-700 transition"
+                    className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl text-xs font-black text-slate-700 transition shadow-sm"
                   >
                     <Plus size={16} /> {t(lang, "dash.quick_add_prod")}
                   </button>
                   <button
                     onClick={() => setTab("promos")}
-                    className="flex items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold text-slate-700 transition"
+                    className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl text-xs font-black text-slate-700 transition shadow-sm"
                   >
                     <Plus size={16} /> {t(lang, "dash.quick_add_promo")}
                   </button>
                   <button
                     onClick={() => setTab("messages")}
-                    className="flex items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold text-slate-700 transition"
+                    className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl text-xs font-black text-slate-700 transition shadow-sm"
                   >
                     <MessageSquare size={16} /> {t(lang, "dash.quick_msg")}
                   </button>
@@ -2904,27 +2904,29 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     href="/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-4 py-2.5 rounded-xl text-sm font-bold text-emerald-700 transition ml-auto"
+                    className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3.5 py-2 rounded-xl text-xs font-black text-emerald-700 transition ml-auto shadow-sm"
                   >
                     <ExternalLink size={16} /> {t(lang, "dash.quick_store")}
                   </a>
                 </div>
 
                 {isLgScreen && (
-                  <div className="hidden lg:grid grid-cols-2 gap-6 mt-4">
-                    <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
-                      <div className="mb-6">
-                        <h3 className="text-lg font-bold text-slate-800">
+                  <div className="hidden lg:grid grid-cols-4 gap-4 mt-2">
+                    <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200/80 shadow-sm xl:col-span-2">
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div>
+                        <h3 className="text-sm font-black text-slate-800">
                           {t(lang, "dash.sales_growth")}
                         </h3>
-                        <p className="text-xs text-slate-500 mt-1">
+                        <p className="text-[11px] text-slate-500 mt-1">
                           {t(lang, "dash.sales_growth_desc")}
                         </p>
+                        </div>
                       </div>
-                      <div className="h-80 sm:h-96 w-full mt-2 font-mono">
+                      <div className="h-56 w-full mt-1 font-mono">
                         <ResponsiveContainer
                           width="100%"
-                          height={320}
+                          height={220}
                           minHeight={50}
                           minWidth={50}
                         >
@@ -3003,19 +3005,19 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       </div>
                     </div>
 
-                    <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
-                      <div className="mb-6">
-                        <h3 className="text-lg font-bold text-slate-800">
+                    <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200/80 shadow-sm">
+                      <div className="mb-3">
+                        <h3 className="text-sm font-black text-slate-800">
                           {t(lang, "dash.cust_reg")}
                         </h3>
-                        <p className="text-xs text-slate-500 mt-1">
+                        <p className="text-[11px] text-slate-500 mt-1">
                           {t(lang, "dash.cust_reg_desc")}
                         </p>
                       </div>
-                      <div className="h-80 sm:h-96 w-full mt-2 font-mono">
+                      <div className="h-56 w-full mt-1 font-mono">
                         <ResponsiveContainer
                           width="100%"
-                          height={320}
+                          height={220}
                           minHeight={50}
                           minWidth={50}
                         >
@@ -3071,23 +3073,23 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     </div>
 
                     {/* Enhanced Analytics: Hourly Peak Traffic Chart */}
-                    <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
-                      <div className="mb-6">
-                        <h3 className="text-lg font-bold text-slate-800">
+                    <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200/80 shadow-sm">
+                      <div className="mb-3">
+                        <h3 className="text-sm font-black text-slate-800">
                           {lang === "sw"
                             ? "Muda wa Juu wa Oda (Peak Hours)"
                             : "Peak Order Distribution"}
                         </h3>
-                        <p className="text-xs text-slate-500 mt-1">
+                        <p className="text-[11px] text-slate-500 mt-1">
                           {lang === "sw"
                             ? "Mchanganuo wa masaa 24 unasaidia staff kuajiri au kujiandaa na usafirishaji."
                             : "24-hour heat trends helping staff optimize delivery preparation."}
                         </p>
                       </div>
-                      <div className="h-80 sm:h-96 w-full mt-2 font-mono">
+                      <div className="h-56 w-full mt-1 font-mono">
                         <ResponsiveContainer
                           width="100%"
-                          height={320}
+                          height={220}
                           minHeight={50}
                           minWidth={50}
                         >
@@ -3166,23 +3168,23 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     </div>
 
                     {/* Enhanced Analytics: High-Performing Categories Revenue */}
-                    <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
-                      <div className="mb-6">
-                        <h3 className="text-lg font-bold text-slate-800">
+                    <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200/80 shadow-sm xl:col-span-2">
+                      <div className="mb-3">
+                        <h3 className="text-sm font-black text-slate-800">
                           {lang === "sw"
                             ? "Mapato kwa Makundi (Niche Revenue)"
                             : "Category Performance"}
                         </h3>
-                        <p className="text-xs text-slate-500 mt-1">
+                        <p className="text-[11px] text-slate-500 mt-1">
                           {lang === "sw"
                             ? "Mchanganuo wa mapato kamilifu yanayotokana na kila kundi la bidhaa."
                             : "True category performance breakdown by total sales volume."}
                         </p>
                       </div>
-                      <div className="h-80 sm:h-96 w-full mt-2 font-mono">
+                      <div className="h-56 w-full mt-1 font-mono">
                         <ResponsiveContainer
                           width="100%"
-                          height={320}
+                          height={220}
                           minHeight={50}
                           minWidth={50}
                         >
