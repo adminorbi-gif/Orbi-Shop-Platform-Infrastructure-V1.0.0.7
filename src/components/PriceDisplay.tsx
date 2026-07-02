@@ -7,6 +7,7 @@ interface PriceDisplayProps {
   colorClass?: string;
   showDecimals?: boolean;
   compact?: boolean | "auto";
+  truncate?: boolean;
 }
 
 export const PriceDisplay: React.FC<PriceDisplayProps> = ({
@@ -16,6 +17,7 @@ export const PriceDisplay: React.FC<PriceDisplayProps> = ({
   colorClass = "text-slate-900",
   showDecimals = false,
   compact = "auto",
+  truncate = true,
 }) => {
   const val = typeof amount === "number" ? amount : Number(amount) || 0;
   const shouldCompact = compact === true || (compact === "auto" && Math.abs(val) >= 1_000_000);
@@ -78,7 +80,9 @@ export const PriceDisplay: React.FC<PriceDisplayProps> = ({
       }}
     >
       <span className="text-[0.75em] font-black mr-0.5 opacity-70 select-none shrink-0">TSh</span>
-      <span className="min-w-0 overflow-hidden text-ellipsis">{mainDisplay}{compactSuffix}</span>
+      <span className={truncate ? "min-w-0 overflow-hidden text-ellipsis" : "min-w-0 overflow-visible"}>
+        {mainDisplay}{compactSuffix}
+      </span>
       {!shouldCompact && showDecimals && (
         <span className="text-[0.65em] font-extrabold opacity-60">.{decimalPart}</span>
       )}

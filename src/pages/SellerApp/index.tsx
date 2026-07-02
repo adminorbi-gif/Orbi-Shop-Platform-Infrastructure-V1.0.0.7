@@ -206,6 +206,9 @@ export default function SellerApp({
   onRefreshData,
 }: SellerAppProps) {
   const { addToast } = useToast();
+  const [dashboardPeriod, setDashboardPeriod] = useState<
+    "daily" | "weekly" | "monthly" | "yearly"
+  >("yearly");
   const {
     tab,
     setTab,
@@ -326,6 +329,117 @@ export default function SellerApp({
     doc.text(`Date: ${new Date(payout.createdAt || Date.now()).toLocaleDateString()}`, 20, 60);
     doc.save(`receipt_${payout.id}.pdf`);
   };
+
+  const sellerRevenueTrend = useMemo(() => {
+    const now = new Date();
+    const validStatuses = new Set([
+      "confirmed",
+      "customer_confirmed",
+      "shipped",
+      "delivered",
+      "payment_held",
+      "processing",
+      "buyer_confirmed",
+      "released",
+    ]);
+
+    const buildBuckets = () => {
+      if (dashboardPeriod === "daily") {
+        return Array.from({ length: 24 }, (_, hour) => ({
+          key: `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${hour}`,
+          name: `${hour.toString().padStart(2, "0")}:00`,
+          sales: 0,
+          orders: 0,
+        }));
+      }
+
+      if (dashboardPeriod === "weekly") {
+        return Array.from({ length: 7 }, (_, index) => {
+          const d = new Date(now);
+          d.setDate(now.getDate() - (6 - index));
+          return {
+            key: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`,
+            name: d.toLocaleDateString("en-US", { weekday: "short" }),
+            sales: 0,
+            orders: 0,
+          };
+        });
+      }
+
+      if (dashboardPeriod === "monthly") {
+        return Array.from({ length: 4 }, (_, index) => ({
+          key: `${now.getFullYear()}-${now.getMonth()}-${index + 1}`,
+          name: lang === "sw" ? `Wiki ${index + 1}` : `Week ${index + 1}`,
+          sales: 0,
+          orders: 0,
+        }));
+      }
+
+      return Array.from({ length: 12 }, (_, month) => {
+        const d = new Date(now.getFullYear(), month, 1);
+        return {
+          key: `${now.getFullYear()}-${month}`,
+          name: d.toLocaleString("en-US", { month: "short" }),
+          sales: 0,
+          orders: 0,
+        };
+      });
+    };
+
+    const buckets = buildBuckets();
+    const bucketMap = new Map(buckets.map((bucket) => [bucket.key, bucket]));
+
+    sellerOrders.forEach((order) => {
+      const norm = String(order.status || "").toLowerCase();
+      if (!validStatuses.has(norm)) return;
+
+      const date = new Date(order.date);
+      let key = "";
+
+      if (dashboardPeriod === "daily") {
+        if (
+          date.getFullYear() !== now.getFullYear() ||
+          date.getMonth() !== now.getMonth() ||
+          date.getDate() !== now.getDate()
+        ) {
+          return;
+        }
+        key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()}`;
+      } else if (dashboardPeriod === "weekly") {
+        const start = new Date(now);
+        start.setDate(now.getDate() - 6);
+        start.setHours(0, 0, 0, 0);
+        if (date < start || date > now) return;
+        key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+      } else if (dashboardPeriod === "monthly") {
+        if (
+          date.getFullYear() !== now.getFullYear() ||
+          date.getMonth() !== now.getMonth()
+        ) {
+          return;
+        }
+        const week = Math.min(4, Math.ceil(date.getDate() / 7));
+        key = `${date.getFullYear()}-${date.getMonth()}-${week}`;
+      } else {
+        if (date.getFullYear() !== now.getFullYear()) return;
+        key = `${date.getFullYear()}-${date.getMonth()}`;
+      }
+
+      const sellerTotal = order.items.reduce((sum, item) => {
+        const product = products.find((p) => p.id === item.productId);
+        return product?.sellerId === seller.id
+          ? sum + item.price * item.quantity
+          : sum;
+      }, 0);
+
+      const bucket = bucketMap.get(key);
+      if (!bucket || sellerTotal <= 0) return;
+      bucket.sales += sellerTotal;
+      bucket.orders += 1;
+    });
+
+    return buckets;
+  }, [dashboardPeriod, sellerOrders, products, seller.id, lang]);
 
   return (
     <div className="h-[100dvh] bg-slate-50 font-sans text-slate-800 flex flex-col md:flex-row overflow-hidden relative">
@@ -697,6 +811,8 @@ export default function SellerApp({
                         amount={computedStats.totalSales}
                         size="xl"
                         colorClass="text-slate-950"
+                        compact={false}
+                        truncate={false}
                       />
                     </div>
                     <p className="text-[10px] text-emerald-600 font-medium mt-1.5 flex items-center gap-1 truncate w-full">
@@ -783,6 +899,8 @@ export default function SellerApp({
                           amount={computedStats.totalSales}
                           size="xl"
                           colorClass="text-white"
+                          compact={false}
+                          truncate={false}
                         />
                       </div>
                     </div>
@@ -903,29 +1021,78 @@ export default function SellerApp({
                   {/* Graphic charts - Desktop */}
                 {isMdScreen && (
                   <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-                    <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200/70 shadow-sm space-y-4 xl:col-span-2">
-                      <div>
-                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                          {lang === "sw"
-                            ? "Mtindo wa Mapato kwa Miezi"
-                            : "Income Performance Stream"}
-                        </h3>
-                        <p className="text-slate-500 text-xs font-medium mt-1">
-                          {lang === "sw"
-                            ? "Onyesho la mauzo kamili yaliyoidhinishwa"
-                            : "Aesthetic metric showing verified completed earnings trend"}
-                        </p>
+                    <div className="bg-white p-5 rounded-[1.75rem] border border-slate-200/70 shadow-sm space-y-4 xl:col-span-2">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3 className="text-base font-black text-slate-950">
+                            {lang === "sw" ? "Mapato ya Duka" : "Store Revenue"}
+                          </h3>
+                          <div className="mt-1 flex flex-wrap items-center gap-3">
+                            <PriceDisplay
+                              amount={sellerRevenueTrend.reduce((sum, point) => sum + point.sales, 0)}
+                              compact={false}
+                              truncate={false}
+                              className="text-[1.65rem]"
+                            />
+                            <span className="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-700">
+                              {sellerRevenueTrend.reduce((sum, point) => sum + point.orders, 0)}{" "}
+                              {lang === "sw" ? "oda" : "orders"}
+                            </span>
+                          </div>
+                          <p className="text-slate-500 text-[11px] font-medium mt-1.5">
+                            {dashboardPeriod === "yearly"
+                              ? lang === "sw"
+                                ? "Miezi yote 12 ya mwaka huu"
+                                : "All 12 months in the current year"
+                              : dashboardPeriod === "monthly"
+                                ? lang === "sw"
+                                  ? "Wiki 4 za mwezi huu"
+                                  : "4-week view for the current month"
+                                : dashboardPeriod === "weekly"
+                                  ? lang === "sw"
+                                    ? "Siku 7 za mwisho"
+                                    : "Last 7 days"
+                                  : lang === "sw"
+                                    ? "Masaa 24 ya leo"
+                                    : "Today by 24 hours"}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center rounded-2xl bg-slate-100 p-1">
+                          {[
+                            { id: "daily", label: lang === "sw" ? "Siku" : "Day" },
+                            { id: "weekly", label: lang === "sw" ? "Wiki" : "Week" },
+                            { id: "monthly", label: lang === "sw" ? "Mwezi" : "Month" },
+                            { id: "yearly", label: lang === "sw" ? "Mwaka" : "Year" },
+                          ].map((item) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() =>
+                                setDashboardPeriod(
+                                  item.id as "daily" | "weekly" | "monthly" | "yearly",
+                                )
+                              }
+                              className={`rounded-xl px-3 py-1.5 text-[10px] font-black transition ${
+                                dashboardPeriod === item.id
+                                  ? "bg-white text-slate-950 shadow-sm"
+                                  : "text-slate-500 hover:text-slate-900"
+                              }`}
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      <div className="h-56 w-full font-mono mt-1">
+                      <div className="h-72 w-full font-mono mt-1">
                         <ResponsiveContainer
                           width="100%"
-                          height={220}
+                          height={288}
                           minWidth={50}
                           minHeight={50}
                         >
                           <AreaChart
-                            data={computedStats.chartData}
-                            margin={{ top: 5, right: 0, left: -25, bottom: -5 }}
+                            data={sellerRevenueTrend}
+                            margin={{ top: 8, right: 18, left: 8, bottom: 0 }}
                           >
                             <defs>
                               <linearGradient
@@ -937,31 +1104,34 @@ export default function SellerApp({
                               >
                                 <stop
                                   offset="5%"
-                                  stopColor="#10b981"
-                                  stopOpacity={0.2}
+                                  stopColor="#2563eb"
+                                  stopOpacity={0.26}
                                 />
                                 <stop
                                   offset="95%"
-                                  stopColor="#10b981"
+                                  stopColor="#2563eb"
                                   stopOpacity={0}
                                 />
                               </linearGradient>
                             </defs>
                             <CartesianGrid
-                              strokeDasharray="3 3"
+                              strokeDasharray="4 4"
                               vertical={false}
-                              stroke="#f1f5f9"
+                              stroke="#e5e7eb"
                             />
                             <XAxis
                               dataKey="name"
-                              stroke="#94a3b8"
-                              fontSize={10}
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fontSize: 11, fill: "#64748b", fontWeight: 700 }}
                               tickMargin={8}
+                              interval={0}
                             />
                             <YAxis
-                              stroke="#94a3b8"
-                              fontSize={10}
-                              width={40}
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fontSize: 11, fill: "#64748b", fontWeight: 700 }}
+                              width={72}
                               tickFormatter={(val) =>
                                 val >= 1000000
                                   ? (val / 1000000).toFixed(1) + "M"
@@ -971,6 +1141,12 @@ export default function SellerApp({
                               }
                             />
                             <Tooltip
+                              cursor={{ stroke: "#2563eb", strokeDasharray: "4 4" }}
+                              contentStyle={{
+                                borderRadius: "16px",
+                                border: "none",
+                                boxShadow: "0 18px 40px -20px rgb(15 23 42 / 0.45)",
+                              }}
                               formatter={(value) => [
                                 `TZS ${Number(value).toLocaleString()}`,
                                 lang === "sw" ? "Kipato" : "Income",
@@ -978,11 +1154,12 @@ export default function SellerApp({
                             />
                             <Area
                               type="monotone"
-                              dataKey="Mauzo"
-                              stroke="#10b981"
+                              dataKey="sales"
+                              stroke="#2563eb"
                               strokeWidth={3}
                               fillOpacity={1}
                               fill="url(#colorSales)"
+                              activeDot={{ r: 5, strokeWidth: 3, stroke: "#fff", fill: "#2563eb" }}
                               isAnimationActive={true}
                               animationDuration={1500}
                               animationEasing="ease-in-out"
@@ -992,23 +1169,31 @@ export default function SellerApp({
                       </div>
                     </div>
                     {/* New Line Chart */}
-                    <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200/70 shadow-sm space-y-4">
+                    <div className="bg-white p-5 rounded-[1.75rem] border border-slate-200/70 shadow-sm space-y-4">
                       <div>
-                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                          {lang === "sw" ? "Mtindo wa Mapato (Miezi 6)" : "Revenue Trend (6 Months)"}
+                        <h3 className="text-sm font-black text-slate-950">
+                          {lang === "sw" ? "Mwendo wa Oda" : "Order Momentum"}
                         </h3>
                         <p className="text-slate-500 text-xs font-medium mt-1">
-                          {lang === "sw" ? "Muhtasari wa utendaji wa kifedha" : "Quick financial performance snapshot"}
+                          {lang === "sw" ? "Idadi ya oda kwa kipindi ulichochagua" : "Orders by the selected period"}
                         </p>
                       </div>
                       <div className="h-56 w-full font-mono mt-1">
                         <ResponsiveContainer width="100%" height={220} minWidth={50} minHeight={50}>
-                          <LineChart data={computedStats.chartData} margin={{ top: 5, right: 0, left: -25, bottom: -5 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                            <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickMargin={8} />
-                            <YAxis stroke="#94a3b8" fontSize={10} width={40} tickFormatter={(val) => val >= 1000000 ? (val / 1000000).toFixed(1) + "M" : val >= 1000 ? (val / 1000).toFixed(0) + "k" : val} />
-                            <Tooltip formatter={(value) => [`TZS ${Number(value).toLocaleString()}`, lang === "sw" ? "Kipato" : "Income"]} />
-                            <Line type="monotone" dataKey="Mauzo" stroke="#6366f1" strokeWidth={3} activeDot={{ r: 8 }} />
+                          <LineChart data={sellerRevenueTrend} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e5e7eb" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#64748b", fontWeight: 700 }} tickMargin={8} interval={0} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#64748b", fontWeight: 700 }} width={34} allowDecimals={false} />
+                            <Tooltip
+                              cursor={{ stroke: "#f97316", strokeDasharray: "4 4" }}
+                              contentStyle={{
+                                borderRadius: "16px",
+                                border: "none",
+                                boxShadow: "0 18px 40px -20px rgb(15 23 42 / 0.45)",
+                              }}
+                              formatter={(value) => [Number(value).toLocaleString(), lang === "sw" ? "Oda" : "Orders"]}
+                            />
+                            <Line type="monotone" dataKey="orders" stroke="#f97316" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 3, stroke: "#fff", fill: "#f97316" }} />
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
@@ -2457,6 +2642,31 @@ export default function SellerApp({
                       ? "Onyesho la mauzo kamili yaliyoidhinishwa"
                       : "Verified earnings trend"}
                   </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {[
+                      { id: "daily", label: lang === "sw" ? "Siku" : "Day" },
+                      { id: "weekly", label: lang === "sw" ? "Wiki" : "Week" },
+                      { id: "monthly", label: lang === "sw" ? "Mwezi" : "Month" },
+                      { id: "yearly", label: lang === "sw" ? "Mwaka" : "Year" },
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() =>
+                          setDashboardPeriod(
+                            item.id as "daily" | "weekly" | "monthly" | "yearly",
+                          )
+                        }
+                        className={`rounded-xl px-3 py-1.5 text-[10px] font-black transition ${
+                          dashboardPeriod === item.id
+                            ? "bg-blue-600 text-white shadow-sm"
+                            : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -2475,8 +2685,8 @@ export default function SellerApp({
                     minWidth={50}
                   >
                     <AreaChart
-                      data={computedStats.chartData}
-                      margin={{ top: 5, right: 0, left: -25, bottom: -5 }}
+                      data={sellerRevenueTrend}
+                      margin={{ top: 8, right: 18, left: 8, bottom: 0 }}
                     >
                       <defs>
                         <linearGradient
@@ -2488,31 +2698,34 @@ export default function SellerApp({
                         >
                           <stop
                             offset="5%"
-                            stopColor="#10b981"
-                            stopOpacity={0.2}
+                            stopColor="#2563eb"
+                            stopOpacity={0.22}
                           />
                           <stop
                             offset="95%"
-                            stopColor="#10b981"
+                            stopColor="#2563eb"
                             stopOpacity={0}
                           />
                         </linearGradient>
                       </defs>
                       <CartesianGrid
-                        strokeDasharray="3 3"
+                        strokeDasharray="4 4"
                         vertical={false}
-                        stroke="#f1f5f9"
+                        stroke="#e5e7eb"
                       />
                       <XAxis
                         dataKey="name"
-                        stroke="#94a3b8"
-                        fontSize={10}
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fill: "#64748b", fontWeight: 700 }}
                         tickMargin={8}
+                        interval={0}
                       />
                       <YAxis
-                        stroke="#94a3b8"
-                        fontSize={10}
-                        width={40}
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fill: "#64748b", fontWeight: 700 }}
+                        width={66}
                         tickFormatter={(val) =>
                           val >= 1000000
                             ? (val / 1000000).toFixed(1) + "M"
@@ -2522,6 +2735,12 @@ export default function SellerApp({
                         }
                       />
                       <Tooltip
+                        cursor={{ stroke: "#2563eb", strokeDasharray: "4 4" }}
+                        contentStyle={{
+                          borderRadius: "16px",
+                          border: "none",
+                          boxShadow: "0 18px 40px -20px rgb(15 23 42 / 0.45)",
+                        }}
                         formatter={(value) => [
                           `TZS ${Number(value).toLocaleString()}`,
                           lang === "sw" ? "Kipato" : "Income",
@@ -2529,11 +2748,12 @@ export default function SellerApp({
                       />
                       <Area
                         type="monotone"
-                        dataKey="Mauzo"
-                        stroke="#10b981"
+                        dataKey="sales"
+                        stroke="#2563eb"
                         strokeWidth={3}
                         fillOpacity={1}
                         fill="url(#colorSalesMobile)"
+                        activeDot={{ r: 5, strokeWidth: 3, stroke: "#fff", fill: "#2563eb" }}
                       />
                     </AreaChart>
                   </ResponsiveContainer>

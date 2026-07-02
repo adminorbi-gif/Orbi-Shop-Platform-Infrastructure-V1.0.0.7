@@ -889,6 +889,9 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   >("dashboard");
 
   // App UI State
+  const [dashboardPeriod, setDashboardPeriod] = useState<
+    "daily" | "weekly" | "monthly" | "yearly"
+  >("yearly");
   const [dashboardChartsOpen, setDashboardChartsOpen] = useState(false);
 
   // Screen size detection to avoid rendering hidden 0x0 size layout charts on mobile/tablet viewports
@@ -1420,6 +1423,122 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       sales: salesByMonth[month],
     }));
   }, [salesByMonth]);
+
+  const dashboardRevenueTrend = useMemo(() => {
+    const now = new Date();
+    const validStatuses = new Set([
+      "confirmed",
+      "customer_confirmed",
+      "shipped",
+      "delivered",
+      "payment_held",
+      "processing",
+      "buyer_confirmed",
+      "released",
+    ]);
+
+    const getOrderRevenue = (order: Order) => {
+      if (currentSeller) {
+        return order.items.reduce((sum, item) => {
+          const prod = products.find((p) => p.id === item.productId);
+          return prod?.sellerId === currentSeller.id
+            ? sum + item.price * item.quantity
+            : sum;
+        }, 0);
+      }
+      return order.total;
+    };
+
+    const buildBuckets = () => {
+      if (dashboardPeriod === "daily") {
+        return Array.from({ length: 24 }, (_, hour) => ({
+          key: `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${hour}`,
+          name: `${hour.toString().padStart(2, "0")}:00`,
+          sales: 0,
+          orders: 0,
+        }));
+      }
+
+      if (dashboardPeriod === "weekly") {
+        return Array.from({ length: 7 }, (_, index) => {
+          const d = new Date(now);
+          d.setDate(now.getDate() - (6 - index));
+          return {
+            key: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`,
+            name: d.toLocaleDateString("en-US", { weekday: "short" }),
+            sales: 0,
+            orders: 0,
+          };
+        });
+      }
+
+      if (dashboardPeriod === "monthly") {
+        return Array.from({ length: 4 }, (_, index) => ({
+          key: `${now.getFullYear()}-${now.getMonth()}-${index + 1}`,
+          name: lang === "sw" ? `Wiki ${index + 1}` : `Week ${index + 1}`,
+          sales: 0,
+          orders: 0,
+        }));
+      }
+
+      return Array.from({ length: 12 }, (_, month) => {
+        const d = new Date(now.getFullYear(), month, 1);
+        return {
+          key: `${now.getFullYear()}-${month}`,
+          name: d.toLocaleString("en-US", { month: "short" }),
+          sales: 0,
+          orders: 0,
+        };
+      });
+    };
+
+    const buckets = buildBuckets();
+    const bucketMap = new Map(buckets.map((bucket) => [bucket.key, bucket]));
+
+    displayedOrders.forEach((order) => {
+      const norm = String(order.status || "").toLowerCase();
+      if (!validStatuses.has(norm)) return;
+
+      const date = new Date(order.date);
+      let key = "";
+
+      if (dashboardPeriod === "daily") {
+        if (
+          date.getFullYear() !== now.getFullYear() ||
+          date.getMonth() !== now.getMonth() ||
+          date.getDate() !== now.getDate()
+        ) {
+          return;
+        }
+        key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()}`;
+      } else if (dashboardPeriod === "weekly") {
+        const start = new Date(now);
+        start.setDate(now.getDate() - 6);
+        start.setHours(0, 0, 0, 0);
+        if (date < start || date > now) return;
+        key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+      } else if (dashboardPeriod === "monthly") {
+        if (
+          date.getFullYear() !== now.getFullYear() ||
+          date.getMonth() !== now.getMonth()
+        ) {
+          return;
+        }
+        const week = Math.min(4, Math.ceil(date.getDate() / 7));
+        key = `${date.getFullYear()}-${date.getMonth()}-${week}`;
+      } else {
+        if (date.getFullYear() !== now.getFullYear()) return;
+        key = `${date.getFullYear()}-${date.getMonth()}`;
+      }
+
+      const bucket = bucketMap.get(key);
+      if (!bucket) return;
+      bucket.sales += getOrderRevenue(order);
+      bucket.orders += 1;
+    });
+
+    return buckets;
+  }, [dashboardPeriod, displayedOrders, products, currentSeller, lang]);
 
   // Pending Payouts Sum
   const pendingPayoutsSum = useMemo(() => {
@@ -2827,7 +2946,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
                   <StatCard
                     onClick={() => setTab("products")}
                     title={t(lang, "dash.tot_prod")}
@@ -2849,7 +2968,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   <StatCard
                     onClick={() => setTab("invoice")}
                     title={t(lang, "dash.tot_sales")}
-                    value={<PriceDisplay amount={totalSales} compact="auto" />}
+                    value={<PriceDisplay amount={totalSales} compact={false} truncate={false} />}
                     icon={<DollarSign size={20} className="text-emerald-500" />}
                   />
                   <StatCard
@@ -2857,7 +2976,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     title={
                       lang === "sw" ? "Malipo Kusubiri" : "Pending Payouts"
                     }
-                    value={<PriceDisplay amount={pendingPayoutsSum} compact="auto" />}
+                    value={<PriceDisplay amount={pendingPayoutsSum} compact={false} truncate={false} />}
                     icon={<Wallet size={20} className="text-indigo-500" />}
                   />
                   <StatCard
@@ -2867,7 +2986,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         ? "Mauzo ya Mwezi Huu"
                         : "Revenue This Month"
                     }
-                    value={<PriceDisplay amount={totalRevenueThisMonth} compact="auto" />}
+                    value={<PriceDisplay amount={totalRevenueThisMonth} compact={false} truncate={false} />}
                     icon={<Calendar size={20} className="text-pink-500" />}
                   />
                   <StatCard
@@ -2912,27 +3031,78 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
                 {isLgScreen && (
                   <div className="hidden lg:grid grid-cols-4 gap-4 mt-2">
-                    <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200/80 shadow-sm xl:col-span-2">
-                      <div className="mb-3 flex items-start justify-between gap-3">
+                    <div className="bg-white p-5 rounded-[1.75rem] border border-slate-200/80 shadow-sm xl:col-span-3">
+                      <div className="mb-4 flex items-start justify-between gap-4">
                         <div>
-                        <h3 className="text-sm font-black text-slate-800">
-                          {t(lang, "dash.sales_growth")}
-                        </h3>
-                        <p className="text-[11px] text-slate-500 mt-1">
-                          {t(lang, "dash.sales_growth_desc")}
-                        </p>
+                          <h3 className="text-base font-black text-slate-900">
+                            {lang === "sw" ? "Mapato Jumla" : "Total Revenue"}
+                          </h3>
+                          <div className="mt-1 flex flex-wrap items-center gap-3">
+                            <PriceDisplay
+                              amount={dashboardRevenueTrend.reduce((sum, point) => sum + point.sales, 0)}
+                              compact={false}
+                              truncate={false}
+                              className="text-[1.75rem]"
+                            />
+                            <span className="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-700">
+                              {dashboardRevenueTrend.reduce((sum, point) => sum + point.orders, 0)}{" "}
+                              {lang === "sw" ? "oda" : "orders"}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-1.5">
+                            {dashboardPeriod === "yearly"
+                              ? lang === "sw"
+                                ? "Miezi yote 12 ya mwaka huu"
+                                : "All 12 months in the current year"
+                              : dashboardPeriod === "monthly"
+                                ? lang === "sw"
+                                  ? "Wiki 4 za mwezi huu"
+                                  : "4-week view for the current month"
+                                : dashboardPeriod === "weekly"
+                                  ? lang === "sw"
+                                    ? "Siku 7 za mwisho"
+                                    : "Last 7 days"
+                                  : lang === "sw"
+                                    ? "Masaa 24 ya leo"
+                                    : "Today by 24 hours"}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center rounded-2xl bg-slate-100 p-1">
+                          {[
+                            { id: "daily", label: lang === "sw" ? "Siku" : "Day" },
+                            { id: "weekly", label: lang === "sw" ? "Wiki" : "Week" },
+                            { id: "monthly", label: lang === "sw" ? "Mwezi" : "Month" },
+                            { id: "yearly", label: lang === "sw" ? "Mwaka" : "Year" },
+                          ].map((item) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() =>
+                                setDashboardPeriod(
+                                  item.id as "daily" | "weekly" | "monthly" | "yearly",
+                                )
+                              }
+                              className={`rounded-xl px-3 py-1.5 text-[10px] font-black transition ${
+                                dashboardPeriod === item.id
+                                  ? "bg-white text-slate-950 shadow-sm"
+                                  : "text-slate-500 hover:text-slate-900"
+                              }`}
+                            >
+                              {item.label}
+                            </button>
+                          ))}
                         </div>
                       </div>
-                      <div className="h-56 w-full mt-1 font-mono">
+                      <div className="h-72 w-full mt-1 font-mono">
                         <ResponsiveContainer
                           width="100%"
-                          height={220}
+                          height={288}
                           minHeight={50}
                           minWidth={50}
                         >
                           <AreaChart
-                            data={salesData}
-                            margin={{ top: 5, right: 0, left: -25, bottom: -5 }}
+                            data={dashboardRevenueTrend}
+                            margin={{ top: 8, right: 18, left: 8, bottom: 0 }}
                           >
                             <defs>
                               <linearGradient
@@ -2942,35 +3112,36 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                 x2="0"
                                 y2="1"
                               >
-                                <stop
-                                  offset="5%"
-                                  stopColor="#10b981"
-                                  stopOpacity={0.3}
-                                />
-                                <stop
-                                  offset="95%"
-                                  stopColor="#10b981"
-                                  stopOpacity={0}
-                                />
+                          <stop
+                            offset="5%"
+                            stopColor="#2563eb"
+                            stopOpacity={0.26}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#2563eb"
+                            stopOpacity={0}
+                          />
                               </linearGradient>
                             </defs>
                             <CartesianGrid
-                              strokeDasharray="3 3"
+                              strokeDasharray="4 4"
                               vertical={false}
-                              stroke="#e2e8f0"
+                              stroke="#e5e7eb"
                             />
                             <XAxis
                               dataKey="name"
                               axisLine={false}
                               tickLine={false}
-                              tick={{ fontSize: 10, fill: "#64748b" }}
+                              tick={{ fontSize: 11, fill: "#64748b", fontWeight: 700 }}
                               dy={10}
+                              interval={0}
                             />
                             <YAxis
                               axisLine={false}
                               tickLine={false}
-                              tick={{ fontSize: 10, fill: "#64748b" }}
-                              width={45}
+                              tick={{ fontSize: 11, fill: "#64748b", fontWeight: 700 }}
+                              width={72}
                               tickFormatter={(val) =>
                                 val >= 1000000
                                   ? (val / 1000000).toFixed(1) + "M"
@@ -2978,27 +3149,29 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                     ? (val / 1000).toFixed(0) + "k"
                                     : val
                               }
-                              dx={-5}
+                              dx={-4}
                             />
                             <Tooltip
+                              cursor={{ stroke: "#2563eb", strokeDasharray: "4 4" }}
                               contentStyle={{
-                                borderRadius: "12px",
+                                borderRadius: "16px",
                                 border: "none",
                                 boxShadow:
-                                  "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+                                  "0 18px 40px -20px rgb(15 23 42 / 0.45)",
                               }}
                               formatter={(value: number) => [
                                 formatCurrency(value),
-                                "Mauzo",
+                                lang === "sw" ? "Mapato" : "Revenue",
                               ]}
                             />
                             <Area
                               type="monotone"
                               dataKey="sales"
-                              stroke="#10b981"
+                              stroke="#2563eb"
                               strokeWidth={3}
                               fillOpacity={1}
                               fill="url(#colorSales)"
+                              activeDot={{ r: 5, strokeWidth: 3, stroke: "#fff", fill: "#2563eb" }}
                             />
                           </AreaChart>
                         </ResponsiveContainer>
@@ -3023,7 +3196,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         >
                           <BarChart
                             data={customerData}
-                            margin={{ top: 5, right: 0, left: -25, bottom: -5 }}
+                            margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
                           >
                             <CartesianGrid
                               strokeDasharray="3 3"
@@ -3041,7 +3214,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                               axisLine={false}
                               tickLine={false}
                               tick={{ fontSize: 10, fill: "#64748b" }}
-                              width={45}
+                              width={48}
                               tickFormatter={(val) =>
                                 val >= 1000000
                                   ? (val / 1000000).toFixed(1) + "M"
@@ -3049,7 +3222,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                     ? (val / 1000).toFixed(0) + "k"
                                     : val
                               }
-                              dx={-5}
+                              dx={-4}
                             />
                             <Tooltip
                               cursor={{ fill: "#f8fafc" }}
@@ -3063,8 +3236,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             />
                             <Bar
                               dataKey="customers"
-                              fill="#6366f1"
-                              radius={[4, 4, 0, 0]}
+                              fill="#3b82f6"
+                              radius={[8, 8, 0, 0]}
                               maxBarSize={40}
                             />
                           </BarChart>
@@ -3095,7 +3268,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         >
                           <AreaChart
                             data={hourlyTrendsData}
-                            margin={{ top: 5, right: 0, left: -25, bottom: -5 }}
+                            margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
                           >
                             <defs>
                               <linearGradient
@@ -3133,7 +3306,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                               axisLine={false}
                               tickLine={false}
                               tick={{ fontSize: 10, fill: "#64748b" }}
-                              width={45}
+                              width={48}
                               tickFormatter={(val) =>
                                 val >= 1000000
                                   ? (val / 1000000).toFixed(1) + "M"
@@ -3141,7 +3314,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                     ? (val / 1000).toFixed(0) + "k"
                                     : val
                               }
-                              dx={-5}
+                              dx={-4}
                             />
                             <Tooltip
                               contentStyle={{
@@ -3190,7 +3363,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         >
                           <BarChart
                             data={categoryPerformanceData}
-                            margin={{ top: 5, right: 0, left: -25, bottom: -5 }}
+                            margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
                           >
                             <CartesianGrid
                               strokeDasharray="3 3"
@@ -3208,7 +3381,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                               axisLine={false}
                               tickLine={false}
                               tick={{ fontSize: 10, fill: "#64748b" }}
-                              width={45}
+                              width={56}
                               tickFormatter={(val) =>
                                 val >= 1000000
                                   ? (val / 1000000).toFixed(1) + "M"
@@ -3216,7 +3389,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                     ? (val / 1000).toFixed(0) + "k"
                                     : val
                               }
-                              dx={-5}
+                              dx={-4}
                             />
                             <Tooltip
                               cursor={{ fill: "#f8fafc" }}
@@ -3232,8 +3405,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             />
                             <Bar
                               dataKey="revenue"
-                              fill="#10b981"
-                              radius={[4, 4, 0, 0]}
+                              fill="#14b8a6"
+                              radius={[8, 8, 0, 0]}
                               maxBarSize={40}
                             />
                           </BarChart>
@@ -3654,12 +3827,34 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-6">
               <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
                 <div className="mb-6">
-                  <h3 className="text-lg font-bold text-slate-800">
-                    {t(lang, "dash.sales_growth")}
+                  <h3 className="text-lg font-black text-slate-900">
+                    {lang === "sw" ? "Mapato Jumla" : "Total Revenue"}
                   </h3>
-                  <p className="text-sm text-slate-500 mt-1">
-                    {t(lang, "dash.sales_growth_desc")}
-                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {[
+                      { id: "daily", label: lang === "sw" ? "Siku" : "Day" },
+                      { id: "weekly", label: lang === "sw" ? "Wiki" : "Week" },
+                      { id: "monthly", label: lang === "sw" ? "Mwezi" : "Month" },
+                      { id: "yearly", label: lang === "sw" ? "Mwaka" : "Year" },
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() =>
+                          setDashboardPeriod(
+                            item.id as "daily" | "weekly" | "monthly" | "yearly",
+                          )
+                        }
+                        className={`rounded-xl px-3 py-1.5 text-[10px] font-black transition ${
+                          dashboardPeriod === item.id
+                            ? "bg-blue-600 text-white shadow-sm"
+                            : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="h-[300px] sm:h-[400px] w-full mt-2 font-mono">
                   <ResponsiveContainer
@@ -3669,8 +3864,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     minWidth={50}
                   >
                     <AreaChart
-                      data={salesData}
-                      margin={{ top: 5, right: 0, left: -25, bottom: -5 }}
+                      data={dashboardRevenueTrend}
+                      margin={{ top: 8, right: 18, left: 8, bottom: 0 }}
                     >
                       <defs>
                         <linearGradient
@@ -3682,33 +3877,34 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         >
                           <stop
                             offset="5%"
-                            stopColor="#10b981"
-                            stopOpacity={0.1}
+                            stopColor="#2563eb"
+                            stopOpacity={0.22}
                           />
                           <stop
                             offset="95%"
-                            stopColor="#10b981"
+                            stopColor="#2563eb"
                             stopOpacity={0}
                           />
                         </linearGradient>
                       </defs>
                       <CartesianGrid
-                        strokeDasharray="3 3"
+                        strokeDasharray="4 4"
                         vertical={false}
-                        stroke="#f1f5f9"
+                        stroke="#e5e7eb"
                       />
                       <XAxis
                         dataKey="name"
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fontSize: 10, fill: "#64748b" }}
+                        tick={{ fontSize: 10, fill: "#64748b", fontWeight: 700 }}
                         dy={10}
+                        interval={0}
                       />
                       <YAxis
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fontSize: 10, fill: "#64748b" }}
-                        width={45}
+                        tick={{ fontSize: 10, fill: "#64748b", fontWeight: 700 }}
+                        width={66}
                         tickFormatter={(val) =>
                           val >= 1000000
                             ? (val / 1000000).toFixed(1) + "M"
@@ -3716,23 +3912,29 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                               ? (val / 1000).toFixed(0) + "k"
                               : val
                         }
-                        dx={-5}
+                        dx={-4}
                       />
                       <Tooltip
+                        cursor={{ stroke: "#2563eb", strokeDasharray: "4 4" }}
                         contentStyle={{
-                          borderRadius: "12px",
+                          borderRadius: "16px",
                           border: "none",
                           boxShadow:
-                            "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+                            "0 18px 40px -20px rgb(15 23 42 / 0.45)",
                         }}
+                        formatter={(value: number) => [
+                          formatCurrency(value),
+                          lang === "sw" ? "Mapato" : "Revenue",
+                        ]}
                       />
                       <Area
                         type="monotone"
                         dataKey="sales"
-                        stroke="#10b981"
+                        stroke="#2563eb"
                         strokeWidth={3}
                         fillOpacity={1}
                         fill="url(#colorSalesMobileAdmin)"
+                        activeDot={{ r: 5, strokeWidth: 3, stroke: "#fff", fill: "#2563eb" }}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -3757,7 +3959,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   >
                     <BarChart
                       data={customerData}
-                      margin={{ top: 5, right: 0, left: -25, bottom: -5 }}
+                      margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
                     >
                       <CartesianGrid
                         strokeDasharray="3 3"
@@ -3827,7 +4029,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   >
                     <AreaChart
                       data={hourlyTrendsData}
-                      margin={{ top: 5, right: 0, left: -25, bottom: -5 }}
+                      margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
                     >
                       <defs>
                         <linearGradient
@@ -3918,7 +4120,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   >
                     <BarChart
                       data={categoryPerformanceData}
-                      margin={{ top: 5, right: 0, left: -25, bottom: -5 }}
+                      margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
                     >
                       <CartesianGrid
                         strokeDasharray="3 3"
