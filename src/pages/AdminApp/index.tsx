@@ -1636,20 +1636,68 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   // Enhanced Analytics: Inventory Category & Niche Revenue performance
   const categoryPerformanceData = useMemo(() => {
     const performance: { [nicheId: string]: number } = {};
-    orders.forEach((o) => {
-      if (o.status !== "cancelled") {
-        o.items.forEach((item) => {
-          const prod = products.find((p) => p.id === item.productId);
-          if (prod && prod.nicheId) {
-            const nicheName = prod.nicheId;
-            performance[nicheName] =
-              (performance[nicheName] || 0) + item.price * item.quantity;
-          } else {
-            performance["Mengineyo"] =
-              (performance["Mengineyo"] || 0) + item.price * item.quantity;
-          }
-        });
+    const normalizeNicheKey = (raw?: string | null) => {
+      const value = String(raw || "").trim();
+      if (!value) return "";
+
+      const normalized = value.toLowerCase().replace(/[_\s]+/g, "-");
+      if (
+        ["electronics", "electronic", "meme", "umeme", "vifaa-vya-umeme"].includes(
+          normalized,
+        )
+      ) {
+        return "electronics";
       }
+      if (
+        [
+          "nyumbani",
+          "home",
+          "home-living",
+          "home-&-living",
+          "vyombo-na-nyumba",
+          "kitchen",
+        ].includes(normalized)
+      ) {
+        return "nyumbani";
+      }
+      if (
+        ["fashion", "mavazi", "kike", "kiume", "apparel", "clothes"].includes(
+          normalized,
+        )
+      ) {
+        return "fashion";
+      }
+      if (
+        ["afya", "health", "beauty", "health-beauty", "afya-na-urembo"].includes(
+          normalized,
+        )
+      ) {
+        return "afya";
+      }
+      if (["auto", "motors", "auto-motors", "magari"].includes(normalized)) {
+        return "auto-motors";
+      }
+      return normalized;
+    };
+
+    displayedOrders.forEach((o) => {
+      const norm = String(o.status || "").toLowerCase();
+      if (norm === "cancelled" || norm === "archived") return;
+
+      o.items.forEach((item) => {
+        const prod = products.find((p) => p.id === item.productId);
+        const nicheKey =
+          normalizeNicheKey((prod as any)?.nicheId) ||
+          normalizeNicheKey(prod?.niche) ||
+          normalizeNicheKey(prod?.category) ||
+          normalizeNicheKey((item as any)?.nicheId) ||
+          normalizeNicheKey((item as any)?.niche) ||
+          normalizeNicheKey((item as any)?.category) ||
+          "other";
+
+        performance[nicheKey] =
+          (performance[nicheKey] || 0) + item.price * item.quantity;
+      });
     });
 
     return Object.keys(performance)
@@ -1668,6 +1716,10 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           displayLabel = lang === "sw" ? "Mavazi" : "Apparel & Fashion";
         else if (nicheId === "afya")
           displayLabel = lang === "sw" ? "Afya na Urembo" : "Health & Beauty";
+        else if (nicheId === "auto-motors")
+          displayLabel = lang === "sw" ? "Magari" : "Auto & Motors";
+        else if (nicheId === "other")
+          displayLabel = lang === "sw" ? "Mengineyo" : "Other";
 
         return {
           name: displayLabel.toUpperCase(),
@@ -1676,7 +1728,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       })
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 6);
-  }, [orders, products, lang]);
+  }, [displayedOrders, products, lang]);
 
   const adminUnreadCount = useMemo(() => {
     return messages.filter((m) => {
