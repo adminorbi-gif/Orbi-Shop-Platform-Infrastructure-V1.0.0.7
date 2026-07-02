@@ -19,6 +19,16 @@ body {
   overscroll-behavior-y: none; /* Prevents elastic Safari/Chrome pull-to-refresh on main container */
   -webkit-touch-callout: none; /* Prevents callout sheet on long tap */
   word-break: break-word;
+  padding-top: env(safe-area-inset-top);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+}
+
+@media (display-mode: standalone) {
+  body {
+    background: #f8fafc;
+  }
 }
 
 .orbi-admin-auto-grid {

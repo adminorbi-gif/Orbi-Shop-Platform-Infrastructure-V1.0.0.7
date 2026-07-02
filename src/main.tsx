@@ -70,6 +70,14 @@ setTimeout(() => {
   aiPilotEngine.start();
 }, 2000);
 
+if ("serviceWorker" in navigator && import.meta.env.PROD) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch((error) => {
+      console.warn("Orbi Shop PWA service worker registration failed:", error);
+    });
+  });
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <HelmetProvider>
