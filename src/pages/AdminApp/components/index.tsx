@@ -1170,7 +1170,14 @@ export function SellersAdmin({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 2xl:grid-cols-2 gap-3">
+          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div className="hidden md:grid grid-cols-[minmax(240px,1.4fr)_190px_270px_minmax(330px,auto)] gap-4 px-4 py-3 bg-slate-50/80 border-b border-slate-200/70 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+              <span>Merchant profile</span>
+              <span>Status</span>
+              <span>Performance</span>
+              <span className="text-right">Actions</span>
+            </div>
+            <div className="divide-y divide-slate-100">
             {sellers.map((s: SellerProfile) => {
               const isCurrentlyPro =
                 s.isPro && s.proUntil && s.proUntil > Date.now();
@@ -1184,7 +1191,7 @@ export function SellersAdmin({
                 <div
                   key={s.id}
                   onClick={() => setSelectedSellerId(s.id)}
-                  className="cursor-pointer bg-white rounded-2xl border border-slate-200/80 shadow-sm p-3 flex flex-col sm:flex-row sm:items-center gap-3 relative hover:shadow-md hover:border-slate-300 transition-all duration-200 group overflow-hidden"
+                  className="cursor-pointer bg-white p-3 md:p-4 flex flex-col gap-3 md:grid md:grid-cols-[minmax(240px,1.4fr)_190px_270px_minmax(330px,auto)] md:items-center md:gap-4 hover:bg-slate-50/80 transition-colors group"
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-slate-100 to-white border border-slate-200 text-slate-600 flex items-center justify-center font-black text-sm shadow-sm shrink-0 group-hover:from-primary group-hover:to-primary group-hover:text-white transition-all duration-300">
@@ -1200,7 +1207,7 @@ export function SellersAdmin({
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 sm:justify-end sm:min-w-[220px]">
+                  <div className="flex flex-wrap items-center gap-2 md:justify-start">
                     <span
                       className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${s.status === "frozen" ? "bg-red-50 text-red-600 border border-red-100" : "bg-emerald-50 text-emerald-600 border border-emerald-100"}`}
                     >
@@ -1230,7 +1237,7 @@ export function SellersAdmin({
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-3 gap-2 sm:w-72 shrink-0">
+                  <div className="grid grid-cols-3 gap-2 md:w-full shrink-0">
                     <div className="bg-slate-50 border border-slate-100 rounded-xl px-2.5 py-2">
                       <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest block">Products</span>
                       <span className="font-black text-slate-800 text-xs">{sellerProducts.length}</span>
@@ -1245,7 +1252,7 @@ export function SellersAdmin({
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-end gap-1 sm:border-l sm:border-slate-100 sm:pl-2 sm:max-w-[340px]">
+                  <div className="flex flex-wrap items-center justify-start md:justify-end gap-1 md:border-l md:border-slate-100 md:pl-4">
                     <button
                       onClick={(e) => { e.stopPropagation(); setSelectedSellerId(s.id); }}
                       className="px-2.5 py-2 text-[10px] font-black text-primary bg-primary/5 hover:bg-primary hover:text-white rounded-lg transition flex items-center gap-1"
@@ -1304,10 +1311,11 @@ export function SellersAdmin({
               );
             })}
             {sellers.length === 0 && (
-              <div className="col-span-full py-12 text-center text-slate-400 font-medium bg-slate-50 rounded-2xl border border-dashed border-slate-300">
+              <div className="py-12 text-center text-slate-400 font-medium bg-slate-50">
                 {lang === "sw" ? "Hakuna Wauzaji" : "No Sellers Yet"}
               </div>
             )}
+            </div>
           </div>
         </>
       )}
@@ -10805,7 +10813,7 @@ export function CustomersAdmin({
           )}
         </div>
       ) : (
-        <div className={selectedCustomerId ? "space-y-4" : "grid grid-cols-1 2xl:grid-cols-2 gap-3"}>
+        <div className={selectedCustomerId ? "space-y-4" : "bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden"}>
           {selectedCustomerId ? (
             <CustomerDetailView 
               customer={customers.find(c => c.id === selectedCustomerId)!}
@@ -10842,7 +10850,15 @@ export function CustomersAdmin({
                 </p>
               </div>
             ) : (
-              filteredCustomers.map((c) => {
+              <>
+              <div className="hidden md:grid grid-cols-[minmax(240px,1.5fr)_170px_220px_minmax(360px,auto)] gap-4 px-4 py-3 bg-slate-50/80 border-b border-slate-200/70 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                <span>Customer profile</span>
+                <span>Status</span>
+                <span>Orders</span>
+                <span className="text-right">Actions</span>
+              </div>
+              <div className="divide-y divide-slate-100">
+              {filteredCustomers.map((c) => {
                 const customerOrders = orders.filter(
                   (o) =>
                     (o.customerId === c.id || o.customer_id === c.id) &&
@@ -10857,7 +10873,7 @@ export function CustomersAdmin({
                   <div
                     key={c.id}
                     onClick={() => setSelectedCustomerId(c.id)}
-                    className="cursor-pointer bg-white rounded-2xl border border-slate-200/80 shadow-sm p-3 flex flex-col sm:flex-row sm:items-center gap-3 relative hover:shadow-md hover:border-slate-300 transition-all duration-200 group overflow-hidden"
+                    className="cursor-pointer bg-white p-3 md:p-4 flex flex-col gap-3 md:grid md:grid-cols-[minmax(240px,1.5fr)_170px_220px_minmax(360px,auto)] md:items-center md:gap-4 hover:bg-slate-50/80 transition-colors group"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-slate-100 to-white border border-slate-200 text-slate-600 flex items-center justify-center font-black text-sm shadow-sm shrink-0 group-hover:from-primary group-hover:to-primary group-hover:text-white transition-all duration-300">
@@ -10873,7 +10889,7 @@ export function CustomersAdmin({
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 sm:justify-end sm:min-w-[160px]">
+                    <div className="flex flex-wrap items-center gap-2 md:justify-start">
                         <span
                           className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${c.status === "frozen" ? "bg-red-50 text-red-600 border border-red-100" : "bg-emerald-50 text-emerald-600 border border-emerald-100"}`}
                         >
@@ -10886,7 +10902,7 @@ export function CustomersAdmin({
                         )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 sm:w-48 shrink-0">
+                    <div className="grid grid-cols-2 gap-2 md:w-full shrink-0">
                       <div className="bg-slate-50 border border-slate-100 rounded-xl px-2.5 py-2">
                         <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest block">Orders</span>
                         <span className="font-black text-slate-800 text-xs">{customerOrders.length}</span>
@@ -10897,7 +10913,7 @@ export function CustomersAdmin({
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center justify-end gap-1 sm:border-l sm:border-slate-100 sm:pl-2 sm:max-w-[360px]">
+                    <div className="flex flex-wrap items-center justify-start md:justify-end gap-1 md:border-l md:border-slate-100 md:pl-4">
                       <button
                         onClick={(e) => { e.stopPropagation(); setSelectedCustomerId(c.id); }}
                         className="px-2.5 py-2 text-[10px] font-black text-primary bg-primary/5 hover:bg-primary hover:text-white rounded-lg transition flex items-center gap-1"
@@ -10957,7 +10973,9 @@ export function CustomersAdmin({
                     </div>
                   </div>
                 );
-              })
+              })}
+              </div>
+              </>
             )}
           </>
           )}
