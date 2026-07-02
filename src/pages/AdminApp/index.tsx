@@ -1728,7 +1728,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         // Human-readable labels
         let displayLabel = nicheId;
         if (nicheId === "electronics")
-          displayLabel = lang === "sw" ? "Meme" : "Meme (Electronics)";
+          displayLabel = lang === "sw" ? "Elektroniki" : "Electronics";
         else if (nicheId === "nyumbani")
           displayLabel = lang === "sw" ? "Vyombo na Nyumba" : "Home & Living";
         else if (
