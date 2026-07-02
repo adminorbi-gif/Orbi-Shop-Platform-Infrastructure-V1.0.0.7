@@ -1,6 +1,7 @@
 import React from 'react';
 import { Customer, Order } from '../../../types';
 import { ArrowLeft, ShoppingCart, DollarSign, User, Mail, Phone, Calendar, Shield, ChevronRight, Activity, MapPin, MessageSquare, Lock, Trash } from 'lucide-react';
+import { PriceDisplay } from '../../../components/PriceDisplay';
 
 interface CustomerDetailViewProps {
   customer: Customer;
@@ -99,7 +100,7 @@ export const CustomerDetailView: React.FC<CustomerDetailViewProps> = ({
       <div className="orbi-admin-auto-grid">
         {[
           { label: 'Total Orders', value: customerOrders.length, icon: ShoppingCart, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-          { label: 'Total Spent', value: `Tsh ${totalSpent.toLocaleString()}`, icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'Total Spent', value: <PriceDisplay amount={totalSpent} compact="auto" />, icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50' },
           { label: 'Orders Completed', value: customerOrders.filter(o => o.status === 'completed' || o.status === 'delivered').length, icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50' },
           { label: 'Member Since', value: new Date(customer.registeredAt).getFullYear(), icon: Calendar, color: 'text-amber-600', bg: 'bg-amber-50' },
         ].map((stat, i) => (
@@ -109,7 +110,7 @@ export const CustomerDetailView: React.FC<CustomerDetailViewProps> = ({
             </div>
             <div>
                 <div className="orbi-admin-label text-[10px] md:text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1">{stat.label}</div>
-                <div className="orbi-admin-compact-value font-black text-slate-900">{stat.value}</div>
+                <div className="orbi-admin-compact-value font-black text-slate-900 min-w-0 max-w-full overflow-hidden">{stat.value}</div>
             </div>
           </div>
         ))}
@@ -148,7 +149,9 @@ export const CustomerDetailView: React.FC<CustomerDetailViewProps> = ({
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-4 shrink-0">
-                                      <div className="text-sm font-black text-slate-900 truncate max-w-[100px] sm:max-w-none">Tsh {order.total.toLocaleString()}</div>
+                                      <div className="text-sm font-black text-slate-900 min-w-0 max-w-[130px] sm:max-w-none overflow-hidden">
+                                        <PriceDisplay amount={order.total} size="sm" compact="auto" />
+                                      </div>
                                       <ChevronRight className="text-slate-300 group-hover:text-slate-500" size={16} />
                                     </div>
                                 </div>

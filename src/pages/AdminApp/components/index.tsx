@@ -1248,7 +1248,7 @@ export function SellersAdmin({
                     </div>
                     <div className="bg-slate-50 border border-slate-100 rounded-xl px-2.5 py-2">
                       <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest block">Sales</span>
-                      <span className="font-black text-emerald-600 text-xs truncate block">{formatCurrency(totalSales)}</span>
+                      <span className="font-black text-emerald-600 text-xs truncate block" title={formatCurrency(totalSales)}>{formatCurrency(totalSales, { compact: true })}</span>
                     </div>
                   </div>
 
@@ -10909,7 +10909,7 @@ export function CustomersAdmin({
                       </div>
                       <div className="bg-slate-50 border border-slate-100 rounded-xl px-2.5 py-2">
                         <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest block">Spent</span>
-                        <span className="font-black text-emerald-600 text-xs truncate block">{formatCurrency(totalSpent)}</span>
+                        <span className="font-black text-emerald-600 text-xs truncate block" title={formatCurrency(totalSpent)}>{formatCurrency(totalSpent, { compact: true })}</span>
                       </div>
                     </div>
 
