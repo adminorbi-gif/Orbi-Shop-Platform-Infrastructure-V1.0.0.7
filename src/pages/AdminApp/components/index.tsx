@@ -49,6 +49,7 @@ import {
   CheckCircle2,
   TrendingUp,
   Users,
+  User,
   ShoppingBag,
   DollarSign,
   Calendar,
@@ -1169,7 +1170,7 @@ export function SellersAdmin({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 2xl:grid-cols-2 gap-3">
             {sellers.map((s: SellerProfile) => {
               const isCurrentlyPro =
                 s.isPro && s.proUntil && s.proUntil > Date.now();
@@ -1199,7 +1200,7 @@ export function SellersAdmin({
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                  <div className="flex flex-wrap items-center gap-2 sm:justify-end sm:min-w-[220px]">
                     <span
                       className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${s.status === "frozen" ? "bg-red-50 text-red-600 border border-red-100" : "bg-emerald-50 text-emerald-600 border border-emerald-100"}`}
                     >
@@ -1229,7 +1230,7 @@ export function SellersAdmin({
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-3 gap-2 sm:w-60 shrink-0">
+                  <div className="grid grid-cols-3 gap-2 sm:w-72 shrink-0">
                     <div className="bg-slate-50 border border-slate-100 rounded-xl px-2.5 py-2">
                       <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest block">Products</span>
                       <span className="font-black text-slate-800 text-xs">{sellerProducts.length}</span>
@@ -1244,7 +1245,7 @@ export function SellersAdmin({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-end gap-1 sm:border-l sm:border-slate-100 sm:pl-2">
+                  <div className="flex flex-wrap items-center justify-end gap-1 sm:border-l sm:border-slate-100 sm:pl-2 sm:max-w-[340px]">
                     <button
                       onClick={(e) => { e.stopPropagation(); setSelectedSellerId(s.id); }}
                       className="px-2.5 py-2 text-[10px] font-black text-primary bg-primary/5 hover:bg-primary hover:text-white rounded-lg transition flex items-center gap-1"
@@ -10804,7 +10805,7 @@ export function CustomersAdmin({
           )}
         </div>
       ) : (
-        <div className={selectedCustomerId ? "space-y-4" : "grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-3"}>
+        <div className={selectedCustomerId ? "space-y-4" : "grid grid-cols-1 2xl:grid-cols-2 gap-3"}>
           {selectedCustomerId ? (
             <CustomerDetailView 
               customer={customers.find(c => c.id === selectedCustomerId)!}
@@ -10872,7 +10873,7 @@ export function CustomersAdmin({
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                    <div className="flex flex-wrap items-center gap-2 sm:justify-end sm:min-w-[160px]">
                         <span
                           className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${c.status === "frozen" ? "bg-red-50 text-red-600 border border-red-100" : "bg-emerald-50 text-emerald-600 border border-emerald-100"}`}
                         >
@@ -10885,7 +10886,7 @@ export function CustomersAdmin({
                         )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 sm:w-40 shrink-0">
+                    <div className="grid grid-cols-2 gap-2 sm:w-48 shrink-0">
                       <div className="bg-slate-50 border border-slate-100 rounded-xl px-2.5 py-2">
                         <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest block">Orders</span>
                         <span className="font-black text-slate-800 text-xs">{customerOrders.length}</span>
@@ -10896,7 +10897,7 @@ export function CustomersAdmin({
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-end gap-1 sm:border-l sm:border-slate-100 sm:pl-2">
+                    <div className="flex flex-wrap items-center justify-end gap-1 sm:border-l sm:border-slate-100 sm:pl-2 sm:max-w-[360px]">
                       <button
                         onClick={(e) => { e.stopPropagation(); setSelectedCustomerId(c.id); }}
                         className="px-2.5 py-2 text-[10px] font-black text-primary bg-primary/5 hover:bg-primary hover:text-white rounded-lg transition flex items-center gap-1"
