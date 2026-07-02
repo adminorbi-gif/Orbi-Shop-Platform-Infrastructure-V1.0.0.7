@@ -1,5 +1,5 @@
 import { Sparkles, RefreshCw, Send, Store, FileText, ShieldCheck, Camera } from "lucide-react";
-import { uploadFileToSupabase } from "../../../lib/upload";
+import { uploadFileViaStorageApi } from "../../../lib/upload";
 import React, { useState, useMemo } from "react";
 import { db } from "../../../lib/db";
 import { SchemaValidator } from "../../../utils/schemaValidation";
@@ -250,7 +250,7 @@ export function StoreSettingsForm({
     if (!e.target.files?.[0]) return;
     setUploadingAvatar(true);
     try {
-      const url = await uploadFileToSupabase(
+      const url = await uploadFileViaStorageApi(
         e.target.files[0],
         "messages",
         () => {},

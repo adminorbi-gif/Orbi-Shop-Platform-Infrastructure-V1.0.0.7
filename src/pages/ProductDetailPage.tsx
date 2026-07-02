@@ -628,6 +628,9 @@ export default function ProductDetailPage({
                 src={product.images[imgIdx]}
                 alt={product.name}
                 className="w-full h-full object-contain p-5 sm:p-7 lg:p-8 transition-transform duration-200 ease-out lg:group-hover:scale-[2.2]"
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
                 style={{ transformOrigin: 'var(--zoom-x, 50%) var(--zoom-y, 50%)' }}
               />
               <div className="absolute left-4 top-4 z-20 flex flex-wrap gap-2">
@@ -683,6 +686,8 @@ export default function ProductDetailPage({
                       src={img}
                       alt={`Thumb ${idx}`}
                       className="w-full h-full object-cover rounded-lg"
+                      loading={idx === imgIdx ? "eager" : "lazy"}
+                      decoding="async"
                     />
                   </button>
                 ))}

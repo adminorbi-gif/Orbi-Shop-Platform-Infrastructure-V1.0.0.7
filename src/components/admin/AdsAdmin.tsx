@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { db } from "../../lib/db";
-import { supabase } from "../../lib/supabase";
 import { formatCurrency } from "../../lib/storage";
+import { uploadFileViaStorageApi } from "../../lib/upload";
 import { Product, MarketplaceAd } from "../../types";
 import {
   Megaphone,
@@ -29,32 +29,6 @@ import {
   Pause,
   Upload
 } from "lucide-react";
-
-// Local storage helper for image uploaded inside the admin
-const uploadFileToSupabaseLocal = async (
-  file: File,
-  folder: "products" | "promotions" | "messages"
-): Promise<string> => {
-  try {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("folder", folder);
-
-    const uploadRes = await fetch("/api/v1/storage/upload", {
-      method: "POST",
-      body: formData
-    });
-    
-    const resJson = await uploadRes.json();
-    if (!uploadRes.ok || !resJson.success) {
-      throw new Error(`Kosa la kupakia: ${resJson.message || uploadRes.statusText}`);
-    }
-    return resJson.publicUrl;
-  } catch (error: any) {
-    console.error("Storage Error:", error);
-    throw error;
-  }
-};
 
 // Auto-calculate current status of a given advertisement based on metrics, dates, and budgets
 export function getAdLiveStatus(ad: MarketplaceAd): MarketplaceAd["status"] {
@@ -147,7 +121,7 @@ export function AdsAdmin({ lang, products, currentStaff }: AdsAdminProps) {
         throw new Error(lang === "sw" ? "Ukubwa usizidi 15MB" : "Size exceeds 15MB");
       }
       setUploadProgress(40);
-      const url = await uploadFileToSupabaseLocal(file, "promotions");
+      const url = await uploadFileViaStorageApi(file, "promotions");
       setUploadProgress(100);
       setAdImage(url);
       triggerAlert(lang === "sw" ? "Picha imepakiwa vizuri!" : "Image uploaded successfully!", "success");

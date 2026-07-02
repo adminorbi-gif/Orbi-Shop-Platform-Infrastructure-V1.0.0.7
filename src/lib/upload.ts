@@ -1,4 +1,4 @@
-export const uploadFileToSupabase = async (
+export const uploadFileViaStorageApi = async (
   rawFile: File,
   folder: "products" | "promotions" | "messages",
   onProgress?: (progress: number) => void,
@@ -116,7 +116,7 @@ export const uploadFileToSupabase = async (
   }
 };
 
-export const deleteFileFromSupabase = async (storagePath: string): Promise<void> => {
+export const deleteFileViaStorageApi = async (storagePath: string): Promise<void> => {
   try {
     const res = await fetch("/api/v1/storage/delete", {
       method: "POST",

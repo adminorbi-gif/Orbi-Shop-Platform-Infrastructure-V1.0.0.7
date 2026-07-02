@@ -1,5 +1,5 @@
 import { getStoragePath, extractMediaFromText, isImage, isVideo } from '../../lib/media';
-import { uploadFileToSupabase } from '../../lib/upload';
+import { uploadFileViaStorageApi } from '../../lib/upload';
 import { getOrderNumber } from "../../lib/helpers";
 import { useAdminApp } from "./useAdminApp";
 import React, {

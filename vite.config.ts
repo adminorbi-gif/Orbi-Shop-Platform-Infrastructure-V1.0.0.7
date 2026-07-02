@@ -18,6 +18,19 @@ export default defineConfig(({ mode }) => {
         input: {
           main: 'index.html',
           admin: 'admin.html'
+        },
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return undefined;
+            if (id.includes('react') || id.includes('scheduler')) return 'vendor-react';
+            if (id.includes('lucide-react')) return 'vendor-icons';
+            if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts';
+            if (id.includes('motion')) return 'vendor-motion';
+            if (id.includes('jspdf') || id.includes('html2canvas')) return 'vendor-documents';
+            if (id.includes('html5-qrcode')) return 'vendor-scanner';
+            if (id.includes('@supabase')) return 'vendor-auth';
+            return undefined;
+          }
         }
       }
     },

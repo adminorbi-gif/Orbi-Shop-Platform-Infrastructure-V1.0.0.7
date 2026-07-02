@@ -1,9 +1,16 @@
 export const getStoragePath = (url: string): string | null => {
   if (!url || typeof url !== "string") return null;
-  const bucketSubstr = "/storage/v1/object/public/orbi-shop-images/";
+
+  // Legacy cleanup support only. New uploads/deletes go through
+  // /api/v1/storage/* and never call storage providers from the browser.
+  const bucketSubstr = "/storage/v1/object/public/";
   const index = url.indexOf(bucketSubstr);
   if (index !== -1) {
-    return decodeURIComponent(url.substring(index + bucketSubstr.length));
+    const objectPath = url.substring(index + bucketSubstr.length);
+    const [, ...pathParts] = objectPath.split("/");
+    if (pathParts.length > 0) {
+      return decodeURIComponent(pathParts.join("/"));
+    }
   }
   return null;
 };

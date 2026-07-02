@@ -8,8 +8,6 @@ import {
   BilingualSearchEngine,
   InvertedIndexSearch,
 } from "../../lib/SearchEngine";
-import PromotionalBannersSection from "../../components/PromotionalBannersSection";
-import { PriceDisplay } from "../../components/PriceDisplay";
 import { formatCurrency } from "../../lib/storage";
 import {
   Product,
@@ -225,35 +223,44 @@ import {
 } from "lucide-react";
 import { Lang, t } from "../../lib/i18nClient";
 import { apiFetch } from "../../lib/db";
-import {
-  AboutUsSection,
-  ApplySellerModal,
-} from "../../components/client/ClientSubcomponents";
 import { useDialog } from "../../components/CustomDialogContext";
-import ProductDetailPage from "../ProductDetailPage";
-import { AppBarBackgroundSlider } from "../../components/AppBarBackgroundSlider";
-import TrackOrderModal from "../../components/TrackOrderModal";
-import ReviewModal from "../../components/ReviewModal";
-import ScratchCardChallenge from "../../components/ScratchCardChallenge";
-import CookieConsent from "../../components/CookieConsent";
-import AboutUsPage from "../AboutUsPage";
-import ForgotPassword from "../../components/ForgotPassword";
-import { LoadingOverlay } from "../../components/LoadingOverlay";
-import { motion, AnimatePresence } from "motion/react";
 
-// Loyalty points system helper methods
-import {
-  PromoImageSlider,
-  PromoCarousel,
-  CustomerInvoiceView,
-  ContactSection,
-  CheckoutModal,
-  AuthModal,
-  ProductSkeleton,
-  MediaRenderer,
-  PackageIcon,
-  CustomerProfile
-} from './components';
+const STOREFRONT_PRIMARY_TIMEOUT_MS = 12000;
+const STOREFRONT_OPTIONAL_TIMEOUT_MS = 6500;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => {
+      reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+
+    promise.then(
+      (value) => {
+        window.clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timeoutId);
+        reject(error);
+      },
+    );
+  });
+}
+
+function getProductIdFromLocation() {
+  const search = new URLSearchParams(window.location.search);
+  const queryProductId = search.get("product") || search.get("product-id");
+  if (queryProductId) return queryProductId;
+
+  const pathParts = window.location.pathname.split("/").filter(Boolean);
+  if (pathParts[0] === "shop" && pathParts.length >= 3) {
+    const lastPart = pathParts[pathParts.length - 1];
+    const idMatch = lastPart.match(/--([a-z0-9-]+)$/i);
+    if (idMatch) return idMatch[1];
+  }
+
+  return null;
+}
 
 function hashString(str: string): number {
   let hash = 0;
@@ -1711,36 +1718,45 @@ Zawadi ya Alama za Uaminifu zilizoongezwa kwenye kibeti chako: +${earned} Points
     try {
       if (!isBackground) setIsLoading(true);
 
-      // Core storefront data needed immediately
-      const [productsRes, promosRes, bannersRes] = await Promise.allSettled([
+      // Products are the only blocking storefront dependency. Campaigns, banners,
+      // reviews, and ads must never hold a product page hostage on slow networks.
+      const allProducts = await withTimeout(
         db.getProducts(),
-        db.getPromotions(),
-        db.getPromotionalBanners()
-      ]);
+        STOREFRONT_PRIMARY_TIMEOUT_MS,
+        "Products",
+      );
+      const visibleProducts = allProducts.filter((p: any) => p.visible !== false);
+      setProducts(visibleProducts);
 
-      // 1. Process Products
-      let visibleProducts: any[] = [];
-      if (productsRes.status === 'fulfilled') {
-        const allProducts = productsRes.value;
-        visibleProducts = allProducts.filter((p: any) => p.visible !== false);
-        setProducts(visibleProducts);
+      const requestedProductId = getProductIdFromLocation();
+      if (requestedProductId) {
+        const requestedProduct = visibleProducts.find(
+          (p: any) => p.id === requestedProductId || p.legacy_id === requestedProductId,
+        );
+        if (requestedProduct) {
+          setSelectedProduct(requestedProduct);
+        }
       }
 
-      // 2. Process Promotions
-      let visiblePromos: any[] = [];
-      if (promosRes.status === 'fulfilled') {
-        const allPromos = promosRes.value;
+      if (!isBackground) setIsLoading(false);
+
+      // Optional visual storefront data loads progressively after the product list.
+      Promise.allSettled([
+        withTimeout(db.getPromotions(), STOREFRONT_OPTIONAL_TIMEOUT_MS, "Promotions"),
+        withTimeout(db.getPromotionalBanners(), STOREFRONT_OPTIONAL_TIMEOUT_MS, "Promotional banners"),
+      ]).then(([promosRes, bannersRes]) => {
+        let visiblePromos: any[] = [];
+        if (promosRes.status === 'fulfilled') {
+          const allPromos = promosRes.value;
         visiblePromos = allPromos.filter((p: any) => p.visible);
         setPromos(visiblePromos);
       }
 
-      // 3. Process Promotional Banners
       if (bannersRes.status === 'fulfilled') {
         const activeBanners = bannersRes.value.filter((b: any) => b.visible);
         setPromotionalBanners(activeBanners);
       }
 
-      // 6. Process Shuffle Weights
       if (!isBackground) {
         const weights: Record<string, number> = {};
         visibleProducts.forEach((p: any) => {
@@ -1763,17 +1779,16 @@ Zawadi ya Alama za Uaminifu zilizoongezwa kwenye kibeti chako: +${earned} Points
         });
         setShuffleWeights(weights);
       }
-
-      if (!isBackground) setIsLoading(false);
+      });
 
       // Fetch secondary data without blocking the UI
       Promise.allSettled([
-        db.getOrders(),
-        db.getReviews(),
-        db.getCoupons(),
-        db.getNiches(),
-        db.getSellers(),
-        db.getAds()
+        withTimeout(db.getOrders(), STOREFRONT_OPTIONAL_TIMEOUT_MS, "Orders"),
+        withTimeout(db.getReviews(), STOREFRONT_OPTIONAL_TIMEOUT_MS, "Reviews"),
+        withTimeout(db.getCoupons(), STOREFRONT_OPTIONAL_TIMEOUT_MS, "Coupons"),
+        withTimeout(db.getNiches(), STOREFRONT_OPTIONAL_TIMEOUT_MS, "Niches"),
+        withTimeout(db.getSellers(), STOREFRONT_OPTIONAL_TIMEOUT_MS, "Sellers"),
+        withTimeout(db.getAds(), STOREFRONT_OPTIONAL_TIMEOUT_MS, "Ads")
       ]).then(([ordersRes, reviewsRes, couponsRes, nichesRes, sellersRes, adsRes]) => {
         // 4. Process Orders
         if (ordersRes.status === 'fulfilled') {
@@ -1826,13 +1841,7 @@ Zawadi ya Alama za Uaminifu zilizoongezwa kwenye kibeti chako: +${earned} Points
           setMarketplaceAds(adsRes.value);
         }
 
-        // 8. Handle initial URL selection (if any)
         const params = new URLSearchParams(window.location.search);
-        const prodId = params.get("product");
-        if (prodId && visibleProducts.length > 0) {
-          const prod = visibleProducts.find((p: any) => p.id === prodId);
-          if (prod) setSelectedProduct(prod);
-        }
 
         const orderIdParam = params.get("order") || params.get("order_id");
         if (orderIdParam) {

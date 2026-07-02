@@ -6,7 +6,7 @@ import { getStoragePath, extractMediaFromText, isImage, isVideo } from '../../..
 import { getLoyaltyPoints, saveLoyaltyPoints, formatOrderNumber, getOrderNumber } from "../../../lib/helpers";
 import { useI18n } from "../index";
 import { useDialog } from "../../../components/CustomDialogContext";
-import { uploadFileToSupabase, deleteFileFromSupabase } from "../../../lib/upload";
+import { uploadFileViaStorageApi, deleteFileViaStorageApi } from "../../../lib/upload";
 import React, {
   useState,
   useEffect,
@@ -3119,7 +3119,7 @@ export function ProductsAdmin({
     const activeUploadLogs = newUploads.map((up) => {
       return addLog(
         `Inapakia picha: ${up.name}`,
-        `Inapeleka kwenye hifadhi ya orbi-shop-images`,
+        `Inapeleka kwenye backend storage API`,
         "pending",
         0,
       );
@@ -3128,7 +3128,7 @@ export function ProductsAdmin({
     try {
       const urls = await Promise.all(
         files.map(async (file, idx) => {
-          const url = await uploadFileToSupabase(
+          const url = await uploadFileViaStorageApi(
             file,
             "products",
             (progress) => {
@@ -3139,7 +3139,7 @@ export function ProductsAdmin({
               );
               addLog(
                 `Inapakia picha: ${file.name}`,
-                `Inapeleka kwenye hifadhi ya orbi-shop-images`,
+                `Inapeleka kwenye backend storage API`,
                 "pending",
                 Math.round(progress),
                 activeUploadLogs[idx],
@@ -3153,7 +3153,7 @@ export function ProductsAdmin({
           );
           addLog(
             `Imepakiwa: ${file.name}`,
-            `Imefanikiwa kuwekwa Supabase`,
+            `Imefanikiwa kuhifadhiwa kupitia backend API`,
             "success",
             100,
             activeUploadLogs[idx],
@@ -3279,7 +3279,7 @@ export function ProductsAdmin({
         for (const imgUrl of removedImages) {
           const storagePath = getStoragePath(imgUrl);
           if (storagePath) {
-            await deleteFileFromSupabase(storagePath);
+            await deleteFileViaStorageApi(storagePath);
           }
         }
       }
@@ -3287,7 +3287,7 @@ export function ProductsAdmin({
 
     try {
       addLog(
-        "Inahifadhi taarifa kwenye Database (Supabase)...",
+        "Inahifadhi taarifa kwenye Backend Database API...",
         `Kutuma data za ${name}`,
         "pending",
         80,
@@ -3359,7 +3359,7 @@ export function ProductsAdmin({
         for (const imgUrl of prodToDelete.images) {
           const storagePath = getStoragePath(imgUrl);
           if (storagePath) {
-            await deleteFileFromSupabase(storagePath);
+            await deleteFileViaStorageApi(storagePath);
           }
         }
       }
@@ -3463,7 +3463,7 @@ export function ProductsAdmin({
           for (const imgUrl of prodToDelete.images) {
             const storagePath = getStoragePath(imgUrl);
             if (storagePath) {
-              await deleteFileFromSupabase(storagePath);
+              await deleteFileViaStorageApi(storagePath);
             }
           }
         }
@@ -7213,7 +7213,7 @@ export function PromosAdmin({
     if (!e.target.files?.[0]) return;
     setBannerUploading(true);
     try {
-      const url = await uploadFileToSupabase(
+      const url = await uploadFileViaStorageApi(
         e.target.files[0],
         "promotions",
         () => {},
@@ -7357,7 +7357,7 @@ export function PromosAdmin({
     try {
       const urls = await Promise.all(
         files.map(async (file, idx) => {
-          const url = await uploadFileToSupabase(
+          const url = await uploadFileViaStorageApi(
             file,
             "promotions",
             (progress) => {
@@ -7452,7 +7452,7 @@ export function PromosAdmin({
           for (const imgUrl of removedPromoImages) {
             const storagePath = getStoragePath(imgUrl);
             if (storagePath) {
-              await deleteFileFromSupabase(storagePath);
+              await deleteFileViaStorageApi(storagePath);
             }
           }
         }
@@ -7500,7 +7500,7 @@ export function PromosAdmin({
       for (const imgUrl of promoImages) {
         const storagePath = getStoragePath(imgUrl);
         if (storagePath) {
-          await deleteFileFromSupabase(storagePath);
+          await deleteFileViaStorageApi(storagePath);
         }
       }
     }
@@ -8723,7 +8723,7 @@ export function MessagesAdmin({
     const file = e.target.files[0];
     setIsUploadingMedia(true);
     try {
-      const url = await uploadFileToSupabase(file, "messages");
+      const url = await uploadFileViaStorageApi(file, "messages");
       setAttachedMediaUrl(url);
       setAttachedFile(file);
     } catch (err: any) {
@@ -11385,7 +11385,7 @@ export function SettingsAdmin() {
     if (!file) return;
     setUploadingBGs((prev) => ({ ...prev, [key]: true }));
     try {
-      const url = await uploadFileToSupabase(file, "promotions", () => {});
+      const url = await uploadFileViaStorageApi(file, "promotions", () => {});
       setSettings((prev: any) => ({ ...prev, [field]: url }));
     } catch (err: any) {
       console.error(err);
@@ -15589,7 +15589,7 @@ export function SellerSettingsSelf({
     if (!e.target.files?.[0]) return;
     setUploadingLogo(true);
     try {
-      const url = await uploadFileToSupabase(
+      const url = await uploadFileViaStorageApi(
         e.target.files[0],
         "products",
         () => {},

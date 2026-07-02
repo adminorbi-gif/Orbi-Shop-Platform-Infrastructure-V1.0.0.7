@@ -1,4 +1,4 @@
-import { uploadFileToSupabase } from "../../lib/upload";
+import { uploadFileViaStorageApi } from "../../lib/upload";
 
 import React, { useState, useMemo } from "react";
 import { db } from "../../lib/db";
@@ -555,7 +555,7 @@ const [tab, setTab] = useState<
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const tracker = newUploads[i];
-        const url = await uploadFileToSupabase(file, "products", (progress) => {
+        const url = await uploadFileViaStorageApi(file, "products", (progress) => {
           setUploadingFiles((prev) =>
             prev.map((item) =>
               item.id === tracker.id
