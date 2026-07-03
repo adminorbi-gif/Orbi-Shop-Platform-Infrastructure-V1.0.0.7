@@ -54,7 +54,6 @@ import {
   Clock,
 } from "lucide-react";
 import { SellerMarketing } from "../../components/seller/SellerMarketing";
-import { OrderHeatmap } from "../../components/seller/OrderHeatmap";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -902,17 +901,63 @@ export default function SellerApp({
                   </div>
                 </div>
 
-                {/* Daily Activity Heatmap */}
+                {/* Daily order activity mirrors the admin dashboard line-chart pattern. */}
                 <div className="bg-white p-3 rounded-[1.25rem] border border-slate-200/80 shadow-sm overflow-hidden">
                   <div className="mb-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                     <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
                       {lang === "sw" ? "Mwenendo wa Oda" : "Order Activity"}
                     </h3>
                     <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-                      {lang === "sw" ? "Saa na siku zenye oda nyingi" : "Peak sales hours"}
+                      {lang === "sw" ? "Oda kwa kipindi ulichochagua" : "Orders by selected period"}
                     </span>
                   </div>
-                  <OrderHeatmap orders={orders} />
+                  <div className="h-52 w-full min-w-[50px] min-h-[208px] font-mono">
+                    <ResponsiveContainer width="100%" height={208} minWidth={50} minHeight={50}>
+                      <LineChart data={sellerRevenueTrend} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e5e7eb" />
+                        <XAxis
+                          dataKey="name"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: "#64748b", fontWeight: 700 }}
+                          tickMargin={8}
+                          interval={dashboardPeriod === "daily" ? 3 : 0}
+                        />
+                        <YAxis
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: "#64748b", fontWeight: 700 }}
+                          width={34}
+                          allowDecimals={false}
+                        />
+                        <Tooltip
+                          cursor={{ stroke: "#2563eb", strokeDasharray: "4 4" }}
+                          contentStyle={{
+                            borderRadius: "16px",
+                            border: "none",
+                            boxShadow: "0 18px 40px -20px rgb(15 23 42 / 0.45)",
+                            fontSize: 12,
+                            fontWeight: 700,
+                          }}
+                          formatter={(value) => [
+                            Number(value).toLocaleString(),
+                            lang === "sw" ? "Oda" : "Orders",
+                          ]}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="orders"
+                          stroke="#2563eb"
+                          strokeWidth={3}
+                          dot={{ r: 3, fill: "#2563eb", strokeWidth: 0 }}
+                          activeDot={{ r: 6, strokeWidth: 3, stroke: "#fff", fill: "#2563eb" }}
+                          isAnimationActive={true}
+                          animationDuration={1200}
+                          animationEasing="ease-in-out"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
 
                 {/* Instant Payout Dialog Drawer */}

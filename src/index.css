@@ -217,27 +217,28 @@ body {
 
 .seller-dashboard-hero {
   background:
-    radial-gradient(circle at 96% 0%, rgba(16, 185, 129, 0.16), transparent 14rem),
+    radial-gradient(circle at 96% 0%, rgba(37, 99, 235, 0.12), transparent 14rem),
+    radial-gradient(circle at 70% 100%, rgba(15, 23, 42, 0.06), transparent 12rem),
     linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
 }
 
 .seller-stat-card {
-  min-height: clamp(5rem, 12cqw, 6rem);
-  max-height: 6.6rem;
+  min-height: clamp(6.4rem, 15cqw, 7.5rem);
+  height: auto;
 }
 
 .seller-stat-label {
-  font-size: clamp(0.44rem, 3.1cqw, 0.56rem);
-  line-height: 1.08;
-  letter-spacing: 0.08em;
+  font-size: clamp(0.48rem, 2.9cqw, 0.58rem);
+  line-height: 1.14;
+  letter-spacing: 0.07em;
   white-space: normal;
   overflow-wrap: anywhere;
 }
 
 .seller-stat-value {
-  font-size: clamp(0.98rem, 10.5cqw, 1.42rem);
-  line-height: 1.02;
-  letter-spacing: -0.05em;
+  font-size: clamp(0.9rem, 8.8cqw, 1.34rem);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
