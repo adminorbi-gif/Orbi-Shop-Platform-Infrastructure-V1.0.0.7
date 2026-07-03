@@ -113,6 +113,7 @@ body {
 .orbi-delivery-truck {
   transform-origin: 50% 70%;
   animation: orbi-delivery-truck-run 4.8s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+  animation-delay: var(--orbi-delivery-truck-delay, 0s);
 }
 
 .orbi-delivery-rotator {
@@ -127,6 +128,7 @@ body {
   display: flex;
   flex-direction: column;
   animation: orbi-delivery-slide var(--orbi-delivery-slide-duration, 18s) cubic-bezier(0.45, 0, 0.2, 1) infinite;
+  animation-delay: var(--orbi-delivery-slide-delay, 0s);
 }
 
 .orbi-delivery-rotator-track--static {

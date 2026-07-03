@@ -26,12 +26,16 @@ import {
   Review,
   PromotionalBanner,
   DeliveryZone,
+  DeliveryRule,
 } from "../../types";
 import {
   DEFAULT_DELIVERY_ZONES,
+  DEFAULT_DELIVERY_RULES,
   formatDeliveryDays,
   getDeliveryZoneName,
   normalizeDeliveryZones,
+  normalizeDeliveryRules,
+  quoteProductDelivery,
 } from "../../lib/deliveryZones";
 import { getProductPriceForQty } from "../../utils/pricing";
 import { navigateTo } from "../../utils/navigation";
@@ -240,6 +244,8 @@ const ProductDetailPage = lazyWithRetry(() => import("../ProductDetailPage"));
 
 let deliveryZonesCache: DeliveryZone[] | null = null;
 let deliveryZonesPromise: Promise<DeliveryZone[]> | null = null;
+let deliveryRulesCache: DeliveryRule[] | null = null;
+let deliveryRulesPromise: Promise<DeliveryRule[]> | null = null;
 
 const getCachedDeliveryZones = async () => {
   if (deliveryZonesCache) return deliveryZonesCache;
@@ -259,6 +265,57 @@ const getCachedDeliveryZones = async () => {
       });
   }
   return deliveryZonesPromise;
+};
+
+const getCachedDeliveryRules = async () => {
+  if (deliveryRulesCache) return deliveryRulesCache;
+  if (!deliveryRulesPromise) {
+    deliveryRulesPromise = db
+      .getDeliveryRules()
+      .then((rules) => {
+        deliveryRulesCache = normalizeDeliveryRules(rules);
+        return deliveryRulesCache;
+      })
+      .catch(() => {
+        deliveryRulesCache = DEFAULT_DELIVERY_RULES;
+        return deliveryRulesCache;
+      })
+      .finally(() => {
+        deliveryRulesPromise = null;
+      });
+  }
+  return deliveryRulesPromise;
+};
+
+const formatDeliveryDateRange = (minDays: number, maxDays: number, lang: Lang) => {
+  const locale = lang === "sw" ? "sw-TZ" : "en-US";
+  const formatOpts: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "numeric" };
+  const minDate = new Date();
+  minDate.setDate(minDate.getDate() + Math.max(0, Number(minDays || 0)));
+  const maxDate = new Date();
+  maxDate.setDate(maxDate.getDate() + Math.max(Number(minDays || 0), Number(maxDays || minDays || 0)));
+  const minLabel = minDate.toLocaleDateString(locale, formatOpts);
+  const maxLabel = maxDate.toLocaleDateString(locale, formatOpts);
+  return minLabel === maxLabel ? minLabel : `${minLabel} - ${maxLabel}`;
+};
+
+const parseEtaDays = (eta: string) => {
+  const normalized = String(eta || "").toLowerCase();
+  if (!normalized || normalized.includes("leo") || normalized.includes("today") || normalized.includes("instant")) {
+    return { min: 0, max: 0 };
+  }
+  const match = normalized.match(/(\d+)(?:\s*-\s*(\d+))?/);
+  const min = match ? Number(match[1]) : 0;
+  const max = match ? Number(match[2] || match[1]) : min;
+  return { min, max };
+};
+
+const productMotionSeed = (value: string) => {
+  let seed = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    seed = (seed * 31 + value.charCodeAt(i)) % 1000;
+  }
+  return seed;
 };
 import { AppBarBackgroundSlider } from "../../components/AppBarBackgroundSlider";
 const TrackOrderModal = lazyWithRetry(() => import("../../components/TrackOrderModal"));
@@ -3580,6 +3637,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   onLikeToggle,
 }) => {
   const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>(DEFAULT_DELIVERY_ZONES);
+  const [deliveryRules, setDeliveryRules] = useState<DeliveryRule[]>(DEFAULT_DELIVERY_RULES);
   const isOutOfStock = p.stock <= 0;
   const [imgIdx, setImgIdx] = useState(0);
   const [showFullImage, setShowFullImage] = useState(false);
@@ -3592,25 +3650,61 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const hasActivePro = Boolean(seller?.isPro && seller?.proUntil && seller.proUntil > Date.now());
   const sellerName = seller?.storeName || seller?.name;
   const sellerLocation = seller?.location || (lang === "sw" ? "Tanzania" : "Tanzania");
-  const deliveryPromise = p.stock > 0
-    ? (lang === "sw" ? "Delivery ipo" : "Delivery available")
-    : (lang === "sw" ? "Haipatikani sasa" : "Currently unavailable");
-  const deliverySlides = useMemo(() => {
-    if (p.stock <= 0) return [deliveryPromise];
-    const zoneSlides = normalizeDeliveryZones(deliveryZones)
-      .slice(0, 3)
-      .map((zone) => `${getDeliveryZoneName(zone, lang)} ${formatDeliveryDays(zone, lang)}`);
-    const source = sellerLocation && sellerLocation !== "Tanzania"
-      ? (lang === "sw" ? `Kutoka ${sellerLocation}` : `Ships from ${sellerLocation}`)
-      : (lang === "sw" ? "Dar 1-2 siku" : "Dar 1-2 days");
+  const motionSeed = useMemo(() => productMotionSeed(String(p.id || p.legacy_id || p.name)), [p.id, p.legacy_id, p.name]);
+  const deliveryMotionStyle = useMemo(() => ({
+    "--orbi-delivery-slide-delay": `-${((motionSeed % 4500) / 1000).toFixed(2)}s`,
+    "--orbi-delivery-truck-delay": `-${(((motionSeed * 7) % 4800) / 1000).toFixed(2)}s`,
+  }) as React.CSSProperties, [motionSeed]);
 
-    return [deliveryPromise, source, ...zoneSlides].slice(0, 4);
-  }, [deliveryPromise, deliveryZones, lang, p.stock, sellerLocation]);
+  const deliverySlides = useMemo(() => {
+    if (p.stock <= 0) return [lang === "sw" ? "Haipatikani sasa" : "Currently unavailable"];
+
+    const zones = normalizeDeliveryZones(deliveryZones);
+    const rules = normalizeDeliveryRules(deliveryRules);
+    const quotes = zones.map((zone) => ({
+      zone,
+      quote: quoteProductDelivery(p, 1, zone, rules, lang),
+    }));
+    const availableQuotes = quotes.filter(({ quote }) => quote.available);
+    const firstUnavailable = quotes.find(({ quote }) => !quote.available);
+
+    if (availableQuotes.length === 0) {
+      const reason = firstUnavailable?.quote.reason;
+      return [
+        p.requiresDeliveryQuote
+          ? (lang === "sw" ? "Makadirio maalum ya delivery" : "Custom delivery quote")
+          : reason || (lang === "sw" ? "Delivery haijapatikana" : "Delivery unavailable"),
+      ];
+    }
+
+    const primary = availableQuotes[0];
+    const primaryEta = parseEtaDays(primary.quote.eta);
+    const primaryDate = formatDeliveryDateRange(primaryEta.min, primaryEta.max, lang);
+    const primaryZone = getDeliveryZoneName(primary.zone, lang);
+    const slides = [
+      `${primaryZone}: ${primaryDate}`,
+      `${lang === "sw" ? "Delivery" : "Delivery"} ${formatCurrency(primary.quote.fee)}`,
+    ];
+
+    if (sellerLocation && sellerLocation !== "Tanzania") {
+      slides.push(lang === "sw" ? `Kutoka ${sellerLocation}` : `Ships from ${sellerLocation}`);
+    }
+
+    availableQuotes.slice(1, 3).forEach(({ zone, quote }) => {
+      const eta = parseEtaDays(quote.eta);
+      slides.push(`${getDeliveryZoneName(zone, lang)}: ${formatDeliveryDateRange(eta.min, eta.max, lang)}`);
+    });
+
+    return slides.slice(0, 4);
+  }, [deliveryRules, deliveryZones, lang, p, sellerLocation]);
 
   useEffect(() => {
     let active = true;
     getCachedDeliveryZones().then((zones) => {
       if (active) setDeliveryZones(zones);
+    });
+    getCachedDeliveryRules().then((rules) => {
+      if (active) setDeliveryRules(rules);
     });
     return () => {
       active = false;
@@ -3828,7 +3922,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   />
                 )}
               </div>
-              <div className="flex min-w-0 flex-wrap items-center justify-between gap-1.5 rounded-2xl bg-slate-50 px-2.5 py-2 text-[9.5px] font-bold leading-tight text-slate-500 ring-1 ring-slate-100">
+              <div
+                className="flex min-w-0 flex-wrap items-center justify-between gap-1.5 rounded-2xl bg-slate-50 px-2.5 py-2 text-[9.5px] font-bold leading-tight text-slate-500 ring-1 ring-slate-100"
+                style={deliveryMotionStyle}
+              >
                 <span className="flex min-w-0 items-center gap-1.5">
                   <span className="orbi-delivery-truck-wrap shrink-0">
                     <Truck size={11} className="orbi-delivery-truck text-blue-500" />
