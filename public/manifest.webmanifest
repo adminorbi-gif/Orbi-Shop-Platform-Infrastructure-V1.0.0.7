@@ -25,22 +25,16 @@
   "dir": "ltr",
   "icons": [
     {
-      "src": "https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png",
+      "src": "/icons/orbi-shop-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png",
+      "src": "/icons/orbi-shop-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
     }
   ],
   "shortcuts": [
@@ -51,7 +45,7 @@
       "url": "/?source=pwa-shortcut-shop",
       "icons": [
         {
-          "src": "https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png",
+          "src": "/icons/orbi-shop-icon-192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
@@ -64,7 +58,7 @@
       "url": "/?track=true&source=pwa-shortcut-track",
       "icons": [
         {
-          "src": "https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png",
+          "src": "/icons/orbi-shop-icon-192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
@@ -77,7 +71,7 @@
       "url": "/seller/signup?source=pwa-shortcut-seller",
       "icons": [
         {
-          "src": "https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png",
+          "src": "/icons/orbi-shop-icon-192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
