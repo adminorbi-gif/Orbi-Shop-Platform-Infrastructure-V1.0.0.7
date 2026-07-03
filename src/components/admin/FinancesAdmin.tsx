@@ -165,7 +165,7 @@ export function FinancesAdmin({ orders }: { orders: Order[] }) {
         <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
           <h2 className="text-lg font-black text-slate-900 mb-6">Monthly Revenue Trend (Last 12 Months)</h2>
           <div className="h-80 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={50} minHeight={50}>
               <ComposedChart data={projectionData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#64748b" }} />

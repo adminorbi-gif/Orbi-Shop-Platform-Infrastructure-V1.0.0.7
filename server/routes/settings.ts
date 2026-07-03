@@ -6,6 +6,74 @@ import { clearCachedValue, sendResilientJson, withTimeout } from "../lib/apiResi
 
 const router = Router();
 
+const optionalSellerSchemaColumns = new Set([
+  "pickup_address",
+  "pickup_place_id",
+  "pickup_lat",
+  "pickup_lng",
+  "pickup_zone_id",
+  "business_logo",
+]);
+
+const isSchemaCacheColumnError = (error: any) => {
+  const message = String(error?.message || "");
+  return (
+    error?.code === "PGRST204" ||
+    /schema cache|Could not find the .* column|column .* does not exist/i.test(message)
+  );
+};
+
+const stripOptionalSellerColumns = (payload: Record<string, any>) =>
+  Object.fromEntries(
+    Object.entries(payload).filter(([key]) => !optionalSellerSchemaColumns.has(key)),
+  );
+
+const mergeSellerBackupUpdate = async (req: any, sellerId: string, updates: any) => {
+  const { data: legacyData } = await getSupabase(req)
+    .from("promotions")
+    .select("id, description")
+    .eq("title", "SYSTEM_SELLERS")
+    .maybeSingle();
+
+  let sellersList: any[] = [];
+  if (legacyData?.description) {
+    try {
+      const parsed = JSON.parse(legacyData.description);
+      sellersList = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      sellersList = [];
+    }
+  }
+
+  const sellerIndex = sellersList.findIndex((seller: any) => seller.id === sellerId);
+  if (sellerIndex < 0) return;
+
+  const legacyPatch: any = {};
+  if (updates.name !== undefined) legacyPatch.name = updates.name;
+  if (updates.description !== undefined) legacyPatch.description = updates.description;
+  if (updates.pickup_address !== undefined) legacyPatch.pickupAddress = updates.pickup_address;
+  if (updates.pickup_place_id !== undefined) legacyPatch.pickupPlaceId = updates.pickup_place_id;
+  if (updates.pickup_lat !== undefined) legacyPatch.pickupLat = updates.pickup_lat;
+  if (updates.pickup_lng !== undefined) legacyPatch.pickupLng = updates.pickup_lng;
+  if (updates.pickup_zone_id !== undefined) legacyPatch.pickupZoneId = updates.pickup_zone_id;
+  if (updates.businessLogo !== undefined) legacyPatch.businessLogo = updates.businessLogo;
+  if (updates.business_logo !== undefined) legacyPatch.businessLogo = updates.business_logo;
+  if (updates.tin !== undefined) legacyPatch.tin = updates.tin;
+
+  sellersList[sellerIndex] = { ...sellersList[sellerIndex], ...legacyPatch };
+
+  if (legacyData?.id) {
+    await getSupabase(req)
+      .from("promotions")
+      .update({ description: JSON.stringify(sellersList) })
+      .eq("id", legacyData.id);
+  } else {
+    await getSupabase(req)
+      .from("promotions")
+      .insert({ title: "SYSTEM_SELLERS", description: JSON.stringify(sellersList), visible: false });
+  }
+};
+
 const defaultDeliveryZones = [
   { id: "dar-es-salaam", name: "Dar es Salaam", labelSw: "Dar es Salaam", labelEn: "Dar es Salaam", price: 2500, minDays: 1, maxDays: 2, isActive: true, sortOrder: 1 },
   { id: "nearby-regions", name: "Mikoa ya karibu", labelSw: "Mikoa ya karibu", labelEn: "Nearby regions", price: 4500, minDays: 2, maxDays: 3, isActive: true, sortOrder: 2 },
@@ -1037,7 +1105,20 @@ router.put("/sellers/:id", async (req, res) => {
     if (updates.businessLogo !== undefined) payload.business_logo = updates.businessLogo;
     if (updates.business_logo !== undefined) payload.business_logo = updates.business_logo;
 
-    const { error } = await getSupabase(req).from('sellers').update(payload).eq('id', id);
+    let { error } = await getSupabase(req).from('sellers').update(payload).eq('id', id);
+    if (error && isSchemaCacheColumnError(error)) {
+      console.warn("[Settings API] Seller update hit schema cache column gap; retrying without optional location/logo columns:", error.message);
+      const safePayload = stripOptionalSellerColumns(payload);
+      if (Object.keys(safePayload).length > 0) {
+        const retry = await getSupabase(req).from('sellers').update(safePayload).eq('id', id);
+        error = retry.error;
+      } else {
+        error = null;
+      }
+      await mergeSellerBackupUpdate(req, id, updates).catch((backupErr) => {
+        console.warn("[Settings API] Seller backup merge failed:", backupErr?.message || backupErr);
+      });
+    }
     if (error) throw error;
     clearCachedValue("settings:sellers");
     res.json({ success: true });
