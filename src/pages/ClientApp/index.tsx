@@ -3834,7 +3834,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     <Truck size={11} className="orbi-delivery-truck text-blue-500" />
                   </span>
                   <span className="orbi-delivery-rotator min-w-0">
-                    <span className="orbi-delivery-rotator-track">
+                    <span
+                      className={`orbi-delivery-rotator-track ${deliverySlides.length < 2 ? "orbi-delivery-rotator-track--static" : ""}`}
+                      style={{ "--orbi-delivery-slide-duration": `${Math.max(deliverySlides.length, 1) * 4.5}s` } as React.CSSProperties}
+                    >
                       {deliverySlides.map((label) => (
                         <span key={label} className="orbi-delivery-rotator-item">
                           {label}
