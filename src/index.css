@@ -159,7 +159,7 @@ body {
 
 .orbi-admin-card {
   min-width: 0;
-  min-height: clamp(6.6rem, 20cqw, 8.25rem);
+  min-height: clamp(5.4rem, 15cqw, 7.25rem);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94)),
     radial-gradient(circle at 100% 0%, rgba(249, 115, 22, 0.08), transparent 11rem);
@@ -169,7 +169,7 @@ body {
 }
 
 .orbi-admin-label {
-  font-size: clamp(0.48rem, 4.2cqw, 0.64rem);
+  font-size: clamp(0.46rem, 3.6cqw, 0.62rem);
   line-height: 1.18;
   overflow-wrap: anywhere;
   hyphens: auto;
@@ -177,13 +177,71 @@ body {
 }
 
 .orbi-admin-metric-value {
-  font-size: clamp(1rem, 17cqw, 1.8rem);
-  line-height: 1.02;
-  letter-spacing: -0.055em;
+  font-size: clamp(0.95rem, 13cqw, 1.55rem);
+  line-height: 1.04;
+  letter-spacing: -0.045em;
   overflow-wrap: anywhere;
   word-break: break-word;
   font-variant-numeric: tabular-nums;
   text-wrap: balance;
+}
+
+.orbi-dashboard-stat-card {
+  min-height: clamp(4.75rem, 10cqw, 5.6rem);
+  max-height: 6.25rem;
+}
+
+.orbi-dashboard-stat-card .orbi-admin-label {
+  font-size: clamp(0.44rem, 3.2cqw, 0.58rem);
+  line-height: 1.08;
+  letter-spacing: 0.08em;
+}
+
+.orbi-dashboard-stat-card .orbi-admin-metric-value {
+  font-size: clamp(0.98rem, 10.5cqw, 1.48rem);
+  line-height: 1.02;
+  letter-spacing: -0.05em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.orbi-dashboard-stat-card .orbi-admin-metric-value .orbi-price-display,
+.orbi-dashboard-stat-card .orbi-admin-metric-value [class*="PriceDisplay"] {
+  max-width: 100%;
+}
+
+.seller-dashboard-hero {
+  background:
+    radial-gradient(circle at 96% 0%, rgba(16, 185, 129, 0.16), transparent 14rem),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
+}
+
+.seller-stat-card {
+  min-height: clamp(5rem, 12cqw, 6rem);
+  max-height: 6.6rem;
+}
+
+.seller-stat-label {
+  font-size: clamp(0.44rem, 3.1cqw, 0.56rem);
+  line-height: 1.08;
+  letter-spacing: 0.08em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.seller-stat-value {
+  font-size: clamp(0.98rem, 10.5cqw, 1.42rem);
+  line-height: 1.02;
+  letter-spacing: -0.05em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  font-variant-numeric: tabular-nums;
+}
+
+.seller-stat-value .orbi-price-display,
+.seller-stat-value [class*="PriceDisplay"] {
+  max-width: 100%;
 }
 
 .orbi-admin-compact-value {

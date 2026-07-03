@@ -111,6 +111,21 @@ const formatDays = (minDays: number, maxDays: number, lang = "sw") => {
   return `${min}-${max} ${unit}`;
 };
 
+const formatSameZoneDeliveryEta = (lang = "sw") =>
+  lang === "sw" ? "Ndani ya saa 2-6 za kazi" : "Within 2-6 business hours";
+
+const isSameDeliveryZone = (product: any, zone: any) => {
+  const originZoneId = product?.sellerOriginZoneId || product?.seller_origin_zone_id;
+  return Boolean(originZoneId && String(originZoneId) === String(zone?.id));
+};
+
+const getEtaDayValue = (eta: string) => {
+  const value = String(eta || "").toLowerCase();
+  if (value.includes("saa") || value.includes("hour")) return 0;
+  const match = value.match(/(\d+)(?:-(\d+))?/);
+  return match ? Number(match[2] || match[1]) : 0;
+};
+
 export const quoteProductDelivery = (product: any, quantity: number, zone: any, rules: any[], lang = "sw") => {
   const qty = Math.max(1, Number(quantity || 1));
   const normalizedZone = normalizeZone(zone);
@@ -223,7 +238,9 @@ export const quoteProductDelivery = (product: any, quantity: number, zone: any, 
     quantity: qty,
     available: true,
     fee,
-    eta: formatDays(matchingRule.minDays, matchingRule.maxDays, lang),
+    eta: isSameDeliveryZone(product, normalizedZone)
+      ? formatSameZoneDeliveryEta(lang)
+      : formatDays(matchingRule.minDays, matchingRule.maxDays, lang),
     deliveryClass,
   };
 };
@@ -235,17 +252,15 @@ export const quoteCartDelivery = (cart: any[], zone: any, rules: any[], lang = "
   const totalFee = items.reduce((sum, item) => sum + (item.available ? Number(item.fee || 0) : 0), 0);
   const maxEta = items
     .filter((item) => item.available)
-    .map((item) => {
-      const match = String(item.eta || "").match(/(\d+)(?:-(\d+))?/);
-      return match ? Number(match[2] || match[1]) : 0;
-    })
+    .map((item) => getEtaDayValue(item.eta))
     .reduce((max, value) => Math.max(max, value), 0);
+  const firstHourlyEta = items.find((item) => item.available && getEtaDayValue(item.eta) === 0 && /saa|hour/i.test(item.eta))?.eta;
 
   return {
     zoneId: normalizedZone.id,
     zoneName: lang === "sw" ? normalizedZone.labelSw : normalizedZone.labelEn,
     totalFee,
-    eta: maxEta > 0 ? `${maxEta} ${lang === "sw" ? "siku" : "days"}` : formatDays(normalizedZone.minDays, normalizedZone.maxDays, lang),
+    eta: maxEta > 0 ? `${maxEta} ${lang === "sw" ? "siku" : "days"}` : firstHourlyEta || formatDays(normalizedZone.minDays, normalizedZone.maxDays, lang),
     available: unavailableItems.length === 0,
     items,
     unavailableItems,

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { supabase, encrypt } from "../lib/supabase.js";
 import { callOrbiPayGateway, getPayServiceKey } from "../lib/orbiPayGateway.js";
 import { quoteCartDelivery } from "../lib/deliveryQuote.js";
+import { quoteCartRouteDelivery } from "../lib/routeDeliveryQuote.js";
 
 const router = Router();
 
@@ -101,7 +102,63 @@ function mapDbProduct(row: any, fallback: any = {}) {
     deliveryHandlingNotes: row?.delivery_handling_notes || fallback.deliveryHandlingNotes || "",
     blockedDeliveryZoneIds: Array.isArray(row?.blocked_delivery_zone_ids) ? row.blocked_delivery_zone_ids : (fallback.blockedDeliveryZoneIds || []),
     sellerOriginZoneId: row?.seller_origin_zone_id || fallback.sellerOriginZoneId,
+    sellerPickupAddress: row?.seller_pickup_address || fallback.sellerPickupAddress,
+    sellerPickupPlaceId: row?.seller_pickup_place_id || fallback.sellerPickupPlaceId,
+    sellerPickupLat: row?.seller_pickup_lat ?? fallback.sellerPickupLat,
+    sellerPickupLng: row?.seller_pickup_lng ?? fallback.sellerPickupLng,
   };
+}
+
+async function attachSellerPickupLocations(cart: any[]) {
+  const sellerIds = Array.from(new Set(
+    cart
+      .map((item) => item.product?.sellerId)
+      .filter((id) => id && id !== "system")
+      .map(String),
+  ));
+  if (sellerIds.length === 0) return cart;
+
+  const uuidIds = sellerIds.filter(isValidUUID);
+  const legacyIds = sellerIds.filter((id) => !isValidUUID(id));
+  const sellerRows: any[] = [];
+
+  if (uuidIds.length > 0) {
+    const { data, error } = await supabase
+      .from("sellers")
+      .select("id, legacy_id, pickup_address, pickup_place_id, pickup_lat, pickup_lng, pickup_zone_id")
+      .in("id", uuidIds);
+    if (!error && data) sellerRows.push(...data);
+  }
+
+  if (legacyIds.length > 0) {
+    const { data, error } = await supabase
+      .from("sellers")
+      .select("id, legacy_id, pickup_address, pickup_place_id, pickup_lat, pickup_lng, pickup_zone_id")
+      .in("legacy_id", legacyIds);
+    if (!error && data) sellerRows.push(...data);
+  }
+
+  const sellersById = new Map<string, any>();
+  sellerRows.forEach((seller) => {
+    sellersById.set(String(seller.id), seller);
+    if (seller.legacy_id) sellersById.set(String(seller.legacy_id), seller);
+  });
+
+  return cart.map((item) => {
+    const seller = sellersById.get(String(item.product?.sellerId || ""));
+    if (!seller) return item;
+    return {
+      ...item,
+      product: {
+        ...item.product,
+        sellerOriginZoneId: item.product.sellerOriginZoneId || seller.pickup_zone_id,
+        sellerPickupAddress: item.product.sellerPickupAddress || seller.pickup_address,
+        sellerPickupPlaceId: item.product.sellerPickupPlaceId || seller.pickup_place_id,
+        sellerPickupLat: item.product.sellerPickupLat ?? seller.pickup_lat,
+        sellerPickupLng: item.product.sellerPickupLng ?? seller.pickup_lng,
+      },
+    };
+  });
 }
 
 type GatewayPaymentCategory = "orbi" | "mobile_money" | "bank" | "card";
@@ -270,7 +327,7 @@ function buildSellerAllocation(
 
 router.post("/", async (req, res) => {
   try {
-    const { cart, user, paymentMethod, paymentCategory, paymentRail, providerCode, paymentAccount, operation, appliedCoupon, finalTotal, name, phone, address, options, tin, lang, deliveryZone, deliveryZoneId, deliveryFee, deliveryEta } = req.body;
+    const { cart, user, paymentMethod, paymentCategory, paymentRail, providerCode, paymentAccount, operation, appliedCoupon, finalTotal, name, phone, address, options, tin, lang, deliveryZone, deliveryZoneId, deliveryFee, deliveryEta, deliveryOrigin, deliveryDestination } = req.body;
 
     // Gateway contract validation
     if (!paymentCategory || !paymentRail || !operation) {
@@ -318,7 +375,7 @@ router.post("/", async (req, res) => {
         currentStock: Number(p.stock) || 0,
       };
     });
-    const validatedCart = await Promise.all(stockCheckPromises);
+    const validatedCart = await attachSellerPickupLocations(await Promise.all(stockCheckPromises));
 
     const sellerGroups: { [key: string]: any[] } = {};
     validatedCart.forEach((c: any) => {
@@ -341,7 +398,13 @@ router.post("/", async (req, res) => {
           .from("delivery_rules")
           .select("*")
           .order("sort_order", { ascending: true });
-        serverDeliveryQuote = quoteCartDelivery(validatedCart, resolvedZone, rules || [], lang || "sw");
+        serverDeliveryQuote = deliveryDestination
+          ? await quoteCartRouteDelivery(validatedCart, resolvedZone, rules || [], {
+              origin: deliveryOrigin,
+              destination: deliveryDestination,
+              lang: lang || "sw",
+            })
+          : quoteCartDelivery(validatedCart, resolvedZone, rules || [], lang || "sw");
         if (!serverDeliveryQuote.available) {
           return res.status(400).json({
             success: false,

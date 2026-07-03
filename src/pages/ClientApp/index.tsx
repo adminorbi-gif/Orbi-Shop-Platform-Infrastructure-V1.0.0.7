@@ -33,6 +33,7 @@ import {
   DEFAULT_DELIVERY_RULES,
   formatDeliveryDays,
   getDeliveryZoneName,
+  inferDeliveryZoneIdFromLocation,
   normalizeDeliveryZones,
   normalizeDeliveryRules,
   quoteProductDelivery,
@@ -301,6 +302,9 @@ const formatDeliveryDateRange = (minDays: number, maxDays: number, lang: Lang) =
 
 const parseEtaDays = (eta: string) => {
   const normalized = String(eta || "").toLowerCase();
+  if (normalized.includes("saa") || normalized.includes("hour")) {
+    return null;
+  }
   if (!normalized || normalized.includes("leo") || normalized.includes("today") || normalized.includes("instant")) {
     return { min: 0, max: 0 };
   }
@@ -3661,9 +3665,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
     const zones = normalizeDeliveryZones(deliveryZones);
     const rules = normalizeDeliveryRules(deliveryRules);
+    const productForQuote = {
+      ...p,
+      sellerOriginZoneId: p.sellerOriginZoneId || inferDeliveryZoneIdFromLocation(sellerLocation, zones),
+    };
     const quotes = zones.map((zone) => ({
       zone,
-      quote: quoteProductDelivery(p, 1, zone, rules, lang),
+      quote: quoteProductDelivery(productForQuote, 1, zone, rules, lang),
     }));
     const availableQuotes = quotes.filter(({ quote }) => quote.available);
     const firstUnavailable = quotes.find(({ quote }) => !quote.available);
@@ -3679,7 +3687,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
     const primary = availableQuotes[0];
     const primaryEta = parseEtaDays(primary.quote.eta);
-    const primaryDate = formatDeliveryDateRange(primaryEta.min, primaryEta.max, lang);
+    const primaryDate = primaryEta ? formatDeliveryDateRange(primaryEta.min, primaryEta.max, lang) : primary.quote.eta;
     const primaryZone = getDeliveryZoneName(primary.zone, lang);
     const slides = [
       `${primaryZone}: ${primaryDate}`,
@@ -3692,7 +3700,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
     availableQuotes.slice(1, 3).forEach(({ zone, quote }) => {
       const eta = parseEtaDays(quote.eta);
-      slides.push(`${getDeliveryZoneName(zone, lang)}: ${formatDeliveryDateRange(eta.min, eta.max, lang)}`);
+      slides.push(`${getDeliveryZoneName(zone, lang)}: ${eta ? formatDeliveryDateRange(eta.min, eta.max, lang) : quote.eta}`);
     });
 
     return slides.slice(0, 4);

@@ -739,12 +739,12 @@ export default function SellerApp({
         </aside>
 
         {/* Right Content Area */}
-        <main className="flex-1 bg-white p-6 sm:p-8 md:p-10 overflow-y-auto h-full flex flex-col items-center">
+        <main className="flex-1 bg-[#f5f8fb] p-3 sm:p-4 md:p-5 overflow-y-auto h-full flex flex-col items-center">
           <div className="w-full max-w-7xl flex-1 flex flex-col">
             {/* Active Toast notifications */}
             {alertMsg && (
               <div
-                className={`mb-6 p-4 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 border ${alertMsg.type === "success" ? "bg-emerald-50 border-emerald-100 text-emerald-800" : "bg-red-50 border-red-100 text-red-800"}`}
+                className={`mb-3 p-3 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 border ${alertMsg.type === "success" ? "bg-emerald-50 border-emerald-100 text-emerald-800" : "bg-red-50 border-red-100 text-red-800"}`}
               >
                 {alertMsg.type === "success" ? (
                   <Check className="shrink-0" size={18} />
@@ -759,23 +759,24 @@ export default function SellerApp({
 
             {/* VIEW: DASHBOARD Overview */}
             {tab === "dashboard" && (
-              <div className="space-y-5 animate-in fade-in duration-200">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="space-y-3 animate-in fade-in duration-200">
+                <div className="seller-dashboard-hero rounded-[1.65rem] border border-slate-200/70 bg-white/95 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 overflow-hidden relative">
+                  <div className="absolute right-0 top-0 h-28 w-28 translate-x-8 -translate-y-8 rounded-full bg-emerald-500/10 pointer-events-none" />
                   <div>
-                    <h1 className="text-2xl font-display font-black text-slate-900 leading-tight">
+                    <h1 className="text-xl sm:text-2xl font-display font-black text-slate-900 leading-tight">
                       {lang === "sw"
-                        ? `Habari, ${seller.name}! 👋`
-                        : `Jeambo, ${seller.name}! 👋`}
+                        ? `Habari, ${seller.name}!`
+                        : `Welcome, ${seller.name}`}
                     </h1>
-                    <p className="text-slate-500 text-xs font-medium mt-1">
+                    <p className="text-slate-500 text-xs font-semibold mt-1 max-w-2xl">
                       {lang === "sw"
-                        ? "Karibu kwenye mfumo wako dhabiti wa wauzaji wa Orbi Merchant."
-                        : "Welcome back to your premium and exclusive Orbi B2B business headquarters."}
+                        ? "Kituo chako cha biashara: fuatilia mauzo, stoku, oda na malipo kwa haraka."
+                        : "Your merchant command center: sales, stock, orders, and payouts in one focused view."}
                     </p>
                   </div>
-                  <div className="bg-white border border-slate-200/80 p-3 rounded-2xl flex items-center gap-2.5">
+                  <div className="bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-2xl flex items-center gap-2.5 relative z-10">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
                       {lang === "sw"
                         ? "DUKA LIPO MTANDAONI"
                         : "Merchant Terminal Active"}
@@ -784,19 +785,18 @@ export default function SellerApp({
                 </div>
 
                 {/* Bento Grid Analytics */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                   {/* Sale Income Card */}
-                  <div className="bg-white p-4 rounded-[1.35rem] border border-slate-200/70 shadow-sm relative overflow-hidden group @container min-w-0">
+                  <div className="seller-stat-card bg-white p-3 rounded-[1.2rem] border border-slate-200/70 shadow-sm relative overflow-hidden group @container min-w-0">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full translate-x-8 -translate-y-8 group-hover:scale-110 transition-transform"></div>
-                    <div className="bg-emerald-100 text-emerald-700 w-9 h-9 rounded-xl flex items-center justify-center mb-3 shrink-0">
-                      <TrendingUp size={20} />
+                    <div className="bg-emerald-100 text-emerald-700 w-8 h-8 rounded-xl flex items-center justify-center mb-2 shrink-0">
+                      <TrendingUp size={18} />
                     </div>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate">
+                    <p className="seller-stat-label text-[9px] text-slate-400 font-bold uppercase tracking-widest truncate">
                       {lang === "sw" ? "Pato Zuri (Sales)" : "Gross Income"}
                     </p>
                     <div
-                      className="mt-1 truncate w-full"
-                      style={{ fontSize: "clamp(1rem, 12cqw, 1.25rem)" }}
+                      className="seller-stat-value mt-1 w-full"
                     >
                       <PriceDisplay
                         amount={computedStats.totalSales}
@@ -806,7 +806,7 @@ export default function SellerApp({
                         truncate={false}
                       />
                     </div>
-                    <p className="text-[10px] text-emerald-600 font-medium mt-1.5 flex items-center gap-1 truncate w-full">
+                    <p className="text-[9px] text-emerald-600 font-bold mt-1 flex items-center gap-1 truncate w-full">
                       <ArrowUpRight size={12} className="shrink-0" />
                       <span className="truncate">
                         {lang === "sw"
@@ -817,21 +817,20 @@ export default function SellerApp({
                   </div>
 
                   {/* Items sold Count Card */}
-                  <div className="bg-white p-4 rounded-[1.35rem] border border-slate-200/70 shadow-sm relative overflow-hidden group @container min-w-0">
+                  <div className="seller-stat-card bg-white p-3 rounded-[1.2rem] border border-slate-200/70 shadow-sm relative overflow-hidden group @container min-w-0">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full translate-x-8 -translate-y-8 group-hover:scale-110 transition-transform"></div>
-                    <div className="bg-amber-100 text-amber-700 w-9 h-9 rounded-xl flex items-center justify-center mb-3 shrink-0">
-                      <Layers size={20} />
+                    <div className="bg-amber-100 text-amber-700 w-8 h-8 rounded-xl flex items-center justify-center mb-2 shrink-0">
+                      <Layers size={18} />
                     </div>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate">
+                    <p className="seller-stat-label text-[9px] text-slate-400 font-bold uppercase tracking-widest truncate">
                       {lang === "sw" ? "Kiasi cha Bidhaa" : "Products Sold"}
                     </p>
                     <div
-                      className="mt-1 font-black text-slate-950 truncate w-full"
-                      style={{ fontSize: "clamp(1rem, 12cqw, 1.25rem)" }}
+                      className="seller-stat-value mt-1 font-black text-slate-950 w-full"
                     >
                       {computedStats.totalItemsSold} Items
                     </div>
-                    <p className="text-[10px] text-slate-500 font-medium mt-1.5 truncate">
+                    <p className="text-[9px] text-slate-500 font-bold mt-1 truncate">
                       {lang === "sw"
                         ? "Kutoka kwa oda zilizokubaliwa"
                         : "Sourced from orders processed"}
@@ -839,17 +838,16 @@ export default function SellerApp({
                   </div>
 
                   {/* Stock Level Warning Card */}
-                  <div className="bg-white p-4 rounded-[1.35rem] border border-slate-200/70 shadow-sm relative overflow-hidden group @container min-w-0">
+                  <div className="seller-stat-card bg-white p-3 rounded-[1.2rem] border border-slate-200/70 shadow-sm relative overflow-hidden group @container min-w-0">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full translate-x-8 -translate-y-8 group-hover:scale-110 transition-transform"></div>
-                    <div className="bg-rose-100 text-rose-700 w-9 h-9 rounded-xl flex items-center justify-center mb-3 shrink-0">
-                      <BadgeAlert size={20} />
+                    <div className="bg-rose-100 text-rose-700 w-8 h-8 rounded-xl flex items-center justify-center mb-2 shrink-0">
+                      <BadgeAlert size={18} />
                     </div>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate">
+                    <p className="seller-stat-label text-[9px] text-slate-400 font-bold uppercase tracking-widest truncate">
                       {lang === "sw" ? "Arifa ya Stock" : "Inventory Alert"}
                     </p>
                     <div
-                      className="mt-1 truncate w-full"
-                      style={{ fontSize: "clamp(1rem, 12cqw, 1.25rem)" }}
+                      className="seller-stat-value mt-1 w-full"
                     >
                       {computedStats.outOfStockCount > 0 ? (
                         <span className="font-black text-rose-600">
@@ -865,7 +863,7 @@ export default function SellerApp({
                         </span>
                       )}
                     </div>
-                    <p className="text-[10px] text-slate-500 font-bold mt-1.5 truncate">
+                    <p className="text-[9px] text-slate-500 font-bold mt-1 truncate">
                       {lang === "sw"
                         ? `${sellerProducts.length} bidhaa zimeorodheshwa`
                         : `${sellerProducts.length} live products currently listed`}
@@ -873,18 +871,17 @@ export default function SellerApp({
                   </div>
 
                   {/* Wallet / Request Payout Card (Innovative Instant Draw-down) */}
-                  <div className="bg-gradient-to-br from-emerald-600 to-emerald-800 text-white p-4 rounded-[1.35rem] border border-emerald-700 shadow-sm relative overflow-hidden group @container min-w-0 flex flex-col justify-between">
+                  <div className="seller-stat-card bg-gradient-to-br from-emerald-600 to-emerald-800 text-white p-3 rounded-[1.2rem] border border-emerald-700 shadow-sm relative overflow-hidden group @container min-w-0 flex flex-col justify-between">
                     <div>
                       <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full translate-x-12 -translate-y-12"></div>
-                      <div className="bg-white/10 text-white w-9 h-9 rounded-xl flex items-center justify-center mb-3 shrink-0">
-                        <Coins size={20} />
+                      <div className="bg-white/10 text-white w-8 h-8 rounded-xl flex items-center justify-center mb-2 shrink-0">
+                        <Coins size={18} />
                       </div>
-                      <p className="text-[10px] text-emerald-200 font-bold uppercase tracking-widest truncate">
+                      <p className="seller-stat-label text-[9px] text-emerald-200 font-bold uppercase tracking-widest truncate">
                         {lang === "sw" ? "SALDO YA KUTOA" : "PAYOUT BALANCE"}
                       </p>
                       <div
-                        className="mt-1 truncate w-full"
-                        style={{ fontSize: "clamp(1rem, 12cqw, 1.25rem)" }}
+                        className="seller-stat-value mt-1 w-full"
                       >
                         <PriceDisplay
                           amount={computedStats.totalSales}
@@ -897,7 +894,7 @@ export default function SellerApp({
                     </div>
                     <button
                       onClick={() => setIsPayoutRequesting(true)}
-                      className="mt-3 shrink-0 cursor-pointer w-full bg-white text-emerald-800 text-[10px] font-black uppercase py-2 rounded-xl text-center hover:bg-emerald-50 active:scale-95 transition"
+                      className="mt-2 shrink-0 cursor-pointer w-full bg-white text-emerald-800 text-[9px] font-black uppercase py-1.5 rounded-xl text-center hover:bg-emerald-50 active:scale-95 transition"
                     >
                       {lang === "sw" ? "Omba Malipo Sasa" : "Request Payout"}
                     </button>
@@ -905,8 +902,8 @@ export default function SellerApp({
                 </div>
 
                 {/* Daily Activity Heatmap */}
-                <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200/70 shadow-sm">
-                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">
+                <div className="bg-white p-3 rounded-[1.25rem] border border-slate-200/70 shadow-sm">
+                  <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2.5">
                     {lang === "sw" ? "Mwenendo wa Oda (Heatmap)" : "Order Activity Heatmap"}
                   </h3>
                   <OrderHeatmap orders={orders} />
@@ -914,14 +911,14 @@ export default function SellerApp({
 
                 {/* Instant Payout Dialog Drawer */}
                 {isPayoutRequesting && (
-                  <div className="p-6 bg-emerald-50 border border-emerald-200/80 rounded-3xl flex flex-col sm:flex-row gap-6 justify-between items-start sm:items-center">
-                    <div className="space-y-1.5">
-                      <h3 className="text-sm font-black text-emerald-950 uppercase tracking-wider">
+                  <div className="p-3.5 bg-emerald-50 border border-emerald-200/80 rounded-[1.35rem] flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
+                    <div className="space-y-1">
+                      <h3 className="text-xs font-black text-emerald-950 uppercase tracking-wider">
                         {lang === "sw"
                           ? "OMBA Payout Papo Hapo"
                           : "Direct Payout Terminal"}
                       </h3>
-                      <p className="text-xs text-emerald-800/80 max-w-lg font-medium leading-relaxed">
+                      <p className="text-[11px] text-emerald-800/80 max-w-lg font-medium leading-relaxed">
                         {lang === "sw"
                           ? "Andika kiasi unachotaka kuhamisha kwenda kwenye akaunti yako ya malipo ya benki au mkoba wa simu uliohifadhiwa."
                           : "Enter the amount you wish to withdraw and draw down from your verified settled sales. Request will execute internally."}
@@ -929,7 +926,7 @@ export default function SellerApp({
                     </div>
                     <form
                       onSubmit={handleRequestPayout}
-                      className="w-full sm:w-auto flex items-center gap-3"
+                      className="w-full sm:w-auto flex flex-col xs:flex-row sm:flex-row items-stretch sm:items-center gap-2"
                     >
                       <div className="relative">
                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-500">
@@ -941,13 +938,13 @@ export default function SellerApp({
                           placeholder="e.g. 50000"
                           value={payoutAmount}
                           onChange={(e) => setPayoutAmount(e.target.value)}
-                          className="w-full sm:w-44 bg-white border border-slate-200 p-3.5 pl-12 rounded-2xl outline-none focus:border-emerald-600 font-mono text-xs font-bold"
+                          className="w-full sm:w-44 bg-white border border-slate-200 p-3 pl-12 rounded-xl outline-none focus:border-emerald-600 font-mono text-xs font-bold"
                         />
                       </div>
                       <button
                         type="submit"
                         disabled={submittingPayout}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase px-5 py-3.5 rounded-2xl shadow-md transition whitespace-nowrap cursor-pointer disabled:opacity-50"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] uppercase px-4 py-3 rounded-xl shadow-md transition whitespace-nowrap cursor-pointer disabled:opacity-50"
                       >
                         {submittingPayout
                           ? lang === "sw"
@@ -960,7 +957,7 @@ export default function SellerApp({
                       <button
                         type="button"
                         onClick={() => setIsPayoutRequesting(false)}
-                        className="bg-slate-200 hover:bg-slate-300 text-slate-600 p-3.5 rounded-2xl cursor-pointer"
+                        className="bg-slate-200 hover:bg-slate-300 text-slate-600 p-3 rounded-xl cursor-pointer"
                       >
                         <X size={16} />
                       </button>
@@ -970,13 +967,13 @@ export default function SellerApp({
 
                 {/* Payout Status Log */}
                 {payouts.length > 0 && (
-                  <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm">
-                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-4">
+                  <div className="bg-white p-3.5 rounded-[1.35rem] border border-slate-200/60 shadow-sm">
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-2.5">
                       {lang === "sw" ? "Historia ya Malipo" : "Payout Request Log"}
                     </h3>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       {payouts.slice().reverse().map((payout) => (
-                        <div key={payout.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <div key={payout.id} className="flex justify-between items-center gap-3 p-2.5 bg-slate-50 rounded-xl border border-slate-100">
                           <div>
                             <p className="text-xs font-bold text-slate-800">
                               {lang === "sw" ? "Ombi la Malipo" : "Payout Request"}
@@ -991,8 +988,8 @@ export default function SellerApp({
                               {lang === "sw" ? "Pakua Risiti" : "Download Receipt"}
                             </button>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <p className="text-xs font-black text-slate-900">
+                          <div className="flex flex-wrap justify-end items-center gap-2 min-w-0">
+                            <p className="text-xs font-black text-slate-900 break-words">
                               {formatCurrency(payout.amount)}
                             </p>
                             <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
@@ -1011,26 +1008,26 @@ export default function SellerApp({
 
                   {/* Graphic charts - Desktop */}
                 {isMdScreen && (
-                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-                    <div className="bg-white p-5 rounded-[1.75rem] border border-slate-200/70 shadow-sm space-y-4 xl:col-span-2">
-                      <div className="flex items-start justify-between gap-4">
+                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
+                    <div className="bg-white p-4 rounded-[1.45rem] border border-slate-200/70 shadow-sm space-y-3 xl:col-span-2">
+                      <div className="flex items-start justify-between gap-3">
                         <div>
-                          <h3 className="text-base font-black text-slate-950">
+                          <h3 className="text-sm font-black text-slate-950">
                             {lang === "sw" ? "Mapato ya Duka" : "Store Revenue"}
                           </h3>
-                          <div className="mt-1 flex flex-wrap items-center gap-3">
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
                             <PriceDisplay
                               amount={sellerRevenueTrend.reduce((sum, point) => sum + point.sales, 0)}
                               compact={false}
                               truncate={false}
-                              className="text-[1.65rem]"
+                              className="text-[1.35rem]"
                             />
                             <span className="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-700">
                               {sellerRevenueTrend.reduce((sum, point) => sum + point.orders, 0)}{" "}
                               {lang === "sw" ? "oda" : "orders"}
                             </span>
                           </div>
-                          <p className="text-slate-500 text-[11px] font-medium mt-1.5">
+                          <p className="text-slate-500 text-[10px] font-semibold mt-1">
                             {dashboardPeriod === "yearly"
                               ? lang === "sw"
                                 ? "Miezi yote 12 ya mwaka huu"
@@ -1048,7 +1045,7 @@ export default function SellerApp({
                                     : "Today by 24 hours"}
                           </p>
                         </div>
-                        <div className="flex shrink-0 items-center rounded-2xl bg-slate-100 p-1">
+                        <div className="flex shrink-0 items-center rounded-xl bg-slate-100 p-0.5">
                           {[
                             { id: "daily", label: lang === "sw" ? "Siku" : "Day" },
                             { id: "weekly", label: lang === "sw" ? "Wiki" : "Week" },
@@ -1063,7 +1060,7 @@ export default function SellerApp({
                                   item.id as "daily" | "weekly" | "monthly" | "yearly",
                                 )
                               }
-                              className={`rounded-xl px-3 py-1.5 text-[10px] font-black transition ${
+                              className={`rounded-lg px-2.5 py-1 text-[9px] font-black transition ${
                                 dashboardPeriod === item.id
                                   ? "bg-white text-slate-950 shadow-sm"
                                   : "text-slate-500 hover:text-slate-900"
@@ -1074,10 +1071,10 @@ export default function SellerApp({
                           ))}
                         </div>
                       </div>
-                      <div className="h-72 w-full font-mono mt-1">
+                      <div className="h-56 w-full font-mono mt-1">
                         <ResponsiveContainer
                           width="100%"
-                          height={288}
+                          height={224}
                           minWidth={50}
                           minHeight={50}
                         >
@@ -1160,17 +1157,17 @@ export default function SellerApp({
                       </div>
                     </div>
                     {/* New Line Chart */}
-                    <div className="bg-white p-5 rounded-[1.75rem] border border-slate-200/70 shadow-sm space-y-4">
+                    <div className="bg-white p-4 rounded-[1.45rem] border border-slate-200/70 shadow-sm space-y-3">
                       <div>
                         <h3 className="text-sm font-black text-slate-950">
                           {lang === "sw" ? "Mwendo wa Oda" : "Order Momentum"}
                         </h3>
-                        <p className="text-slate-500 text-xs font-medium mt-1">
+                        <p className="text-slate-500 text-[11px] font-medium mt-1">
                           {lang === "sw" ? "Idadi ya oda kwa kipindi ulichochagua" : "Orders by the selected period"}
                         </p>
                       </div>
-                      <div className="h-56 w-full font-mono mt-1">
-                        <ResponsiveContainer width="100%" height={220} minWidth={50} minHeight={50}>
+                      <div className="h-48 w-full font-mono mt-1">
+                        <ResponsiveContainer width="100%" height={192} minWidth={50} minHeight={50}>
                           <LineChart data={sellerRevenueTrend} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e5e7eb" />
                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#64748b", fontWeight: 700 }} tickMargin={8} interval={0} />
@@ -1197,7 +1194,7 @@ export default function SellerApp({
                   <button
                     type="button"
                     onClick={() => setChartModalOpen(true)}
-                    className="w-full bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between text-left"
+                    className="w-full bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between text-left"
                   >
                     <div>
                       <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
@@ -1219,13 +1216,14 @@ export default function SellerApp({
 
             {/* VIEW: CATALOG (My products) */}
             {tab === "products" && (
-              <div className="space-y-6 animate-in fade-in duration-200">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <div className="seller-dashboard-hero rounded-[1.65rem] border border-slate-200/70 bg-white/95 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 overflow-hidden relative">
+                  <div className="absolute right-0 top-0 h-28 w-28 translate-x-8 -translate-y-8 rounded-full bg-blue-500/10 pointer-events-none" />
                   <div>
-                    <h1 className="text-2xl font-black text-slate-900 leading-tight">
+                    <h1 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
                       {lang === "sw" ? "Katalogi ya Bidhaa" : "Products Center"}
                     </h1>
-                    <p className="text-slate-500 text-xs font-medium mt-1">
+                    <p className="text-slate-500 text-xs font-semibold mt-1 max-w-2xl">
                       {lang === "sw"
                         ? "Simamia bidhaa, ongeza na kurekebisha bei au stoki yako."
                         : "Add, manage, track inventory levels, and configure listing details."}
@@ -1236,7 +1234,7 @@ export default function SellerApp({
                   <button
                     type="button"
                     onClick={() => openProductForm()}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase px-4 py-3.5 sm:px-5 sm:py-3.5 rounded-xl sm:rounded-2xl flex items-center gap-2 shadow-md transition cursor-pointer"
+                    className="relative z-10 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase px-4 py-3 sm:px-5 rounded-xl sm:rounded-2xl flex items-center gap-2 shadow-md transition cursor-pointer min-h-11"
                   >
                     <Plus size={16} />
                     <span className="hidden sm:inline">
@@ -1249,12 +1247,12 @@ export default function SellerApp({
                 </div>
 
                 {discountSuggestions.length > 0 && (
-                  <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-600/5 border border-amber-500/25 rounded-3xl p-5 shadow-sm space-y-4 animate-in slide-in-from-top-4 duration-300">
+                  <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-600/5 border border-amber-500/25 rounded-[1.45rem] p-4 shadow-sm space-y-3 animate-in slide-in-from-top-4 duration-300">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-amber-500 text-white rounded-xl shadow-md">
+                        <div className="p-2 bg-amber-500 text-white rounded-xl shadow-md">
                           <Sparkles
-                            size={20}
+                            size={18}
                             className="animate-spin"
                             style={{ animationDuration: "4s" }}
                           />
@@ -1281,7 +1279,7 @@ export default function SellerApp({
                       {discountSuggestions.map((suggestion) => (
                         <div
                           key={suggestion.product.id}
-                          className="bg-white/90 backdrop-blur-sm border border-amber-100/80 rounded-2xl p-4 flex flex-col justify-between gap-3 shadow-sm hover:border-amber-300 hover:shadow transition-all group"
+                            className="bg-white/90 backdrop-blur-sm border border-amber-100/80 rounded-2xl p-3.5 flex flex-col justify-between gap-3 shadow-sm hover:border-amber-300 hover:shadow transition-all group"
                         >
                           <div>
                             <div className="flex items-start justify-between gap-2 border-b border-dashed border-slate-100 pb-2.5">
@@ -1321,7 +1319,7 @@ export default function SellerApp({
                                 suggestion.suggestedPrice,
                               )
                             }
-                            className="w-full bg-slate-900 group-hover:bg-amber-600 text-white font-bold py-3 px-3 rounded-xl text-[11px] sm:text-xs transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                            className="w-full bg-slate-900 group-hover:bg-amber-600 text-white font-bold py-2.5 px-3 rounded-xl text-[11px] sm:text-xs transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer min-h-11"
                           >
                             <Tag
                               size={13}
@@ -1652,14 +1650,14 @@ export default function SellerApp({
 
             {/* VIEW: ORDERS (Fulfillment Stream) */}
             {tab === "orders" && (
-              <div className="space-y-6 animate-in fade-in duration-200">
-                <div>
-                  <h1 className="text-2xl font-black text-slate-900 leading-tight">
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <div className="seller-dashboard-hero rounded-[1.65rem] border border-slate-200/70 bg-white/95 p-4 sm:p-5 shadow-sm">
+                  <h1 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
                     {lang === "sw"
                       ? "Mizigo na Uwasilishaji"
                       : "Fulfillment Stream"}
                   </h1>
-                  <p className="text-slate-500 text-xs font-medium mt-1">
+                  <p className="text-slate-500 text-xs font-semibold mt-1 max-w-2xl">
                     {lang === "sw"
                       ? "Angalia oda zilizopokelewa kutoka kwa wateja, badili hali ili kukamilisha usafirishaji."
                       : "Track incoming orders, calculate payout percentages, check destination details."}
@@ -1672,7 +1670,7 @@ export default function SellerApp({
                     <button
                       key={status}
                       onClick={() => setOrderStatusFilter(status)}
-                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition duration-150 ${
+                      className={`px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition duration-150 min-h-11 ${
                         orderStatusFilter === status
                           ? 'bg-slate-900 text-white'
                           : 'bg-white border border-slate-200 text-slate-500 hover:border-slate-300'
@@ -1686,7 +1684,7 @@ export default function SellerApp({
                 {/* Orders Queue */}
                 <div className="space-y-4">
                   {sellerOrders.filter(o => orderStatusFilter === 'all' || o.status === orderStatusFilter).length === 0 ? (
-                    <div className="bg-white p-12 text-center rounded-3xl border border-slate-200/60 shadow-xs text-slate-400 font-bold">
+                    <div className="bg-white p-8 text-center rounded-[1.45rem] border border-slate-200/60 shadow-xs text-slate-400 font-bold">
                       {lang === "sw"
                         ? "Hujapokea oda yoyote kutoka kwa wateja bado."
                         : "No orders found with this status."}
@@ -1708,9 +1706,9 @@ export default function SellerApp({
                       return (
                         <div
                           key={o.id}
-                          className="bg-white rounded-3xl border border-slate-200/60 shadow-xs p-5.5 sm:p-6 space-y-4 hover:border-slate-300 transition duration-150"
+                          className="bg-white rounded-[1.45rem] border border-slate-200/60 shadow-xs p-4 sm:p-5 space-y-3 hover:border-slate-300 transition duration-150"
                         >
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                             <div>
                               <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider">
                                 ORDER CODE
@@ -1746,7 +1744,7 @@ export default function SellerApp({
                           </div>
 
                           {/* Customer & Item Rows */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Seller Specific Purchased Items */}
                             <div className="space-y-3">
                               <h4 className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
@@ -2591,14 +2589,14 @@ export default function SellerApp({
 
             {/* VIEW: SETTINGS (Store builder & Private Invoicing) */}
             {tab === "settings" && (
-              <div className="space-y-6 animate-in fade-in duration-200">
-                <div>
-                  <h1 className="text-2xl font-black text-slate-900 leading-tight">
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <div className="seller-dashboard-hero rounded-[1.65rem] border border-slate-200/70 bg-white/95 p-4 sm:p-5 shadow-sm">
+                  <h1 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
                     {lang === "sw"
                       ? "Mipangilio ya Invoice ya Duka"
                       : "Merchant Invoicing Console"}
                   </h1>
-                  <p className="text-slate-500 text-xs font-medium mt-1">
+                  <p className="text-slate-500 text-xs font-semibold mt-1 max-w-2xl">
                     {lang === "sw"
                       ? "Kamilisha mpangilio wa duka na kuweka taarifa za kibenki au nembo ya risiti kwa wateja."
                       : "Configure merchant invoice templates, branding descriptions, telephone registers, and legal terms."}
@@ -2606,7 +2604,7 @@ export default function SellerApp({
                 </div>
 
                 {/* Visual customizer card */}
-                <div className="bg-white rounded-[2rem] border border-slate-200/60 p-6 sm:p-8 shadow-xs">
+                <div className="bg-white rounded-[1.45rem] border border-slate-200/60 p-4 sm:p-5 shadow-sm">
                   <StoreSettingsForm
                     seller={seller}
                     displayAlert={displayAlert}

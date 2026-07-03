@@ -162,6 +162,48 @@ export const getDeliveryZoneName = (zone: DeliveryZone, lang: string) => {
     : zone.labelEn || zone.name;
 };
 
+const normalizeLocationToken = (value?: string | null) =>
+  String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+export const inferDeliveryZoneIdFromLocation = (
+  location: string | undefined | null,
+  zones: DeliveryZone[],
+) => {
+  const normalizedLocation = normalizeLocationToken(location);
+  if (!normalizedLocation) return undefined;
+
+  const normalizedZones = normalizeDeliveryZones(zones);
+  const exact = normalizedZones.find((zone) => {
+    const tokens = [zone.id, zone.name, zone.labelSw, zone.labelEn].map(normalizeLocationToken);
+    return tokens.some((token) => token && (normalizedLocation === token || normalizedLocation.includes(token) || token.includes(normalizedLocation)));
+  });
+  if (exact) return exact.id;
+
+  if (/\bdar\b|dar es salaam|daressalaam|dsm/.test(normalizedLocation)) {
+    return normalizedZones.find((zone) => normalizeLocationToken(`${zone.id} ${zone.name} ${zone.labelSw} ${zone.labelEn}`).includes("dar"))?.id;
+  }
+
+  return undefined;
+};
+
+export const isSameDeliveryZone = (product: Partial<Product>, zone: DeliveryZone) => {
+  const originZoneId = product.sellerOriginZoneId;
+  return Boolean(originZoneId && String(originZoneId) === String(zone.id));
+};
+
+export const formatSameZoneDeliveryEta = (lang: string) =>
+  lang === "sw" ? "Ndani ya saa 2-6 za kazi" : "Within 2-6 business hours";
+
+const getEtaDayValue = (eta: string) => {
+  const value = String(eta || "").toLowerCase();
+  if (value.includes("saa") || value.includes("hour")) return 0;
+  const match = value.match(/(\d+)(?:-(\d+))?/);
+  return match ? Number(match[2] || match[1]) : 0;
+};
+
 export const formatDeliveryDays = (zone: DeliveryZone, lang: string) => {
   const min = Number(zone.minDays || 0);
   const max = Math.max(min, Number(zone.maxDays || min));
@@ -326,6 +368,7 @@ export const quoteProductDelivery = (
     minDays: matchingRule.minDays,
     maxDays: matchingRule.maxDays,
   };
+  const sameZone = isSameDeliveryZone(product, zone);
 
   return {
     productId,
@@ -333,7 +376,7 @@ export const quoteProductDelivery = (
     quantity: qty,
     available: true,
     fee,
-    eta: formatDeliveryDays(etaZone, lang),
+    eta: sameZone ? formatSameZoneDeliveryEta(lang) : formatDeliveryDays(etaZone, lang),
     deliveryClass,
   };
 };
@@ -349,17 +392,15 @@ export const quoteCartDelivery = (
   const totalFee = items.reduce((sum, item) => sum + (item.available ? item.fee : 0), 0);
   const maxEta = items
     .filter((item) => item.available)
-    .map((item) => {
-      const match = item.eta.match(/(\d+)(?:-(\d+))?/);
-      return match ? Number(match[2] || match[1]) : 0;
-    })
+    .map((item) => getEtaDayValue(item.eta))
     .reduce((max, days) => Math.max(max, days), 0);
+  const firstHourlyEta = items.find((item) => item.available && getEtaDayValue(item.eta) === 0 && /saa|hour/i.test(item.eta))?.eta;
 
   return {
     zoneId: String(zone.id),
     zoneName: getDeliveryZoneName(zone, lang),
     totalFee,
-    eta: maxEta > 0 ? `${maxEta} ${lang === "sw" ? "siku" : "days"}` : formatDeliveryDays(zone, lang),
+    eta: maxEta > 0 ? `${maxEta} ${lang === "sw" ? "siku" : "days"}` : firstHourlyEta || formatDeliveryDays(zone, lang),
     available: unavailableItems.length === 0,
     items,
     unavailableItems,

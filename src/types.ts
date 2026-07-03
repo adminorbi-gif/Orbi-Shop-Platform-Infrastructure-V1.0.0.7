@@ -61,6 +61,14 @@ export interface DeliveryQuoteItem {
   eta: string;
   reason?: string;
   deliveryClass?: string;
+  quoteMode?: "route_exact" | "route_estimate" | "zone_fallback";
+  routeProvider?: "google_routes" | "distance_estimate" | "zone_rules";
+  route?: {
+    distanceKm: number;
+    durationMinutes: number;
+    provider: string;
+    cached?: boolean;
+  };
 }
 
 export interface DeliveryQuote {
@@ -71,6 +79,8 @@ export interface DeliveryQuote {
   available: boolean;
   items: DeliveryQuoteItem[];
   unavailableItems: DeliveryQuoteItem[];
+  quoteMode?: "route_exact" | "route_estimate" | "zone_fallback";
+  routeProvider?: "google_routes" | "distance_estimate" | "zone_rules";
 }
 
 export interface InvoiceSettings {
@@ -112,6 +122,11 @@ export interface SellerProfile {
   fullName?: string;
   phone?: string;
   location?: string;
+  pickupAddress?: string;
+  pickupPlaceId?: string;
+  pickupLat?: number;
+  pickupLng?: number;
+  pickupZoneId?: string;
   isVerifiedSeller?: boolean;
   niche?: string;
   businessType?: string;
@@ -186,6 +201,10 @@ export interface Product {
   deliveryHandlingNotes?: string;
   blockedDeliveryZoneIds?: string[];
   sellerOriginZoneId?: string;
+  sellerPickupAddress?: string;
+  sellerPickupPlaceId?: string;
+  sellerPickupLat?: number;
+  sellerPickupLng?: number;
 }
 
 export interface Promotion {

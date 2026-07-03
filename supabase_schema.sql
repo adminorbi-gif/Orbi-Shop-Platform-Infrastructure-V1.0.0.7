@@ -158,6 +158,10 @@ ALTER TABLE public.products ADD COLUMN IF NOT EXISTS delivery_policy_source TEXT
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS delivery_handling_notes TEXT;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS blocked_delivery_zone_ids TEXT[] DEFAULT '{}';
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS seller_origin_zone_id TEXT;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS seller_pickup_address TEXT;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS seller_pickup_place_id TEXT;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS seller_pickup_lat NUMERIC(10,7);
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS seller_pickup_lng NUMERIC(10,7);
 
 CREATE TABLE IF NOT EXISTS public.delivery_rules (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -181,6 +185,31 @@ CREATE TABLE IF NOT EXISTS public.delivery_rules (
 
 CREATE INDEX IF NOT EXISTS delivery_rules_zone_class_weight_idx
 ON public.delivery_rules (zone_id, delivery_class, min_weight_kg, max_weight_kg);
+
+CREATE TABLE IF NOT EXISTS public.delivery_route_quotes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  order_id UUID,
+  seller_id TEXT,
+  product_id TEXT,
+  zone_id TEXT,
+  origin_lat NUMERIC(10,7),
+  origin_lng NUMERIC(10,7),
+  destination_lat NUMERIC(10,7),
+  destination_lng NUMERIC(10,7),
+  distance_km NUMERIC(10,2),
+  duration_minutes INTEGER,
+  fee NUMERIC(12,2) NOT NULL DEFAULT 0,
+  eta TEXT,
+  quote_mode TEXT NOT NULL DEFAULT 'zone_fallback',
+  route_provider TEXT NOT NULL DEFAULT 'zone_rules',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS delivery_route_quotes_order_idx
+ON public.delivery_route_quotes (order_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS delivery_route_quotes_product_zone_idx
+ON public.delivery_route_quotes (product_id, zone_id, created_at DESC);
 
 -- Promotions Table
 CREATE TABLE IF NOT EXISTS public.promotions (
@@ -229,6 +258,10 @@ ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_eta TEXT;
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_quote_id TEXT;
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_quote_breakdown JSONB DEFAULT '{}';
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_unavailable_items JSONB DEFAULT '[]';
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_distance_km NUMERIC(10,2);
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_duration_minutes INTEGER;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_quote_mode TEXT;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_route_provider TEXT;
 
 -- Order Items Table
 CREATE TABLE IF NOT EXISTS public.order_items (
@@ -319,6 +352,7 @@ ALTER TABLE public.invoice_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.portal_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.delivery_zones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.delivery_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.delivery_route_quotes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_options ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.coupons ENABLE ROW LEVEL SECURITY;
 
@@ -359,6 +393,8 @@ DROP POLICY IF EXISTS "Public read delivery_zones" ON public.delivery_zones;
 DROP POLICY IF EXISTS "Admin manage delivery_zones" ON public.delivery_zones;
 DROP POLICY IF EXISTS "Public read delivery_rules" ON public.delivery_rules;
 DROP POLICY IF EXISTS "Admin manage delivery_rules" ON public.delivery_rules;
+DROP POLICY IF EXISTS "Public insert delivery_route_quotes" ON public.delivery_route_quotes;
+DROP POLICY IF EXISTS "Admin manage delivery_route_quotes" ON public.delivery_route_quotes;
 
 DROP POLICY IF EXISTS "Public read payment_options" ON public.payment_options;
 DROP POLICY IF EXISTS "Admin manage payment_options" ON public.payment_options;
@@ -411,6 +447,8 @@ CREATE POLICY "Public read delivery_zones" ON public.delivery_zones FOR SELECT U
 CREATE POLICY "Admin manage delivery_zones" ON public.delivery_zones FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 CREATE POLICY "Public read delivery_rules" ON public.delivery_rules FOR SELECT USING (true);
 CREATE POLICY "Admin manage delivery_rules" ON public.delivery_rules FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Public insert delivery_route_quotes" ON public.delivery_route_quotes FOR INSERT WITH CHECK (true);
+CREATE POLICY "Admin manage delivery_route_quotes" ON public.delivery_route_quotes FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 CREATE POLICY "Public read payment_options" ON public.payment_options FOR SELECT USING (is_active = true);
 CREATE POLICY "Admin manage payment_options" ON public.payment_options FOR ALL USING (auth.role() = 'authenticated');
@@ -469,7 +507,10 @@ VALUES
   ('00000000-0000-0000-0000-000000000103', 'standard', 0, 5, 6500, 650, 2000, 4500, 5500, 3, 5, true, 10),
   ('00000000-0000-0000-0000-000000000103', 'processed_food', 0, 20, 8000, 850, 1500, 3500, 0, 3, 6, true, 11),
   ('00000000-0000-0000-0000-000000000103', 'bulky', 0, 30, 12000, 1100, 4000, 8500, 8500, 4, 7, true, 12),
-  ('00000000-0000-0000-0000-000000000103', 'heavy', 0, 80, 18000, 1600, 6000, 12000, 12000, 5, 10, true, 13)
+  ('00000000-0000-0000-0000-000000000103', 'heavy', 0, 80, 18000, 1600, 6000, 12000, 12000, 5, 10, true, 13),
+  ('00000000-0000-0000-0000-000000000101', 'vehicle', 0, NULL, 0, 0, 0, 0, 0, 0, 0, false, 90),
+  ('00000000-0000-0000-0000-000000000102', 'vehicle', 0, NULL, 0, 0, 0, 0, 0, 0, 0, false, 91),
+  ('00000000-0000-0000-0000-000000000103', 'vehicle', 0, NULL, 0, 0, 0, 0, 0, 0, 0, false, 92)
 ON CONFLICT DO NOTHING;
 
 -- Newsletters Table
@@ -644,6 +685,11 @@ CREATE TABLE IF NOT EXISTS public.sellers (
 );
 
 ALTER TABLE public.sellers ADD COLUMN IF NOT EXISTS tin TEXT;
+ALTER TABLE public.sellers ADD COLUMN IF NOT EXISTS pickup_address TEXT;
+ALTER TABLE public.sellers ADD COLUMN IF NOT EXISTS pickup_place_id TEXT;
+ALTER TABLE public.sellers ADD COLUMN IF NOT EXISTS pickup_lat NUMERIC(10,7);
+ALTER TABLE public.sellers ADD COLUMN IF NOT EXISTS pickup_lng NUMERIC(10,7);
+ALTER TABLE public.sellers ADD COLUMN IF NOT EXISTS pickup_zone_id TEXT;
 
 -- RLS for Sellers
 ALTER TABLE public.sellers ENABLE ROW LEVEL SECURITY;

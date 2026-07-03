@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { getSupabase } from "../lib/supabase.js";
 import { quoteCartDelivery } from "../lib/deliveryQuote.js";
+import { quoteCartRouteDelivery } from "../lib/routeDeliveryQuote.js";
 
 const router = Router();
 
@@ -40,12 +41,68 @@ const mapDbProduct = (row: any, fallback: any = {}) => {
     deliveryHandlingNotes: row?.delivery_handling_notes || fallback.deliveryHandlingNotes || "",
     blockedDeliveryZoneIds: Array.isArray(row?.blocked_delivery_zone_ids) ? row.blocked_delivery_zone_ids : (fallback.blockedDeliveryZoneIds || []),
     sellerOriginZoneId: row?.seller_origin_zone_id || fallback.sellerOriginZoneId,
+    sellerPickupAddress: row?.seller_pickup_address || fallback.sellerPickupAddress,
+    sellerPickupPlaceId: row?.seller_pickup_place_id || fallback.sellerPickupPlaceId,
+    sellerPickupLat: row?.seller_pickup_lat ?? fallback.sellerPickupLat,
+    sellerPickupLng: row?.seller_pickup_lng ?? fallback.sellerPickupLng,
   };
 };
 
-router.post("/quote", async (req, res) => {
+const attachSellerPickupLocations = async (client: any, cart: any[]) => {
+  const sellerIds = Array.from(new Set(
+    cart
+      .map((item) => item.product?.sellerId)
+      .filter((id) => id && id !== "system")
+      .map(String),
+  ));
+  if (sellerIds.length === 0) return cart;
+
+  const uuidIds = sellerIds.filter(isValidUUID);
+  const legacyIds = sellerIds.filter((id) => !isValidUUID(id));
+  const sellerRows: any[] = [];
+
+  if (uuidIds.length > 0) {
+    const { data, error } = await client
+      .from("sellers")
+      .select("id, legacy_id, pickup_address, pickup_place_id, pickup_lat, pickup_lng, pickup_zone_id")
+      .in("id", uuidIds);
+    if (!error && data) sellerRows.push(...data);
+  }
+
+  if (legacyIds.length > 0) {
+    const { data, error } = await client
+      .from("sellers")
+      .select("id, legacy_id, pickup_address, pickup_place_id, pickup_lat, pickup_lng, pickup_zone_id")
+      .in("legacy_id", legacyIds);
+    if (!error && data) sellerRows.push(...data);
+  }
+
+  const sellersById = new Map<string, any>();
+  sellerRows.forEach((seller) => {
+    sellersById.set(String(seller.id), seller);
+    if (seller.legacy_id) sellersById.set(String(seller.legacy_id), seller);
+  });
+
+  return cart.map((item) => {
+    const seller = sellersById.get(String(item.product?.sellerId || ""));
+    if (!seller) return item;
+    return {
+      ...item,
+      product: {
+        ...item.product,
+        sellerOriginZoneId: item.product.sellerOriginZoneId || seller.pickup_zone_id,
+        sellerPickupAddress: item.product.sellerPickupAddress || seller.pickup_address,
+        sellerPickupPlaceId: item.product.sellerPickupPlaceId || seller.pickup_place_id,
+        sellerPickupLat: item.product.sellerPickupLat ?? seller.pickup_lat,
+        sellerPickupLng: item.product.sellerPickupLng ?? seller.pickup_lng,
+      },
+    };
+  });
+};
+
+const handleDeliveryQuote = async (req: any, res: any) => {
   try {
-    const { cart, zoneId, lang = "sw" } = req.body || {};
+    const { cart, zoneId, lang = "sw", origin, destination } = req.body || {};
     if (!Array.isArray(cart) || cart.length === 0) {
       return res.status(400).json({ success: false, error: "CART_REQUIRED" });
     }
@@ -74,7 +131,7 @@ router.post("/quote", async (req, res) => {
       console.warn("[Delivery Quote] Falling back to default rules:", ruleError.message);
     }
 
-    const validatedCart = await Promise.all(
+    const validatedCartRaw = await Promise.all(
       cart.map(async (item: any) => {
         const productId = item.product?.id || item.productId || item.id;
         let query = client.from("products").select("*");
@@ -88,13 +145,19 @@ router.post("/quote", async (req, res) => {
         };
       }),
     );
+    const validatedCart = await attachSellerPickupLocations(client, validatedCartRaw);
 
-    const quote = quoteCartDelivery(validatedCart, zone, rules || [], lang);
+    const quote = destination
+      ? await quoteCartRouteDelivery(validatedCart, zone, rules || [], { origin, destination, lang })
+      : quoteCartDelivery(validatedCart, zone, rules || [], lang);
     res.json({ success: true, data: quote });
   } catch (error: any) {
-    console.error("POST /api/v1/delivery/quote error:", error.message || error);
+    console.error("POST /api/v1/delivery quote error:", error.message || error);
     res.status(500).json({ success: false, error: error.message || "DELIVERY_QUOTE_FAILED" });
   }
-});
+};
+
+router.post("/quote", handleDeliveryQuote);
+router.post("/route-quote", handleDeliveryQuote);
 
 export default router;

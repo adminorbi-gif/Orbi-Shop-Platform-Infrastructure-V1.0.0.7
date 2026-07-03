@@ -406,6 +406,10 @@ export const db = {
       body: JSON.stringify({ rules })
     });
   },
+  getServiceHealth: async () => {
+    const res = await apiFetch('/api/v1/settings/service-health');
+    return res.data;
+  },
   getDeliveryQuote: async (payload: { cart: any[]; zoneId: string; lang?: string }): Promise<DeliveryQuote> => {
     const res = await apiFetch('/api/v1/delivery/quote', {
       method: 'POST',

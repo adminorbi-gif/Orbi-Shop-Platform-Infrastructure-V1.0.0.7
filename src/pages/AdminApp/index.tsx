@@ -3005,23 +3005,23 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
         {/* Main Content */}
         <main
-          className={`flex-1 p-4 sm:p-6 md:p-8 flex flex-col gap-5 items-center bg-[#f6f8fc] ${tab === "messages" ? "overflow-hidden h-full min-h-0" : "overflow-auto"}`}
+          className={`flex-1 p-3 sm:p-4 md:p-5 flex flex-col gap-3 items-center bg-[#f6f8fc] ${tab === "messages" ? "overflow-hidden h-full min-h-0" : "overflow-auto"}`}
         >
           <div className="w-full max-w-7xl flex flex-col flex-1 h-full min-h-0">
             {tab === "dashboard" && (
-              <div className="space-y-4 flex-1 flex flex-col">
-                <div className="bg-white/90 border border-slate-200/70 rounded-[1.75rem] px-5 py-4 flex items-center justify-between shadow-sm">
+              <div className="space-y-3 flex-1 flex flex-col">
+                <div className="bg-white/90 border border-slate-200/70 rounded-[1.35rem] px-4 py-3 flex items-center justify-between shadow-sm">
                   <div>
-                    <h2 className="text-2xl font-display font-black tracking-tight text-slate-800">
+                    <h2 className="text-xl sm:text-2xl font-display font-black tracking-tight text-slate-800 leading-tight">
                       {t(lang, "dash.title")}
                     </h2>
-                    <p className="text-sm text-slate-500 mt-1">
+                    <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
                       {t(lang, "dash.desc")}
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
                   <StatCard
                     onClick={() => setTab("products")}
                     title={t(lang, "dash.tot_prod")}
@@ -3075,41 +3075,41 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="flex flex-wrap gap-2 mt-1">
+                <div className="flex flex-wrap gap-1.5">
                   <button
                     onClick={() => setTab("products")}
-                    className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl text-xs font-black text-slate-700 transition shadow-sm"
+                    className="flex min-h-9 items-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-[11px] font-black text-slate-700 transition shadow-sm"
                   >
-                    <Plus size={16} /> {t(lang, "dash.quick_add_prod")}
+                    <Plus size={14} /> {t(lang, "dash.quick_add_prod")}
                   </button>
                   <button
                     onClick={() => setTab("promos")}
-                    className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl text-xs font-black text-slate-700 transition shadow-sm"
+                    className="flex min-h-9 items-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-[11px] font-black text-slate-700 transition shadow-sm"
                   >
-                    <Plus size={16} /> {t(lang, "dash.quick_add_promo")}
+                    <Plus size={14} /> {t(lang, "dash.quick_add_promo")}
                   </button>
                   <button
                     onClick={() => setTab("messages")}
-                    className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl text-xs font-black text-slate-700 transition shadow-sm"
+                    className="flex min-h-9 items-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-[11px] font-black text-slate-700 transition shadow-sm"
                   >
-                    <MessageSquare size={16} /> {t(lang, "dash.quick_msg")}
+                    <MessageSquare size={14} /> {t(lang, "dash.quick_msg")}
                   </button>
                   <a
                     href="/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3.5 py-2 rounded-xl text-xs font-black text-emerald-700 transition ml-auto shadow-sm"
+                    className="flex min-h-9 items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-xl text-[11px] font-black text-emerald-700 transition ml-auto shadow-sm"
                   >
-                    <ExternalLink size={16} /> {t(lang, "dash.quick_store")}
+                    <ExternalLink size={14} /> {t(lang, "dash.quick_store")}
                   </a>
                 </div>
 
                 {isLgScreen && (
-                  <div className="hidden lg:grid grid-cols-4 gap-4 mt-2">
-                    <div className="bg-white p-5 rounded-[1.75rem] border border-slate-200/80 shadow-sm xl:col-span-3">
-                      <div className="mb-4 flex items-start justify-between gap-4">
+                  <div className="hidden lg:grid grid-cols-4 gap-3 mt-1">
+                    <div className="bg-white p-4 rounded-[1.35rem] border border-slate-200/80 shadow-sm xl:col-span-3">
+                      <div className="mb-3 flex items-start justify-between gap-3">
                         <div>
-                          <h3 className="text-base font-black text-slate-900">
+                          <h3 className="text-sm font-black text-slate-900">
                             {lang === "sw" ? "Mapato Jumla" : "Total Revenue"}
                           </h3>
                           <div className="mt-1 flex flex-wrap items-center gap-3">
@@ -3117,14 +3117,14 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                               amount={dashboardRevenueTrend.reduce((sum, point) => sum + point.sales, 0)}
                               compact={false}
                               truncate={false}
-                              className="text-[1.75rem]"
+                              className="text-[1.35rem]"
                             />
                             <span className="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-700">
                               {dashboardRevenueTrend.reduce((sum, point) => sum + point.orders, 0)}{" "}
                               {lang === "sw" ? "oda" : "orders"}
                             </span>
                           </div>
-                          <p className="text-[11px] text-slate-500 mt-1.5">
+                          <p className="text-[10px] text-slate-500 mt-1">
                             {dashboardPeriod === "yearly"
                               ? lang === "sw"
                                 ? "Miezi yote 12 ya mwaka huu"
@@ -3157,7 +3157,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                   item.id as "daily" | "weekly" | "monthly" | "yearly",
                                 )
                               }
-                              className={`rounded-xl px-3 py-1.5 text-[10px] font-black transition ${
+                              className={`rounded-xl px-2.5 py-1 text-[9px] font-black transition ${
                                 dashboardPeriod === item.id
                                   ? "bg-white text-slate-950 shadow-sm"
                                   : "text-slate-500 hover:text-slate-900"
@@ -3168,10 +3168,10 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                           ))}
                         </div>
                       </div>
-                      <div className="h-72 w-full mt-1 font-mono">
+                      <div className="h-56 w-full mt-1 font-mono">
                         <ResponsiveContainer
                           width="100%"
-                          height={288}
+                          height={224}
                           minHeight={50}
                           minWidth={50}
                         >
@@ -3253,19 +3253,19 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       </div>
                     </div>
 
-                    <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200/80 shadow-sm">
-                      <div className="mb-3">
+                    <div className="bg-white p-3 rounded-[1.35rem] border border-slate-200/80 shadow-sm">
+                      <div className="mb-2">
                         <h3 className="text-sm font-black text-slate-800">
                           {t(lang, "dash.cust_reg")}
                         </h3>
-                        <p className="text-[11px] text-slate-500 mt-1">
+                        <p className="text-[10px] text-slate-500 mt-0.5">
                           {t(lang, "dash.cust_reg_desc")}
                         </p>
                       </div>
-                      <div className="h-56 w-full mt-1 font-mono">
+                      <div className="h-44 w-full mt-1 font-mono">
                         <ResponsiveContainer
                           width="100%"
-                          height={220}
+                          height={176}
                           minHeight={50}
                           minWidth={50}
                         >
@@ -3321,8 +3321,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     </div>
 
                     {/* Enhanced Analytics: Hourly Peak Traffic Chart */}
-                    <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200/80 shadow-sm">
-                      <div className="mb-3">
+                    <div className="bg-white p-3 rounded-[1.35rem] border border-slate-200/80 shadow-sm">
+                      <div className="mb-2">
                         <h3 className="text-sm font-black text-slate-800">
                           {lang === "sw"
                             ? "Muda wa Juu wa Oda (Peak Hours)"
@@ -3334,10 +3334,10 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             : "24-hour heat trends helping staff optimize delivery preparation."}
                         </p>
                       </div>
-                      <div className="h-56 w-full mt-1 font-mono">
+                      <div className="h-44 w-full mt-1 font-mono">
                         <ResponsiveContainer
                           width="100%"
-                          height={220}
+                          height={176}
                           minHeight={50}
                           minWidth={50}
                         >
@@ -3416,23 +3416,23 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     </div>
 
                     {/* Enhanced Analytics: High-Performing Categories Revenue */}
-                    <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200/80 shadow-sm xl:col-span-2">
-                      <div className="mb-3">
+                    <div className="bg-white p-3 rounded-[1.35rem] border border-slate-200/80 shadow-sm xl:col-span-2">
+                      <div className="mb-2">
                         <h3 className="text-sm font-black text-slate-800">
                           {lang === "sw"
                             ? "Mapato kwa Makundi (Niche Revenue)"
                             : "Category Performance"}
                         </h3>
-                        <p className="text-[11px] text-slate-500 mt-1">
+                        <p className="text-[10px] text-slate-500 mt-0.5">
                           {lang === "sw"
                             ? "Mchanganuo wa mapato kamilifu yanayotokana na kila kundi la bidhaa."
                             : "True category performance breakdown by total sales volume."}
                         </p>
                       </div>
-                      <div className="h-56 w-full mt-1 font-mono">
+                      <div className="h-44 w-full mt-1 font-mono">
                         <ResponsiveContainer
                           width="100%"
-                          height={220}
+                          height={176}
                           minHeight={50}
                           minWidth={50}
                         >
@@ -3492,11 +3492,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 )}
 
                 {/* Graphic charts - Mobile Button */}
-                <div className="lg:hidden mt-4">
+                <div className="lg:hidden mt-2">
                   <button
                     type="button"
                     onClick={() => setDashboardChartsOpen(true)}
-                    className="w-full bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between text-left"
+                    className="w-full bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between text-left"
                   >
                     <div>
                       <h3 className="text-lg font-bold text-slate-800">
@@ -3515,31 +3515,31 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 </div>
 
                 {/* Top Selling Products */}
-                <div className="mt-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
-                  <h3 className="text-lg font-bold text-slate-800 mb-4">
+                <div className="mt-2 bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm">
+                  <h3 className="text-base font-bold text-slate-800 mb-3">
                     Top Selling Products
                   </h3>
-                  <div className="space-y-4">
+                  <div className="space-y-2.5">
                     {topSellingProducts.length > 0 ? (
                       topSellingProducts.map((p, i) => (
                         <div
                           key={p.id}
-                          className="flex items-center justify-between gap-4"
+                          className="flex items-center justify-between gap-3"
                         >
                           <div className="flex items-center gap-3">
-                            <span className="text-xl font-bold text-slate-400 w-6">
+                            <span className="text-base font-bold text-slate-400 w-6">
                               #{i + 1}
                             </span>
                             <img
                               src={p.images && p.images[0] ? p.images[0] : ""}
                               alt={p.name}
-                              className="w-10 h-10 rounded-lg object-cover"
+                              className="w-8 h-8 rounded-lg object-cover"
                             />
-                            <span className="font-semibold text-slate-700">
+                            <span className="font-semibold text-sm text-slate-700">
                               {p.name}
                             </span>
                           </div>
-                          <span className="text-sm font-bold text-emerald-600">
+                          <span className="text-xs font-bold text-emerald-600">
                             {p.sales} Sold
                           </span>
                         </div>

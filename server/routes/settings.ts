@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { supabase, getSupabase, encrypt, decrypt, decryptObject } from "../lib/supabase.js";
 import { GoogleGenAI, Type } from "@google/genai";
+import { getRouteDeliveryHealth } from "../lib/routeDeliveryQuote.js";
 
 const router = Router();
 
@@ -301,6 +302,81 @@ router.post("/delivery-rules", async (req, res) => {
     console.error("POST /api/v1/settings/delivery-rules error:", error.message);
     res.status(500).json({ success: false, error: error.message });
   }
+});
+
+router.get("/service-health", async (req, res) => {
+  const checkedAt = new Date().toISOString();
+  const services: any[] = [];
+
+  const routeHealth = getRouteDeliveryHealth();
+  services.push({
+    id: "google_routes",
+    name: "Google Routes API",
+    group: "Delivery",
+    status: routeHealth.routesApi.status,
+    message:
+      routeHealth.routesApi.status === "ok"
+        ? "Routes API is responding and route quotes can use exact road distance."
+        : routeHealth.routesApi.status === "ready"
+          ? "API key is configured. Waiting for the next live route quote to confirm response."
+          : routeHealth.routesApi.status === "degraded"
+            ? `Routes API failed recently: ${routeHealth.routesApi.lastError || "unknown error"}`
+            : "GOOGLE_MAPS_ROUTES_API_KEY is not configured. Delivery is using fallback rules.",
+    meta: routeHealth.routesApi,
+  });
+
+  services.push({
+    id: "delivery_route_cache",
+    name: "Delivery Route Cache",
+    group: "Delivery",
+    status: routeHealth.routeCache.status,
+    message: `Route cache is active for ${routeHealth.routeCache.ttlMinutes} minutes.`,
+    meta: routeHealth.routeCache,
+  });
+
+  services.push({
+    id: "delivery_fallback",
+    name: "Delivery Fallback Engine",
+    group: "Delivery",
+    status: routeHealth.fallback.status,
+    message: "Zone/rule and distance-estimate fallback are available when Google Routes cannot respond.",
+    meta: routeHealth.fallback,
+  });
+
+  try {
+    const { count, error } = await getSupabase(req)
+      .from("delivery_zones")
+      .select("id", { count: "exact", head: true });
+    services.push({
+      id: "delivery_zones_db",
+      name: "Delivery Zones Database",
+      group: "Database",
+      status: error ? "degraded" : "ok",
+      message: error ? error.message : `${count || 0} delivery zones reachable.`,
+      meta: { count: count || 0 },
+    });
+  } catch (error: any) {
+    services.push({
+      id: "delivery_zones_db",
+      name: "Delivery Zones Database",
+      group: "Database",
+      status: "degraded",
+      message: error.message || "Delivery zones database check failed.",
+      meta: {},
+    });
+  }
+
+  const hasDegraded = services.some((service) => service.status === "degraded");
+  const hasNotConfigured = services.some((service) => service.status === "not_configured");
+
+  res.json({
+    success: true,
+    data: {
+      checkedAt,
+      overallStatus: hasDegraded ? "degraded" : hasNotConfigured ? "attention" : "ok",
+      services,
+    },
+  });
 });
 
 // 2. NICHES

@@ -21,6 +21,7 @@ import { supabase } from "../../../lib/supabase";
 import { formatCurrency } from "../../../lib/storage";
 import { PriceDisplay } from "../../../components/PriceDisplay";
 import { db } from "../../../lib/db";
+import { quoteProductDelivery } from "../../../lib/deliveryZones";
 import { SchemaValidator } from "../../../utils/schemaValidation";
 import { PhotoQualityGuide } from "../../../components/PhotoQualityGuide";
 import {
@@ -2152,9 +2153,9 @@ export function StatCard({
   return (
     <div
       onClick={onClick}
-      className={`orbi-admin-card p-3.5 sm:p-4 rounded-[1.35rem] border border-slate-200/80 flex items-start justify-between gap-2.5 overflow-hidden @container bg-white/95 ${onClick ? "cursor-pointer hover:border-blue-300 hover:shadow-[0_16px_35px_rgba(15,23,42,0.08)] transition-all duration-300 transform hover:-translate-y-0.5 group" : ""}`}
+      className={`orbi-admin-card orbi-dashboard-stat-card p-2.5 sm:p-3 rounded-[1.15rem] border border-slate-200/80 flex items-center justify-between gap-2 overflow-hidden @container bg-white/95 ${onClick ? "cursor-pointer hover:border-blue-300 hover:shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-all duration-300 transform hover:-translate-y-0.5 group" : ""}`}
     >
-      <div className="space-y-1.5 min-w-0 flex-1 overflow-hidden">
+      <div className="space-y-1 min-w-0 flex-1 overflow-hidden">
         <p className="orbi-admin-label text-zinc-500 font-extrabold uppercase tracking-[0.1em] transition max-w-full line-clamp-2">
           {title}
         </p>
@@ -2166,7 +2167,7 @@ export function StatCard({
         </div>
       </div>
       {icon && (
-        <div className="shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100 group-hover:bg-blue-50 transition duration-300">
+        <div className="shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100 group-hover:bg-blue-50 transition duration-300">
           {icon}
         </div>
       )}
@@ -11568,6 +11569,18 @@ export function SettingsAdmin() {
   const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>([]);
   const [deliveryRules, setDeliveryRules] = useState<DeliveryRule[]>([]);
   const [deliverySaved, setDeliverySaved] = useState(false);
+  const [serviceHealth, setServiceHealth] = useState<any>(null);
+  const [serviceHealthLoading, setServiceHealthLoading] = useState(false);
+  const [editingDeliveryRuleIndex, setEditingDeliveryRuleIndex] = useState<number | null>(null);
+  const [deliveryTest, setDeliveryTest] = useState({
+    zoneId: "",
+    deliveryClass: "standard",
+    weightKg: 1,
+    quantity: 1,
+    fragile: false,
+    oversized: false,
+    requiresColdChain: false,
+  });
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiTotalPending, setAiTotalPending] = useState(0);
@@ -12139,8 +12152,81 @@ export function SettingsAdmin() {
   const [isTraSaved, setIsTraSaved] = useState(false);
 
   const [activeSubTab, setActiveSubTab] = useState<
-    "profile" | "delivery" | "loyalty" | "tra" | "security" | "niches"
+    "system" | "profile" | "delivery" | "loyalty" | "tra" | "security" | "niches"
   >("profile");
+
+  const deliveryMatrixRows = useMemo(() => {
+    const zonesById = new Map(deliveryZones.map((zone) => [String(zone.id), zone]));
+    return deliveryRules
+      .map((rule, index) => ({
+        rule,
+        index,
+        zone: zonesById.get(String(rule.zoneId)),
+      }))
+      .sort((a, b) => {
+        const zoneSort = Number(a.zone?.sortOrder || 0) - Number(b.zone?.sortOrder || 0);
+        if (zoneSort !== 0) return zoneSort;
+        return Number(a.rule.sortOrder || 0) - Number(b.rule.sortOrder || 0);
+      });
+  }, [deliveryRules, deliveryZones]);
+
+  const fallbackQuotePreview = useMemo(() => {
+    const zone = deliveryZones.find((item) => String(item.id) === String(deliveryTest.zoneId)) || deliveryZones[0];
+    if (!zone) return null;
+    const product: Partial<Product> = {
+      id: "admin-fallback-test",
+      name: "Fallback test product",
+      niche: "Admin",
+      category: "Admin",
+      price: 0,
+      stock: 1,
+      images: [],
+      tags: [],
+      description: "",
+      createdAt: Date.now(),
+      deliveryClass: deliveryTest.deliveryClass,
+      weightKg: Number(deliveryTest.weightKg || 1),
+      fragile: deliveryTest.fragile,
+      oversized: deliveryTest.oversized,
+      requiresColdChain: deliveryTest.requiresColdChain,
+    };
+    return quoteProductDelivery(product, Number(deliveryTest.quantity || 1), zone, deliveryRules, lang);
+  }, [deliveryRules, deliveryTest, deliveryZones, lang]);
+
+  const focusDeliveryRuleEditor = (index: number) => {
+    setEditingDeliveryRuleIndex(index);
+    setTimeout(() => {
+      document
+        .getElementById(`delivery-rule-editor-${index}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+  };
+
+  const refreshServiceHealth = async () => {
+    setServiceHealthLoading(true);
+    try {
+      setServiceHealth(await db.getServiceHealth());
+    } catch (err) {
+      console.warn("Failed loading service health:", err);
+      setServiceHealth({
+        overallStatus: "degraded",
+        checkedAt: new Date().toISOString(),
+        services: [
+          {
+            id: "admin_health_endpoint",
+            name: "Admin service health endpoint",
+            group: "System",
+            status: "degraded",
+            message: isSw
+              ? "Imeshindwa kusoma hali ya huduma kutoka backend."
+              : "Failed to read service health from backend.",
+          },
+        ],
+      });
+    } finally {
+      setServiceHealthLoading(false);
+    }
+  };
 
   useEffect(() => {
     Promise.all([
@@ -12168,13 +12254,18 @@ export function SettingsAdmin() {
         console.warn("Failed loading delivery rules:", err);
         return [];
       }),
+      db.getServiceHealth().catch((err) => {
+        console.warn("Failed loading service health:", err);
+        return null;
+      }),
     ])
-      .then(([res, niches, traConfig, prods, zones, rules]) => {
+      .then(([res, niches, traConfig, prods, zones, rules, health]) => {
         setSettings(res || {});
         setSysNiches(niches || []);
         setProducts(prods || []);
         setDeliveryZones(zones || []);
         setDeliveryRules(rules || []);
+        setServiceHealth(health);
         if (traConfig) {
           setTraTin(traConfig.tin || "");
           setTraCertKey(traConfig.certKey || "");
@@ -12320,6 +12411,14 @@ export function SettingsAdmin() {
 
   const categories = [
     {
+      id: "system",
+      label: isSw ? "Afya ya Mfumo" : "Service Health",
+      desc: isSw
+        ? "Huduma, APIs na fallback"
+        : "Services, APIs, and fallback status",
+      icon: Server,
+    },
+    {
       id: "profile",
       label: isSw ? "Wasifu wa Soko" : "Business Profile",
       desc: isSw
@@ -12446,6 +12545,122 @@ export function SettingsAdmin() {
 
         {/* Dynamic Display Area */}
         <div className="lg:col-span-3 space-y-6">
+          {activeSubTab === "system" && (
+            <div className="bg-white rounded-[2.25rem] border border-slate-200/80 p-6 sm:p-8 shadow-xs space-y-5 animate-in fade-in duration-200 text-left">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <Server size={17} className="text-indigo-600" />
+                    {isSw ? "Ufuatiliaji wa Huduma Muhimu" : "Critical Service Monitor"}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-medium mt-1">
+                    {isSw
+                      ? "Angalia Routes API, delivery cache, fallback engine na database kabla hazijaleta changamoto kwenye checkout."
+                      : "Track Routes API, delivery cache, fallback engine, and database readiness before they affect checkout."}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={refreshServiceHealth}
+                  disabled={serviceHealthLoading}
+                  className="min-h-[44px] px-4 py-2 rounded-2xl bg-slate-900 text-white text-xs font-black hover:bg-indigo-700 transition flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  <RefreshCw size={14} className={serviceHealthLoading ? "animate-spin" : ""} />
+                  {isSw ? "Hakiki Tena" : "Refresh"}
+                </button>
+              </div>
+
+              <div className={`rounded-3xl border p-4 sm:p-5 ${
+                serviceHealth?.overallStatus === "ok"
+                  ? "bg-emerald-50 border-emerald-100"
+                  : serviceHealth?.overallStatus === "attention"
+                    ? "bg-amber-50 border-amber-100"
+                    : "bg-rose-50 border-rose-100"
+              }`}>
+                <div className="flex items-start gap-3">
+                  {serviceHealth?.overallStatus === "ok" ? (
+                    <CheckCircle2 size={22} className="text-emerald-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle size={22} className={`${serviceHealth?.overallStatus === "attention" ? "text-amber-600" : "text-rose-600"} shrink-0 mt-0.5`} />
+                  )}
+                  <div>
+                    <p className="text-sm font-black text-slate-900">
+                      {serviceHealth?.overallStatus === "ok"
+                        ? (isSw ? "Huduma Muhimu Ziko Sawa" : "Critical Services Healthy")
+                        : serviceHealth?.overallStatus === "attention"
+                          ? (isSw ? "Kuna Huduma Inahitaji Kuwekwa" : "Some Services Need Configuration")
+                          : (isSw ? "Kuna Huduma Inahitaji Uangalizi" : "Some Services Need Attention")}
+                    </p>
+                    <p className="text-[11px] text-slate-600 font-semibold mt-1">
+                      {isSw ? "Ukaguzi wa mwisho:" : "Last checked:"}{" "}
+                      {serviceHealth?.checkedAt ? new Date(serviceHealth.checkedAt).toLocaleString() : "-"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(serviceHealth?.services || []).map((service: any) => {
+                  const status = String(service.status || "unknown");
+                  const ok = status === "ok" || status === "ready";
+                  const attention = status === "not_configured";
+                  return (
+                    <div
+                      key={service.id}
+                      className={`rounded-3xl border p-4 sm:p-5 shadow-xs ${
+                        ok
+                          ? "border-emerald-100 bg-white"
+                          : attention
+                            ? "border-amber-100 bg-amber-50/40"
+                            : "border-rose-100 bg-rose-50/40"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                            {service.group || "System"}
+                          </p>
+                          <h4 className="text-sm font-black text-slate-900 mt-1">
+                            {service.name}
+                          </h4>
+                        </div>
+                        <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase shrink-0 ${
+                          ok
+                            ? "bg-emerald-100 text-emerald-700"
+                            : attention
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-rose-100 text-rose-700"
+                        }`}>
+                          {status.replace("_", " ")}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 font-semibold leading-relaxed mt-3">
+                        {service.message}
+                      </p>
+                      {service.meta && (
+                        <div className="mt-4 grid grid-cols-2 gap-2">
+                          {Object.entries(service.meta)
+                            .filter(([_, value]) => value !== null && value !== "" && typeof value !== "object")
+                            .slice(0, 6)
+                            .map(([key, value]) => (
+                              <div key={key} className="rounded-2xl bg-slate-50 border border-slate-100 p-2">
+                                <p className="text-[8px] font-black uppercase tracking-wider text-slate-400 truncate">
+                                  {key}
+                                </p>
+                                <p className="text-[11px] font-black text-slate-800 truncate">
+                                  {String(value)}
+                                </p>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {activeSubTab === "profile" && (
             <form
               onSubmit={handleSaveProfile}
@@ -13330,6 +13545,186 @@ export function SettingsAdmin() {
                   </button>
                 </div>
 
+                <div className="rounded-[1.5rem] border border-blue-100 bg-white/80 p-3 sm:p-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
+                    <div>
+                      <h5 className="text-[11px] font-black uppercase tracking-widest text-slate-900">
+                        {isSw ? "Live Fallback Pricing Matrix" : "Live Fallback Pricing Matrix"}
+                      </h5>
+                      <p className="text-[10px] font-semibold text-slate-500">
+                        {isSw
+                          ? "Hiki ndicho checkout itatumia kama Google Routes au coordinates hazipo."
+                          : "This is what checkout uses when Google Routes or coordinates are unavailable."}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-blue-50 px-3 py-1 text-[9px] font-black uppercase text-blue-700 ring-1 ring-blue-100">
+                      {deliveryMatrixRows.length} {isSw ? "rules" : "rules"}
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-2xl border border-slate-100">
+                    <table className="min-w-[760px] w-full text-left text-[11px]">
+                      <thead className="bg-slate-50 text-[9px] font-black uppercase tracking-wider text-slate-400">
+                        <tr>
+                          <th className="px-3 py-2">{isSw ? "Eneo" : "Zone"}</th>
+                          <th className="px-3 py-2">{isSw ? "Class" : "Class"}</th>
+                          <th className="px-3 py-2">{isSw ? "Uzito" : "Weight"}</th>
+                          <th className="px-3 py-2">{isSw ? "Bei" : "Pricing"}</th>
+                          <th className="px-3 py-2">ETA</th>
+                          <th className="px-3 py-2">{isSw ? "Hali" : "Status"}</th>
+                          <th className="px-3 py-2">{isSw ? "Kitendo" : "Action"}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {deliveryMatrixRows.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="px-3 py-5 text-center text-xs font-semibold text-slate-400">
+                              {isSw ? "Hakuna matrix rules bado." : "No matrix rules configured yet."}
+                            </td>
+                          </tr>
+                        ) : (
+                          deliveryMatrixRows.map(({ rule, zone, index }, idx) => (
+                            <tr key={`${rule.id || idx}-matrix`} className="hover:bg-slate-50/80">
+                              <td className="px-3 py-2 font-black text-slate-800">
+                                {zone?.labelSw || zone?.name || rule.zoneId || "-"}
+                              </td>
+                              <td className="px-3 py-2">
+                                <span className="rounded-full bg-slate-100 px-2 py-1 text-[9px] font-black uppercase text-slate-700">
+                                  {rule.deliveryClass}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 font-semibold text-slate-600">
+                                {Number(rule.minWeightKg || 0)}kg - {rule.maxWeightKg ?? "∞"}kg
+                              </td>
+                              <td className="px-3 py-2 font-semibold text-slate-600">
+                                {formatCurrency(rule.baseFee || 0)} + {formatCurrency(rule.perKgFee || 0)}/kg
+                              </td>
+                              <td className="px-3 py-2 font-semibold text-slate-600">
+                                {rule.minDays === rule.maxDays
+                                  ? `${rule.maxDays} ${isSw ? "siku" : "days"}`
+                                  : `${rule.minDays}-${rule.maxDays} ${isSw ? "siku" : "days"}`}
+                              </td>
+                              <td className="px-3 py-2">
+                                <span className={`rounded-full px-2 py-1 text-[9px] font-black uppercase ${
+                                  rule.isAvailable !== false
+                                    ? "bg-emerald-50 text-emerald-700"
+                                    : "bg-rose-50 text-rose-700"
+                                }`}>
+                                  {rule.isAvailable !== false ? (isSw ? "Inafanya kazi" : "Available") : (isSw ? "Imezuiwa" : "Blocked")}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2">
+                                <button
+                                  type="button"
+                                  onClick={() => focusDeliveryRuleEditor(index)}
+                                  className="min-h-9 rounded-xl bg-slate-900 px-3 text-[10px] font-black uppercase text-white transition hover:bg-blue-700"
+                                >
+                                  {isSw ? "Hariri" : "Edit"}
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="rounded-[1.5rem] border border-emerald-100 bg-emerald-50/50 p-4">
+                  <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h5 className="text-[11px] font-black uppercase tracking-widest text-slate-900">
+                        {isSw ? "Jaribu Quote ya Fallback" : "Test Fallback Quote"}
+                      </h5>
+                      <p className="text-[10px] font-semibold text-slate-500">
+                        {isSw
+                          ? "Jaribu bei na ETA kabla ya kuweka rules live kwa wateja."
+                          : "Preview fee and ETA before customers rely on these fallback rules."}
+                      </p>
+                    </div>
+                    <div className={`rounded-2xl px-4 py-2 text-right ${
+                      fallbackQuotePreview?.available ? "bg-white text-emerald-700" : "bg-white text-rose-700"
+                    }`}>
+                      <p className="text-[9px] font-black uppercase tracking-wider">
+                        {fallbackQuotePreview?.available ? (isSw ? "Quote Inaruhusu" : "Quote Allowed") : (isSw ? "Quote Imezuiwa" : "Quote Blocked")}
+                      </p>
+                      <p className="text-sm font-black">
+                        {fallbackQuotePreview?.available
+                          ? `${formatCurrency(fallbackQuotePreview.fee)} · ${fallbackQuotePreview.eta}`
+                          : fallbackQuotePreview?.reason || "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+                    <div className="lg:col-span-2">
+                      <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-emerald-800">{isSw ? "Eneo la Mteja" : "Customer Zone"}</label>
+                      <select
+                        value={deliveryTest.zoneId || deliveryZones[0]?.id || ""}
+                        onChange={(e) => setDeliveryTest((prev) => ({ ...prev, zoneId: e.target.value }))}
+                        className="w-full rounded-2xl border border-emerald-100 bg-white p-3 text-xs font-bold outline-none focus:border-emerald-600"
+                      >
+                        {deliveryZones.map((zone) => (
+                          <option key={zone.id} value={zone.id}>{zone.labelSw || zone.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-emerald-800">{isSw ? "Class" : "Class"}</label>
+                      <select
+                        value={deliveryTest.deliveryClass}
+                        onChange={(e) => setDeliveryTest((prev) => ({ ...prev, deliveryClass: e.target.value }))}
+                        className="w-full rounded-2xl border border-emerald-100 bg-white p-3 text-xs font-bold outline-none focus:border-emerald-600"
+                      >
+                        <option value="standard">standard</option>
+                        <option value="fresh_food">fresh_food</option>
+                        <option value="processed_food">processed_food</option>
+                        <option value="bulky">bulky</option>
+                        <option value="heavy">heavy</option>
+                        <option value="vehicle">vehicle</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-emerald-800">{isSw ? "Uzito Kg" : "Weight Kg"}</label>
+                      <input
+                        type="number"
+                        min="0.1"
+                        step="0.1"
+                        value={deliveryTest.weightKg}
+                        onChange={(e) => setDeliveryTest((prev) => ({ ...prev, weightKg: Number(e.target.value || 1) }))}
+                        className="w-full rounded-2xl border border-emerald-100 bg-white p-3 text-xs font-bold outline-none focus:border-emerald-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-emerald-800">{isSw ? "Qty" : "Qty"}</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={deliveryTest.quantity}
+                        onChange={(e) => setDeliveryTest((prev) => ({ ...prev, quantity: Number(e.target.value || 1) }))}
+                        className="w-full rounded-2xl border border-emerald-100 bg-white p-3 text-xs font-bold outline-none focus:border-emerald-600"
+                      />
+                    </div>
+                    <div className="flex flex-wrap items-end gap-2 lg:col-span-6">
+                      {[
+                        ["fragile", isSw ? "Fragile" : "Fragile"],
+                        ["oversized", isSw ? "Oversized" : "Oversized"],
+                        ["requiresColdChain", isSw ? "Cold chain" : "Cold chain"],
+                      ].map(([key, label]) => (
+                        <label key={key} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-2xl bg-white px-3 text-[10px] font-black uppercase tracking-wider text-slate-600 ring-1 ring-emerald-100">
+                          <input
+                            type="checkbox"
+                            checked={Boolean((deliveryTest as any)[key])}
+                            onChange={(e) => setDeliveryTest((prev) => ({ ...prev, [key]: e.target.checked }))}
+                            className="h-4 w-4 accent-emerald-600"
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-3">
                   {deliveryRules.length === 0 && (
                     <div className="rounded-3xl border border-dashed border-blue-200 bg-white p-5 text-center text-xs font-semibold text-slate-500">
@@ -13337,7 +13732,29 @@ export function SettingsAdmin() {
                     </div>
                   )}
                   {deliveryRules.map((rule, idx) => (
-                    <div key={rule.id || idx} className="rounded-3xl border border-blue-100 bg-white p-4">
+                    <div
+                      id={`delivery-rule-editor-${idx}`}
+                      key={rule.id || idx}
+                      className={`rounded-3xl border p-4 transition-all ${
+                        editingDeliveryRuleIndex === idx
+                          ? "border-blue-400 bg-blue-50/70 shadow-lg shadow-blue-100"
+                          : "border-blue-100 bg-white"
+                      }`}
+                    >
+                      {editingDeliveryRuleIndex === idx && (
+                        <div className="mb-3 flex items-center justify-between rounded-2xl bg-white px-3 py-2 ring-1 ring-blue-100">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-blue-700">
+                            {isSw ? "Unahariri rule hii kutoka fallback matrix" : "Editing this fallback matrix rule"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setEditingDeliveryRuleIndex(null)}
+                            className="rounded-lg px-2 py-1 text-[10px] font-black text-slate-500 hover:bg-slate-100"
+                          >
+                            {isSw ? "Funga" : "Close"}
+                          </button>
+                        </div>
+                      )}
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
                         <div className="lg:col-span-2">
                           <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-slate-400">{isSw ? "Eneo" : "Zone"}</label>
@@ -13368,8 +13785,11 @@ export function SettingsAdmin() {
                             className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-xs font-bold outline-none focus:border-blue-600"
                           >
                             <option value="standard">{isSw ? "Kawaida" : "Standard"}</option>
+                            <option value="fresh_food">{isSw ? "Chakula fresh" : "Fresh food"}</option>
+                            <option value="processed_food">{isSw ? "Chakula kilichosindikwa" : "Processed food"}</option>
                             <option value="bulky">{isSw ? "Kubwa" : "Bulky"}</option>
                             <option value="heavy">{isSw ? "Nzito" : "Heavy"}</option>
+                            <option value="vehicle">{isSw ? "Gari / Chombo" : "Vehicle"}</option>
                             <option value="special">{isSw ? "Maalum" : "Special"}</option>
                           </select>
                         </div>
