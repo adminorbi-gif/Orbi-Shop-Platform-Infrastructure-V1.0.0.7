@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Download, Smartphone, X } from "lucide-react";
 
 const ORBI_SHOP_LOGO = "https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png";
+const PWA_PROMPT_VERSION = "2026-07-03-open-install-v2";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -13,6 +14,10 @@ function isStandaloneDisplay() {
     window.matchMedia?.("(display-mode: standalone)").matches ||
     (window.navigator as any).standalone === true
   );
+}
+
+function isMobileBrowser() {
+  return /android|iphone|ipad|ipod|mobile/i.test(window.navigator.userAgent) || window.innerWidth <= 820;
 }
 
 export function OrbiBootSplash() {
@@ -59,35 +64,45 @@ export function PwaExperience() {
     if (isStandaloneDisplay()) return;
 
     const dismissedAt = Number(localStorage.getItem("orbi_shop_pwa_install_dismissed_at") || "0");
-    const dismissedRecently = dismissedAt > 0 && Date.now() - dismissedAt < 1000 * 60 * 60 * 24 * 7;
+    const dismissedVersion = localStorage.getItem("orbi_shop_pwa_prompt_version") || "";
+    const dismissedRecently =
+      dismissedVersion === PWA_PROMPT_VERSION &&
+      dismissedAt > 0 &&
+      Date.now() - dismissedAt < 1000 * 60 * 60 * 24;
     const installedAt = Number(localStorage.getItem("orbi_shop_pwa_installed_at") || "0");
     const hasInstalledHint = installedAt > 0;
+    const mobileBrowser = isMobileBrowser();
 
     const handleBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
       setInstallEvent(event as BeforeInstallPromptEvent);
       if (!dismissedRecently) {
-        window.setTimeout(() => setShowPrompt(true), 6500);
+        window.setTimeout(() => setShowPrompt(true), 3600);
       }
     };
 
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    window.addEventListener("appinstalled", () => {
+    const handleAppInstalled = () => {
       localStorage.setItem("orbi_shop_pwa_installed_at", String(Date.now()));
       setInstalledHint(true);
       setShowPrompt(false);
-    });
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
 
     if (hasInstalledHint && !dismissedRecently) {
       setInstalledHint(true);
-      window.setTimeout(() => setShowPrompt(true), 4500);
+      window.setTimeout(() => setShowPrompt(true), 3000);
     }
 
-    if (isIos && !dismissedRecently) {
-      window.setTimeout(() => setShowPrompt(true), 8500);
+    if ((isIos || mobileBrowser) && !dismissedRecently) {
+      window.setTimeout(() => setShowPrompt(true), isIos ? 5200 : 6200);
     }
 
-    return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
   }, [isIos]);
 
   useEffect(() => {
@@ -102,11 +117,15 @@ export function PwaExperience() {
 
   const dismissPrompt = () => {
     localStorage.setItem("orbi_shop_pwa_install_dismissed_at", String(Date.now()));
+    localStorage.setItem("orbi_shop_pwa_prompt_version", PWA_PROMPT_VERSION);
     setShowPrompt(false);
   };
 
   const installApp = async () => {
     if (!installEvent) {
+      if (!installedHint) {
+        localStorage.setItem("orbi_shop_pwa_install_dismissed_at", String(Date.now() - 1000 * 60 * 60 * 23));
+      }
       setShowPrompt(false);
       return;
     }
@@ -127,8 +146,8 @@ export function PwaExperience() {
         ? "Fungua kwenye App ya Orbi Shop"
         : "Open in Orbi Shop App"
       : isSw
-        ? "Install App ya Orbi Shop"
-        : "Install Orbi Shop App";
+        ? "Open in App / Install Orbi Shop"
+        : "Open in App / Install Orbi Shop";
   const promptBody =
     installedHint && !installEvent
       ? isSw
@@ -139,8 +158,8 @@ export function PwaExperience() {
           ? "Kwa muonekano wa app, bonyeza Share kisha chagua Add to Home Screen."
           : "For a cleaner app experience, tap Share then Add to Home Screen."
         : isSw
-          ? "Pata matumizi ya haraka na full-screen nje ya browser."
-          : "Get a faster full-screen shopping experience outside the browser.";
+          ? "Pata matumizi ya haraka na full-screen. Kama install button haijatokea, tumia menyu ya browser kisha chagua Install app au Add to Home Screen."
+          : "Get a faster full-screen experience. If the install button is unavailable, use the browser menu and choose Install app or Add to Home Screen.";
 
   return (
     <>
@@ -186,7 +205,7 @@ export function PwaExperience() {
                       className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-slate-900/15 transition hover:bg-slate-800 active:scale-[0.98]"
                     >
                       <Download size={15} />
-                      {isSw ? "Install App" : "Install App"}
+                      {isSw ? "Open / Install" : "Open / Install"}
                     </button>
                   ) : (
                     <button
