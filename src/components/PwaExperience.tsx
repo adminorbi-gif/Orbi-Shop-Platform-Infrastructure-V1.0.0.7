@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Download, Smartphone, X } from "lucide-react";
+import { Download, ExternalLink, Smartphone, X } from "lucide-react";
 
 const ORBI_SHOP_LOGO = "https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png";
 
@@ -19,14 +19,14 @@ export function OrbiBootSplash({ message = "Opening Orbi Shop" }: { message?: st
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#f8fafc] text-slate-950">
       <div className="relative flex flex-col items-center gap-5 px-6 text-center">
-        <div className="absolute -inset-16 rounded-full bg-[radial-gradient(circle,rgba(30,41,59,0.10),transparent_62%)] animate-pulse" />
-        <div className="relative flex h-28 w-28 items-center justify-center rounded-[2rem] bg-white shadow-2xl shadow-slate-900/10 ring-1 ring-slate-200/80">
-          <span className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-white via-slate-50 to-slate-100" />
-          <span className="absolute -inset-1 rounded-[2.2rem] border border-slate-200/70 animate-[orbi-boot-ring_1.8s_ease-in-out_infinite]" />
+        <div className="absolute -inset-20 rounded-full bg-[radial-gradient(circle,rgba(30,41,59,0.10),transparent_62%)] animate-pulse" />
+        <div className="relative flex h-32 w-32 items-center justify-center">
+          <span className="absolute inset-2 rounded-full border border-slate-200/70 animate-[orbi-boot-ring_1.8s_ease-in-out_infinite]" />
+          <span className="absolute inset-7 rounded-full bg-white/80 blur-xl" />
           <img
             src={ORBI_SHOP_LOGO}
             alt="Orbi Shop"
-            className="relative h-16 w-16 object-contain drop-shadow-sm animate-[orbi-boot-logo_1.4s_ease-in-out_infinite]"
+            className="relative h-24 w-24 object-contain drop-shadow-sm animate-[orbi-boot-logo_1.4s_ease-in-out_infinite]"
             referrerPolicy="no-referrer"
           />
         </div>
@@ -43,13 +43,14 @@ export function PwaExperience() {
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [showBoot, setShowBoot] = useState(false);
+  const [installedHint, setInstalledHint] = useState(false);
   const isIos = useMemo(() => /iphone|ipad|ipod/i.test(window.navigator.userAgent), []);
 
   useEffect(() => {
     const standalone = isStandaloneDisplay();
     if (standalone) {
       setShowBoot(true);
-      const timeout = window.setTimeout(() => setShowBoot(false), 1300);
+      const timeout = window.setTimeout(() => setShowBoot(false), 1500);
       return () => window.clearTimeout(timeout);
     }
   }, []);
@@ -59,6 +60,8 @@ export function PwaExperience() {
 
     const dismissedAt = Number(localStorage.getItem("orbi_shop_pwa_install_dismissed_at") || "0");
     const dismissedRecently = dismissedAt > 0 && Date.now() - dismissedAt < 1000 * 60 * 60 * 24 * 7;
+    const installedAt = Number(localStorage.getItem("orbi_shop_pwa_installed_at") || "0");
+    const hasInstalledHint = installedAt > 0;
 
     const handleBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
@@ -69,6 +72,16 @@ export function PwaExperience() {
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", () => {
+      localStorage.setItem("orbi_shop_pwa_installed_at", String(Date.now()));
+      setInstalledHint(true);
+      setShowPrompt(false);
+    });
+
+    if (hasInstalledHint && !dismissedRecently) {
+      setInstalledHint(true);
+      window.setTimeout(() => setShowPrompt(true), 4500);
+    }
 
     if (isIos && !dismissedRecently) {
       window.setTimeout(() => setShowPrompt(true), 8500);
@@ -97,6 +110,19 @@ export function PwaExperience() {
     setShowPrompt(false);
   };
 
+  const openInstalledApp = () => {
+    localStorage.setItem("orbi_shop_pwa_open_app_clicked_at", String(Date.now()));
+    window.location.href = `${window.location.origin}${window.location.pathname}${window.location.search}`;
+  };
+
+  const promptTitle = installedHint && !installEvent ? "Open in Orbi Shop App" : "Install Orbi Shop App";
+  const promptBody =
+    installedHint && !installEvent
+      ? "For a cleaner full-screen experience, open Orbi Shop from your home screen app icon."
+      : isIos && !installEvent
+        ? "For a cleaner app experience, tap Share then Add to Home Screen."
+        : "Get a faster full-screen shopping experience outside the browser.";
+
   return (
     <>
       {showBoot && <OrbiBootSplash message="Preparing your marketplace" />}
@@ -110,11 +136,9 @@ export function PwaExperience() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-display text-sm font-black text-slate-950">Install Orbi Shop App</p>
+                    <p className="font-display text-sm font-black text-slate-950">{promptTitle}</p>
                     <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-600">
-                      {isIos && !installEvent
-                        ? "For a cleaner app experience, tap Share then Add to Home Screen."
-                        : "Get a faster full-screen shopping experience outside the browser."}
+                      {promptBody}
                     </p>
                   </div>
                   <button
@@ -127,7 +151,16 @@ export function PwaExperience() {
                   </button>
                 </div>
                 <div className="mt-3 flex gap-2">
-                  {installEvent ? (
+                  {installedHint && !installEvent ? (
+                    <button
+                      type="button"
+                      onClick={openInstalledApp}
+                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-slate-900/15 transition hover:bg-slate-800 active:scale-[0.98]"
+                    >
+                      <ExternalLink size={15} />
+                      Open in App
+                    </button>
+                  ) : installEvent ? (
                     <button
                       type="button"
                       onClick={installApp}

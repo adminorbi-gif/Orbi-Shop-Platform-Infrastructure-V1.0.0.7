@@ -3564,6 +3564,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const deliveryPromise = p.stock > 0
     ? (lang === "sw" ? "Delivery ipo" : "Delivery available")
     : (lang === "sw" ? "Haipatikani sasa" : "Currently unavailable");
+  const deliverySlides = useMemo(() => {
+    if (p.stock <= 0) return [deliveryPromise];
+    const source = sellerLocation && sellerLocation !== "Tanzania"
+      ? (lang === "sw" ? `Kutoka ${sellerLocation}` : `Ships from ${sellerLocation}`)
+      : (lang === "sw" ? "Dar 1-2 siku" : "Dar 1-2 days");
+
+    return lang === "sw"
+      ? [deliveryPromise, source, "Mikoani 2-5 siku", "Ufuatiliaji wa oda"]
+      : [deliveryPromise, source, "Regions 2-5 days", "Order tracking"];
+  }, [deliveryPromise, lang, p.stock, sellerLocation]);
 
   const avgRating = useMemo(() => {
     if (!reviews || reviews.length === 0) return 0;
@@ -3778,8 +3788,18 @@ const ProductCard: React.FC<ProductCardProps> = ({
               </div>
               <div className="flex min-w-0 flex-wrap items-center justify-between gap-1.5 rounded-2xl bg-slate-50 px-2.5 py-2 text-[9.5px] font-bold leading-tight text-slate-500 ring-1 ring-slate-100">
                 <span className="flex min-w-0 items-center gap-1.5">
-                  <Truck size={11} className="shrink-0 text-blue-500" />
-                  <span className="min-w-0 break-words">{deliveryPromise}</span>
+                  <span className="orbi-delivery-truck-wrap shrink-0">
+                    <Truck size={11} className="orbi-delivery-truck text-blue-500" />
+                  </span>
+                  <span className="orbi-delivery-rotator min-w-0">
+                    <span className="orbi-delivery-rotator-track">
+                      {deliverySlides.map((label) => (
+                        <span key={label} className="orbi-delivery-rotator-item">
+                          {label}
+                        </span>
+                      ))}
+                    </span>
+                  </span>
                 </span>
                 {sellerLocation && (
                   <span className="hidden min-w-0 items-center gap-1 text-slate-400 sm:flex">
