@@ -68,19 +68,19 @@ body {
 
 @keyframes orbi-delivery-slide {
   0%,
-  18% {
+  20% {
     transform: translateY(0);
   }
-  25%,
-  43% {
+  26%,
+  45% {
     transform: translateY(-25%);
   }
-  50%,
-  68% {
+  51%,
+  70% {
     transform: translateY(-50%);
   }
-  75%,
-  93% {
+  76%,
+  95% {
     transform: translateY(-75%);
   }
   100% {
@@ -90,42 +90,42 @@ body {
 
 @keyframes orbi-delivery-truck-run {
   0%,
-  16%,
+  12%,
   100% {
     transform: translate3d(0, 0, 0) rotate(0deg);
   }
-  20% {
-    transform: translate3d(1px, -1px, 0) rotate(-2deg);
+  18% {
+    transform: translate3d(0.75px, -0.75px, 0) rotate(-1.25deg);
   }
   24% {
-    transform: translate3d(3px, 0, 0) rotate(1deg);
+    transform: translate3d(2px, 0, 0) rotate(0.75deg);
   }
-  28% {
-    transform: translate3d(1px, 1px, 0) rotate(0deg);
+  30% {
+    transform: translate3d(0.75px, 0.75px, 0) rotate(0deg);
   }
-  46% {
+  42% {
     transform: translate3d(0, 0, 0) rotate(0deg);
   }
-  50% {
-    transform: translate3d(1px, -1px, 0) rotate(-2deg);
+  48% {
+    transform: translate3d(0.75px, -0.75px, 0) rotate(-1.25deg);
   }
   54% {
-    transform: translate3d(3px, 0, 0) rotate(1deg);
+    transform: translate3d(2px, 0, 0) rotate(0.75deg);
   }
-  58% {
-    transform: translate3d(1px, 1px, 0) rotate(0deg);
+  60% {
+    transform: translate3d(0.75px, 0.75px, 0) rotate(0deg);
   }
-  76% {
+  72% {
     transform: translate3d(0, 0, 0) rotate(0deg);
   }
-  80% {
-    transform: translate3d(1px, -1px, 0) rotate(-2deg);
+  78% {
+    transform: translate3d(0.75px, -0.75px, 0) rotate(-1.25deg);
   }
   84% {
-    transform: translate3d(3px, 0, 0) rotate(1deg);
+    transform: translate3d(2px, 0, 0) rotate(0.75deg);
   }
-  88% {
-    transform: translate3d(1px, 1px, 0) rotate(0deg);
+  90% {
+    transform: translate3d(0.75px, 0.75px, 0) rotate(0deg);
   }
 }
 
@@ -137,7 +137,7 @@ body {
 
 .orbi-delivery-truck {
   transform-origin: 50% 70%;
-  animation: orbi-delivery-truck-run 4.5s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+  animation: orbi-delivery-truck-run 5s cubic-bezier(0.45, 0, 0.2, 1) infinite;
 }
 
 .orbi-delivery-rotator {
@@ -151,7 +151,7 @@ body {
 .orbi-delivery-rotator-track {
   display: flex;
   flex-direction: column;
-  animation: orbi-delivery-slide 4.5s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+  animation: orbi-delivery-slide 5s cubic-bezier(0.45, 0, 0.2, 1) infinite;
 }
 
 .orbi-delivery-rotator-item {
