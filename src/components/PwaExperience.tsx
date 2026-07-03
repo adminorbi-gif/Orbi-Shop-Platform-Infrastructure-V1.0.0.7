@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Download, ExternalLink, Smartphone, X } from "lucide-react";
+import { Download, Smartphone, X } from "lucide-react";
 
 const ORBI_SHOP_LOGO = "https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png";
 
@@ -15,10 +15,10 @@ function isStandaloneDisplay() {
   );
 }
 
-export function OrbiBootSplash({ message = "Opening Orbi Shop" }: { message?: string }) {
+export function OrbiBootSplash() {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#f8fafc] text-slate-950">
-      <div className="relative flex flex-col items-center gap-5 px-6 text-center">
+      <div className="relative flex flex-col items-center px-6 text-center">
         <div className="absolute -inset-20 rounded-full bg-[radial-gradient(circle,rgba(30,41,59,0.10),transparent_62%)] animate-pulse" />
         <div className="relative flex h-32 w-32 items-center justify-center">
           <span className="absolute inset-2 rounded-full border border-slate-200/70 animate-[orbi-boot-ring_1.8s_ease-in-out_infinite]" />
@@ -30,10 +30,6 @@ export function OrbiBootSplash({ message = "Opening Orbi Shop" }: { message?: st
             referrerPolicy="no-referrer"
           />
         </div>
-        <div className="relative space-y-1">
-          <p className="font-display text-base font-black tracking-tight text-slate-950">Orbi Shop</p>
-          <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">{message}</p>
-        </div>
       </div>
     </div>
   );
@@ -44,6 +40,10 @@ export function PwaExperience() {
   const [showPrompt, setShowPrompt] = useState(false);
   const [showBoot, setShowBoot] = useState(false);
   const [installedHint, setInstalledHint] = useState(false);
+  const [lang, setLang] = useState<"sw" | "en">(() => {
+    if (typeof window === "undefined") return "sw";
+    return localStorage.getItem("orbishop_lang") === "en" ? "en" : "sw";
+  });
   const isIos = useMemo(() => /iphone|ipad|ipod/i.test(window.navigator.userAgent), []);
 
   useEffect(() => {
@@ -90,6 +90,16 @@ export function PwaExperience() {
     return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
   }, [isIos]);
 
+  useEffect(() => {
+    const syncLanguage = () => setLang(localStorage.getItem("orbishop_lang") === "en" ? "en" : "sw");
+    window.addEventListener("storage", syncLanguage);
+    window.addEventListener("orbishop-language-change", syncLanguage);
+    return () => {
+      window.removeEventListener("storage", syncLanguage);
+      window.removeEventListener("orbishop-language-change", syncLanguage);
+    };
+  }, []);
+
   const dismissPrompt = () => {
     localStorage.setItem("orbi_shop_pwa_install_dismissed_at", String(Date.now()));
     setShowPrompt(false);
@@ -110,22 +120,31 @@ export function PwaExperience() {
     setShowPrompt(false);
   };
 
-  const openInstalledApp = () => {
-    localStorage.setItem("orbi_shop_pwa_open_app_clicked_at", String(Date.now()));
-    window.location.href = `${window.location.origin}${window.location.pathname}${window.location.search}`;
-  };
-
-  const promptTitle = installedHint && !installEvent ? "Open in Orbi Shop App" : "Install Orbi Shop App";
+  const isSw = lang === "sw";
+  const promptTitle =
+    installedHint && !installEvent
+      ? isSw
+        ? "Fungua kwenye App ya Orbi Shop"
+        : "Open in Orbi Shop App"
+      : isSw
+        ? "Install App ya Orbi Shop"
+        : "Install Orbi Shop App";
   const promptBody =
     installedHint && !installEvent
-      ? "For a cleaner full-screen experience, open Orbi Shop from your home screen app icon."
+      ? isSw
+        ? "Kama tayari umeinstall, fungua Orbi Shop kupitia icon ya app kwenye Home Screen au App Drawer. Browser hairuhusu kufungua PWA moja kwa moja."
+        : "If already installed, open Orbi Shop from the app icon on your Home Screen or App Drawer. Browsers do not allow websites to directly launch an installed PWA."
       : isIos && !installEvent
-        ? "For a cleaner app experience, tap Share then Add to Home Screen."
-        : "Get a faster full-screen shopping experience outside the browser.";
+        ? isSw
+          ? "Kwa muonekano wa app, bonyeza Share kisha chagua Add to Home Screen."
+          : "For a cleaner app experience, tap Share then Add to Home Screen."
+        : isSw
+          ? "Pata matumizi ya haraka na full-screen nje ya browser."
+          : "Get a faster full-screen shopping experience outside the browser.";
 
   return (
     <>
-      {showBoot && <OrbiBootSplash message="Preparing your marketplace" />}
+      {showBoot && <OrbiBootSplash />}
       {showPrompt && (
         <div className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-[9000] mx-auto max-w-md animate-[orbi-install-rise_0.42s_ease-out]">
           <div className="overflow-hidden rounded-[1.55rem] border border-slate-200/80 bg-white/95 shadow-2xl shadow-slate-950/18 backdrop-blur-xl">
@@ -154,11 +173,11 @@ export function PwaExperience() {
                   {installedHint && !installEvent ? (
                     <button
                       type="button"
-                      onClick={openInstalledApp}
+                      onClick={dismissPrompt}
                       className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-slate-900/15 transition hover:bg-slate-800 active:scale-[0.98]"
                     >
-                      <ExternalLink size={15} />
-                      Open in App
+                      <Smartphone size={15} />
+                      {isSw ? "Nimeelewa" : "Got it"}
                     </button>
                   ) : installEvent ? (
                     <button
@@ -167,7 +186,7 @@ export function PwaExperience() {
                       className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-slate-900/15 transition hover:bg-slate-800 active:scale-[0.98]"
                     >
                       <Download size={15} />
-                      Install App
+                      {isSw ? "Install App" : "Install App"}
                     </button>
                   ) : (
                     <button
@@ -175,7 +194,7 @@ export function PwaExperience() {
                       onClick={dismissPrompt}
                       className="inline-flex flex-1 items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-slate-900/15 transition active:scale-[0.98]"
                     >
-                      I understand
+                      {isSw ? "Nimeelewa" : "I understand"}
                     </button>
                   )}
                   <button
@@ -183,7 +202,7 @@ export function PwaExperience() {
                     onClick={dismissPrompt}
                     className="rounded-2xl border border-slate-200 px-4 py-3 text-xs font-black text-slate-600 transition hover:bg-slate-50"
                   >
-                    Later
+                    {isSw ? "Baadaye" : "Later"}
                   </button>
                 </div>
               </div>

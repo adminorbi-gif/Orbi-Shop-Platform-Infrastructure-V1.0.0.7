@@ -742,6 +742,7 @@ const { showAlert, showConfirm } = useDialog();
   useEffect(() => {
     try {
       localStorage.setItem("orbishop_lang", lang);
+      window.dispatchEvent(new Event("orbishop-language-change"));
       localStorage.setItem("orbishop_selectedCategory", selectedCategory);
       localStorage.setItem("orbishop_selectedNiche", selectedNiche);
       localStorage.setItem(

@@ -18,7 +18,7 @@ function ProtectedRoute({ children, fallbackPath }: { children: React.ReactNode,
   }, []);
 
   if (isAuthenticated === null) {
-    return <OrbiBootSplash message="Securing your session" />;
+    return <OrbiBootSplash />;
   }
 
   if (!isAuthenticated) {
