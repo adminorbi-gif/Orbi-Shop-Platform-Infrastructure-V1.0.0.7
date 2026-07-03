@@ -10,6 +10,12 @@
   "launch_handler": {
     "client_mode": ["navigate-existing", "auto"]
   },
+  "protocol_handlers": [
+    {
+      "protocol": "web+orbishop",
+      "url": "/?launch=%s"
+    }
+  ],
   "orientation": "portrait",
   "background_color": "#f8fafc",
   "theme_color": "#1e293b",

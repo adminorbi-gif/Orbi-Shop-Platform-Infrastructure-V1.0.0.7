@@ -177,7 +177,7 @@ export function PwaExperience() {
                       className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-slate-900/15 transition hover:bg-slate-800 active:scale-[0.98]"
                     >
                       <Smartphone size={15} />
-                      {isSw ? "Nimeelewa" : "Got it"}
+                      {isSw ? "Fungua App" : "Open in App"}
                     </button>
                   ) : installEvent ? (
                     <button

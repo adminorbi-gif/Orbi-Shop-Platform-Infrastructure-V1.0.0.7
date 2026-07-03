@@ -247,8 +247,47 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
   });
 }
 
+function normalizePwaLaunchUrl() {
+  const currentUrl = new URL(window.location.href);
+  const rawLaunch = currentUrl.searchParams.get("launch");
+  if (!rawLaunch) return currentUrl;
+
+  let launchUrl: URL | null = null;
+  try {
+    launchUrl = new URL(rawLaunch);
+  } catch {
+    try {
+      launchUrl = new URL(decodeURIComponent(rawLaunch));
+    } catch {
+      launchUrl = null;
+    }
+  }
+
+  if (!launchUrl || launchUrl.protocol !== "web+orbishop:") return currentUrl;
+
+  const targetUrl = new URL(window.location.origin);
+  const launchParts = [launchUrl.hostname, ...launchUrl.pathname.split("/")].filter(Boolean);
+  const [kind, id] = launchParts;
+
+  if (kind === "product" && id) {
+    targetUrl.searchParams.set("product", id);
+  } else if (kind === "seller" && id) {
+    targetUrl.searchParams.set("seller", id);
+  } else if (kind === "track" && id) {
+    targetUrl.searchParams.set("track", "true");
+    targetUrl.searchParams.set("order", id);
+  } else {
+    targetUrl.searchParams.set("source", "pwa-protocol");
+  }
+
+  targetUrl.searchParams.set("source", "pwa-protocol");
+  window.history.replaceState({}, "", `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`);
+  return targetUrl;
+}
+
 function getProductIdFromLocation() {
-  const search = new URLSearchParams(window.location.search);
+  const launchUrl = normalizePwaLaunchUrl();
+  const search = new URLSearchParams(launchUrl.search);
   const queryProductId = search.get("product") || search.get("product-id");
   if (queryProductId) return queryProductId;
 
@@ -783,7 +822,8 @@ const { showAlert, showConfirm } = useDialog();
   useEffect(() => {
     // Bi-directional URL to React State router
     const handleUrlToStateSync = () => {
-      const search = new URLSearchParams(window.location.search);
+      const normalizedUrl = normalizePwaLaunchUrl();
+      const search = new URLSearchParams(normalizedUrl.search);
       const hash = window.location.hash;
       const path = window.location.pathname;
       const cur = syncStatesRef.current;
