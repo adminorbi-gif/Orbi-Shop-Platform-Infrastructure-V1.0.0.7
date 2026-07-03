@@ -2,6 +2,7 @@ import { Router } from "express";
 import { getSupabase } from "../lib/supabase.js";
 import { quoteCartDelivery } from "../lib/deliveryQuote.js";
 import { quoteCartRouteDelivery } from "../lib/routeDeliveryQuote.js";
+import { getDeliverySettings } from "../lib/deliverySettings.js";
 
 const router = Router();
 
@@ -102,7 +103,7 @@ const attachSellerPickupLocations = async (client: any, cart: any[]) => {
 
 const handleDeliveryQuote = async (req: any, res: any) => {
   try {
-    const { cart, zoneId, lang = "sw", origin, destination } = req.body || {};
+    const { cart, zoneId, lang = "sw", origin, destination, applyInsurance } = req.body || {};
     if (!Array.isArray(cart) || cart.length === 0) {
       return res.status(400).json({ success: false, error: "CART_REQUIRED" });
     }
@@ -146,10 +147,11 @@ const handleDeliveryQuote = async (req: any, res: any) => {
       }),
     );
     const validatedCart = await attachSellerPickupLocations(client, validatedCartRaw);
+    const deliverySettings = await getDeliverySettings(client);
 
     const quote = destination
-      ? await quoteCartRouteDelivery(validatedCart, zone, rules || [], { origin, destination, lang })
-      : quoteCartDelivery(validatedCart, zone, rules || [], lang);
+      ? await quoteCartRouteDelivery(validatedCart, zone, rules || [], { origin, destination, lang }, deliverySettings, { applyInsurance })
+      : quoteCartDelivery(validatedCart, zone, rules || [], lang, deliverySettings, { applyInsurance });
     res.json({ success: true, data: quote });
   } catch (error: any) {
     console.error("POST /api/v1/delivery quote error:", error.message || error);

@@ -1,4 +1,5 @@
-import { quoteCartDelivery, quoteProductDelivery, getProductDeliveryClass } from "./deliveryQuote.js";
+import { applyCartDeliveryAdjustments, quoteCartDelivery, quoteProductDelivery, getProductDeliveryClass } from "./deliveryQuote.js";
+import { DEFAULT_DELIVERY_SETTINGS, DeliverySettings, mapDeliverySettings } from "./deliverySettings.js";
 
 type Coordinate = {
   lat: number;
@@ -237,10 +238,13 @@ export const quoteCartRouteDelivery = async (
   zone: any,
   rules: any[],
   context: RouteContext,
+  settingsInput?: Partial<DeliverySettings>,
+  options: { applyInsurance?: boolean } = {},
 ) => {
   const lang = context.lang || "sw";
+  const settings = mapDeliverySettings(settingsInput || DEFAULT_DELIVERY_SETTINGS);
   const destination = toCoordinate(context.destination);
-  const fallback = quoteCartDelivery(cart, zone, rules, lang);
+  const fallback = quoteCartDelivery(cart, zone, rules, lang, settings, options);
   if (!destination || !fallback.available) {
     return {
       ...fallback,
@@ -254,7 +258,7 @@ export const quoteCartRouteDelivery = async (
     cart.map(async (item) => {
       const product = item.product || item;
       const origin = getProductOrigin(product, fallbackOrigin);
-      const fallbackItem = quoteProductDelivery(product, item.quantity, zone, rules, lang);
+      const fallbackItem = quoteProductDelivery(product, item.quantity, zone, rules, lang, settings);
       if (!origin || !fallbackItem.available) {
         return {
           ...fallbackItem,
@@ -287,7 +291,7 @@ export const quoteCartRouteDelivery = async (
     .filter((item) => item.available)
     .sort((a: any, b: any) => Number(b.route?.durationMinutes || 0) - Number(a.route?.durationMinutes || 0))[0] as any;
 
-  return {
+  return applyCartDeliveryAdjustments({
     ...fallback,
     totalFee,
     eta: slowest?.eta || fallback.eta,
@@ -300,7 +304,7 @@ export const quoteCartRouteDelivery = async (
         ? "route_estimate"
         : "zone_fallback",
     routeProvider: items.find((item) => item.routeProvider && item.routeProvider !== "zone_rules")?.routeProvider || "zone_rules",
-  };
+  }, cart, settings, options);
 };
 
 export const getRouteDeliveryHealth = () => {

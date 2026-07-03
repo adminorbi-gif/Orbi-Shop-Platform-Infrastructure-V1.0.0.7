@@ -2,6 +2,7 @@ import { Router } from "express";
 import { supabase, getSupabase, encrypt, decrypt, decryptObject } from "../lib/supabase.js";
 import { GoogleGenAI, Type } from "@google/genai";
 import { getRouteDeliveryHealth } from "../lib/routeDeliveryQuote.js";
+import { DEFAULT_DELIVERY_SETTINGS, getDeliverySettings, toDeliverySettingsRow } from "../lib/deliverySettings.js";
 import { clearCachedValue, sendResilientJson, withTimeout } from "../lib/apiResilience.js";
 
 const router = Router();
@@ -374,6 +375,28 @@ router.post("/delivery-rules", async (req, res) => {
   }
 });
 
+router.get("/delivery-settings", async (req, res) => {
+  try {
+    const data = await getDeliverySettings(getSupabase(req));
+    res.json({ success: true, data });
+  } catch (error: any) {
+    console.warn("GET /api/v1/settings/delivery-settings fallback:", error.message);
+    res.json({ success: true, data: DEFAULT_DELIVERY_SETTINGS });
+  }
+});
+
+router.post("/delivery-settings", async (req, res) => {
+  try {
+    const row = toDeliverySettingsRow(req.body || {});
+    const { error } = await getSupabase(req).from("delivery_settings").upsert(row);
+    if (error) throw error;
+    res.json({ success: true, data: await getDeliverySettings(getSupabase(req)) });
+  } catch (error: any) {
+    console.error("POST /api/v1/settings/delivery-settings error:", error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 router.get("/service-health", async (req, res) => {
   const checkedAt = new Date().toISOString();
   const services: any[] = [];
@@ -451,6 +474,29 @@ router.get("/service-health", async (req, res) => {
       group: "Database",
       status: "degraded",
       message: error.message || "Delivery zones database check failed.",
+      meta: {},
+    });
+  }
+
+  try {
+    const { count, error } = await getSupabase(req)
+      .from("delivery_settings")
+      .select("id", { count: "exact", head: true });
+    services.push({
+      id: "delivery_settings_db",
+      name: "Delivery Global Rate Card",
+      group: "Database",
+      status: error ? "degraded" : "ok",
+      message: error ? error.message : `${count || 0} global delivery setting record reachable.`,
+      meta: { count: count || 0 },
+    });
+  } catch (error: any) {
+    services.push({
+      id: "delivery_settings_db",
+      name: "Delivery Global Rate Card",
+      group: "Database",
+      status: "degraded",
+      message: error.message || "Delivery settings database check failed.",
       meta: {},
     });
   }

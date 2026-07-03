@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import { supabase } from './supabase';
-import { Product, Promotion, Order, Customer, Message, Niche, SellerProfile, SubscriptionPlan, MarketplaceAd, Review, PromotionalBanner, OrderStatusLog, DeliveryZone, DeliveryRule, DeliveryQuote, GeoCoordinate, GooglePlaceDetails, GooglePlaceSuggestion } from '../types';
+import { Product, Promotion, Order, Customer, Message, Niche, SellerProfile, SubscriptionPlan, MarketplaceAd, Review, PromotionalBanner, OrderStatusLog, DeliveryZone, DeliveryRule, DeliverySettings, DeliveryQuote, GeoCoordinate, GooglePlaceDetails, GooglePlaceSuggestion } from '../types';
 
 let sessionRefreshPromise: Promise<string> | null = null;
 
@@ -417,11 +417,21 @@ export const db = {
       body: JSON.stringify({ rules })
     });
   },
+  getDeliverySettings: async (): Promise<DeliverySettings> => {
+    const res = await apiFetch('/api/v1/settings/delivery-settings');
+    return res.data;
+  },
+  saveDeliverySettings: async (settings: DeliverySettings) => {
+    await apiFetch('/api/v1/settings/delivery-settings', {
+      method: 'POST',
+      body: JSON.stringify(settings)
+    });
+  },
   getServiceHealth: async () => {
     const res = await apiFetch('/api/v1/settings/service-health');
     return res.data;
   },
-  getDeliveryQuote: async (payload: { cart: any[]; zoneId: string; lang?: string; origin?: GeoCoordinate; destination?: GeoCoordinate & { address?: string; placeId?: string } }): Promise<DeliveryQuote> => {
+  getDeliveryQuote: async (payload: { cart: any[]; zoneId: string; lang?: string; origin?: GeoCoordinate; destination?: GeoCoordinate & { address?: string; placeId?: string }; applyInsurance?: boolean }): Promise<DeliveryQuote> => {
     const res = await apiFetch('/api/v1/delivery/quote', {
       method: 'POST',
       body: JSON.stringify(payload)

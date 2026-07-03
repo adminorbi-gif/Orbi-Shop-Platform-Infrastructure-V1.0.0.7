@@ -211,6 +211,29 @@ ON public.delivery_route_quotes (order_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS delivery_route_quotes_product_zone_idx
 ON public.delivery_route_quotes (product_id, zone_id, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS public.delivery_settings (
+  id INT PRIMARY KEY DEFAULT 1,
+  base_price_tzs NUMERIC(12,2) NOT NULL DEFAULT 1800,
+  cost_per_km_tzs NUMERIC(12,2) NOT NULL DEFAULT 900,
+  cost_per_kg_tzs NUMERIC(12,2) NOT NULL DEFAULT 350,
+  volumetric_divisor NUMERIC(12,2) NOT NULL DEFAULT 5000,
+  max_distance_km NUMERIC(10,2) NOT NULL DEFAULT 1200,
+  max_total_weight_kg NUMERIC(10,3) NOT NULL DEFAULT 120,
+  max_package_weight_kg NUMERIC(10,3) NOT NULL DEFAULT 25,
+  max_package_volumetric_kg NUMERIC(10,3) NOT NULL DEFAULT 30,
+  extra_package_fee_tzs NUMERIC(12,2) NOT NULL DEFAULT 1800,
+  extra_package_distance_multiplier NUMERIC(8,4) NOT NULL DEFAULT 0.18,
+  bulky_threshold_kg NUMERIC(10,3) NOT NULL DEFAULT 20,
+  bulky_surcharge_tzs NUMERIC(12,2) NOT NULL DEFAULT 3500,
+  fuel_surcharge_percent NUMERIC(8,4) NOT NULL DEFAULT 0,
+  insurance_enabled BOOLEAN NOT NULL DEFAULT true,
+  insurance_rate_percent NUMERIC(8,4) NOT NULL DEFAULT 1.25,
+  insurance_min_fee_tzs NUMERIC(12,2) NOT NULL DEFAULT 500,
+  insurance_max_coverage_tzs NUMERIC(14,2) NOT NULL DEFAULT 1000000,
+  fallback_enabled BOOLEAN NOT NULL DEFAULT true,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Promotions Table
 CREATE TABLE IF NOT EXISTS public.promotions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -262,6 +285,8 @@ ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_distance_km NUMERIC(
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_duration_minutes INTEGER;
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_quote_mode TEXT;
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_route_provider TEXT;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_insurance_fee NUMERIC(12,2) DEFAULT 0;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_insurance_coverage NUMERIC(14,2) DEFAULT 0;
 
 -- Order Items Table
 CREATE TABLE IF NOT EXISTS public.order_items (
@@ -353,6 +378,7 @@ ALTER TABLE public.portal_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.delivery_zones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.delivery_rules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.delivery_route_quotes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.delivery_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_options ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.coupons ENABLE ROW LEVEL SECURITY;
 
@@ -395,6 +421,8 @@ DROP POLICY IF EXISTS "Public read delivery_rules" ON public.delivery_rules;
 DROP POLICY IF EXISTS "Admin manage delivery_rules" ON public.delivery_rules;
 DROP POLICY IF EXISTS "Public insert delivery_route_quotes" ON public.delivery_route_quotes;
 DROP POLICY IF EXISTS "Admin manage delivery_route_quotes" ON public.delivery_route_quotes;
+DROP POLICY IF EXISTS "Public read delivery_settings" ON public.delivery_settings;
+DROP POLICY IF EXISTS "Admin manage delivery_settings" ON public.delivery_settings;
 
 DROP POLICY IF EXISTS "Public read payment_options" ON public.payment_options;
 DROP POLICY IF EXISTS "Admin manage payment_options" ON public.payment_options;
@@ -449,6 +477,8 @@ CREATE POLICY "Public read delivery_rules" ON public.delivery_rules FOR SELECT U
 CREATE POLICY "Admin manage delivery_rules" ON public.delivery_rules FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 CREATE POLICY "Public insert delivery_route_quotes" ON public.delivery_route_quotes FOR INSERT WITH CHECK (true);
 CREATE POLICY "Admin manage delivery_route_quotes" ON public.delivery_route_quotes FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Public read delivery_settings" ON public.delivery_settings FOR SELECT USING (true);
+CREATE POLICY "Admin manage delivery_settings" ON public.delivery_settings FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 CREATE POLICY "Public read payment_options" ON public.payment_options FOR SELECT USING (is_active = true);
 CREATE POLICY "Admin manage payment_options" ON public.payment_options FOR ALL USING (auth.role() = 'authenticated');
@@ -512,6 +542,49 @@ VALUES
   ('00000000-0000-0000-0000-000000000102', 'vehicle', 0, NULL, 0, 0, 0, 0, 0, 0, 0, false, 91),
   ('00000000-0000-0000-0000-000000000103', 'vehicle', 0, NULL, 0, 0, 0, 0, 0, 0, 0, false, 92)
 ON CONFLICT DO NOTHING;
+
+INSERT INTO public.delivery_settings (
+  id,
+  base_price_tzs,
+  cost_per_km_tzs,
+  cost_per_kg_tzs,
+  volumetric_divisor,
+  max_distance_km,
+  max_total_weight_kg,
+  max_package_weight_kg,
+  max_package_volumetric_kg,
+  extra_package_fee_tzs,
+  extra_package_distance_multiplier,
+  bulky_threshold_kg,
+  bulky_surcharge_tzs,
+  fuel_surcharge_percent,
+  insurance_enabled,
+  insurance_rate_percent,
+  insurance_min_fee_tzs,
+  insurance_max_coverage_tzs,
+  fallback_enabled
+)
+VALUES (
+  1,
+  1800,
+  900,
+  350,
+  5000,
+  1200,
+  120,
+  25,
+  30,
+  1800,
+  0.18,
+  20,
+  3500,
+  0,
+  true,
+  1.25,
+  500,
+  1000000,
+  true
+) ON CONFLICT (id) DO NOTHING;
 
 -- Newsletters Table
 CREATE TABLE IF NOT EXISTS public.newsletters (

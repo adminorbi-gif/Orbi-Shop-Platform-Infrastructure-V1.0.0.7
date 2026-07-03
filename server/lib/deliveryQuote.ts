@@ -1,3 +1,5 @@
+import { DEFAULT_DELIVERY_SETTINGS, DeliverySettings, mapDeliverySettings } from "./deliverySettings.js";
+
 const DEFAULT_ZONES = [
   { id: "dar-es-salaam", name: "Dar es Salaam", label_sw: "Dar es Salaam", label_en: "Dar es Salaam", price: 2500, min_days: 1, max_days: 2, is_active: true, sort_order: 1 },
   { id: "nearby-regions", name: "Mikoa ya karibu", label_sw: "Mikoa ya karibu", label_en: "Nearby regions", price: 4500, min_days: 2, max_days: 3, is_active: true, sort_order: 2 },
@@ -93,13 +95,133 @@ export const getProductDeliveryClass = (product: any) => {
   return "standard";
 };
 
-const getBillableWeightKg = (product: any) => {
+const getBillableWeightKg = (product: any, volumetricDivisor = DEFAULT_DELIVERY_SETTINGS.volumetricDivisor) => {
   const actual = Math.max(0.1, Number(product?.weightKg ?? product?.weight_kg ?? 1));
   const length = Number(product?.lengthCm ?? product?.length_cm ?? 0);
   const width = Number(product?.widthCm ?? product?.width_cm ?? 0);
   const height = Number(product?.heightCm ?? product?.height_cm ?? 0);
-  const volumetric = length > 0 && width > 0 && height > 0 ? (length * width * height) / 5000 : 0;
+  const volumetric = length > 0 && width > 0 && height > 0 ? (length * width * height) / Math.max(1, volumetricDivisor) : 0;
   return Math.max(actual, volumetric);
+};
+
+const getActualWeightKg = (product: any) =>
+  Math.max(0.1, Number(product?.weightKg ?? product?.weight_kg ?? 1));
+
+const getVolumetricWeightKg = (product: any, volumetricDivisor = DEFAULT_DELIVERY_SETTINGS.volumetricDivisor) => {
+  const length = Number(product?.lengthCm ?? product?.length_cm ?? 0);
+  const width = Number(product?.widthCm ?? product?.width_cm ?? 0);
+  const height = Number(product?.heightCm ?? product?.height_cm ?? 0);
+  return length > 0 && width > 0 && height > 0
+    ? (length * width * height) / Math.max(1, volumetricDivisor)
+    : 0;
+};
+
+export const getCartDeliveryMetrics = (cart: any[], settingsInput?: Partial<DeliverySettings>) => {
+  const settings = mapDeliverySettings(settingsInput || DEFAULT_DELIVERY_SETTINGS);
+  const totalItems = cart.reduce((sum, item) => sum + Math.max(1, Number(item.quantity || 1)), 0);
+  const totalActualWeightKg = cart.reduce((sum, item) => {
+    const product = item.product || item;
+    const qty = Math.max(1, Number(item.quantity || 1));
+    return sum + getActualWeightKg(product) * qty;
+  }, 0);
+  const totalVolumetricWeightKg = cart.reduce((sum, item) => {
+    const product = item.product || item;
+    const qty = Math.max(1, Number(item.quantity || 1));
+    return sum + getVolumetricWeightKg(product, settings.volumetricDivisor) * qty;
+  }, 0);
+  const chargeableWeightKg = Math.max(totalActualWeightKg, totalVolumetricWeightKg);
+  const packagesByActualWeight = Math.ceil(totalActualWeightKg / Math.max(1, settings.maxPackageWeightKg));
+  const packagesByVolumetricWeight = Math.ceil(totalVolumetricWeightKg / Math.max(1, settings.maxPackageVolumetricKg));
+  const packageCount = Math.max(1, packagesByActualWeight, packagesByVolumetricWeight);
+  const declaredValueTzs = cart.reduce((sum, item) => {
+    const product = item.product || item;
+    const qty = Math.max(1, Number(item.quantity || 1));
+    return sum + Number(product?.price ?? product?.unit_price_tzs ?? 0) * qty;
+  }, 0);
+
+  return {
+    totalItems,
+    totalActualWeightKg: Number(totalActualWeightKg.toFixed(3)),
+    totalVolumetricWeightKg: Number(totalVolumetricWeightKg.toFixed(3)),
+    chargeableWeightKg: Number(chargeableWeightKg.toFixed(3)),
+    packageCount,
+    declaredValueTzs: Math.round(declaredValueTzs),
+    packagesByActualWeight,
+    packagesByVolumetricWeight,
+  };
+};
+
+const calculateInsuranceFee = (declaredValueTzs: number, settings: DeliverySettings, applyInsurance = false) => {
+  if (!applyInsurance || !settings.insuranceEnabled || declaredValueTzs <= 0) {
+    return { fee: 0, coverage: 0 };
+  }
+  const rawFee = declaredValueTzs * (settings.insuranceRatePercent / 100);
+  const fee = Math.round(Math.max(settings.insuranceMinFeeTzs, rawFee));
+  const coverage = Math.min(declaredValueTzs, settings.insuranceMaxCoverageTzs);
+  return { fee, coverage };
+};
+
+export const applyCartDeliveryAdjustments = (
+  quote: any,
+  cart: any[],
+  settingsInput?: Partial<DeliverySettings>,
+  options: { applyInsurance?: boolean } = {},
+) => {
+  const settings = mapDeliverySettings(settingsInput || DEFAULT_DELIVERY_SETTINGS);
+  const metrics = getCartDeliveryMetrics(cart, settings);
+
+  if (metrics.chargeableWeightKg > settings.maxTotalWeightKg) {
+    return {
+      ...quote,
+      available: false,
+      reason: `DELIVERY_MAX_WEIGHT_EXCEEDED:${metrics.chargeableWeightKg}:${settings.maxTotalWeightKg}`,
+      totalFee: 0,
+      packageSummary: metrics,
+      costBreakdown: {
+        ...(quote?.costBreakdown || {}),
+        settings,
+        packageSummary: metrics,
+      },
+    };
+  }
+
+  const baseDeliveryFee = Math.max(0, Number(quote?.totalFee || 0));
+  const extraPackageCount = Math.max(0, metrics.packageCount - 1);
+  const extraPackageFee = Math.round(extraPackageCount * settings.extraPackageFeeTzs);
+  const fuelSurcharge = Math.round((baseDeliveryFee + extraPackageFee) * (settings.fuelSurchargePercent / 100));
+  const insurance = calculateInsuranceFee(metrics.declaredValueTzs, settings, Boolean(options.applyInsurance));
+  const totalFee = Math.max(0, Math.round(baseDeliveryFee + extraPackageFee + fuelSurcharge + insurance.fee));
+
+  return {
+    ...quote,
+    totalFee,
+    packageSummary: metrics,
+    insurance: {
+      enabled: settings.insuranceEnabled,
+      selected: Boolean(options.applyInsurance),
+      fee: insurance.fee,
+      coverage: insurance.coverage,
+      ratePercent: settings.insuranceRatePercent,
+    },
+    costBreakdown: {
+      ...(quote?.costBreakdown || {}),
+      baseDeliveryFee,
+      extraPackageFee,
+      fuelSurcharge,
+      insuranceFee: insurance.fee,
+      insuranceCoverage: insurance.coverage,
+      totalFee,
+      settings: {
+        volumetricDivisor: settings.volumetricDivisor,
+        maxTotalWeightKg: settings.maxTotalWeightKg,
+        maxPackageWeightKg: settings.maxPackageWeightKg,
+        maxPackageVolumetricKg: settings.maxPackageVolumetricKg,
+        extraPackageFeeTzs: settings.extraPackageFeeTzs,
+        fuelSurchargePercent: settings.fuelSurchargePercent,
+      },
+      packageSummary: metrics,
+    },
+  };
 };
 
 const formatDays = (minDays: number, maxDays: number, lang = "sw") => {
@@ -126,7 +248,8 @@ const getEtaDayValue = (eta: string) => {
   return match ? Number(match[2] || match[1]) : 0;
 };
 
-export const quoteProductDelivery = (product: any, quantity: number, zone: any, rules: any[], lang = "sw") => {
+export const quoteProductDelivery = (product: any, quantity: number, zone: any, rules: any[], lang = "sw", settingsInput?: Partial<DeliverySettings>) => {
+  const settings = mapDeliverySettings(settingsInput || DEFAULT_DELIVERY_SETTINGS);
   const qty = Math.max(1, Number(quantity || 1));
   const normalizedZone = normalizeZone(zone);
   const productId = String(product?.id || "");
@@ -201,7 +324,7 @@ export const quoteProductDelivery = (product: any, quantity: number, zone: any, 
   }
 
   const normalizedRules = rules.length > 0 ? rules.map(mapDeliveryRule) : buildDefaultRules([normalizedZone]);
-  const billableWeight = getBillableWeightKg(product) * qty;
+  const billableWeight = getBillableWeightKg(product, settings.volumetricDivisor) * qty;
   const zoneRules = normalizedRules.filter((rule) => String(rule.zoneId) === String(normalizedZone.id));
   const matchingRule: any =
     zoneRules.find((rule) =>
@@ -245,9 +368,17 @@ export const quoteProductDelivery = (product: any, quantity: number, zone: any, 
   };
 };
 
-export const quoteCartDelivery = (cart: any[], zone: any, rules: any[], lang = "sw") => {
+export const quoteCartDelivery = (
+  cart: any[],
+  zone: any,
+  rules: any[],
+  lang = "sw",
+  settingsInput?: Partial<DeliverySettings>,
+  options: { applyInsurance?: boolean } = {},
+) => {
+  const settings = mapDeliverySettings(settingsInput || DEFAULT_DELIVERY_SETTINGS);
   const normalizedZone = normalizeZone(zone || DEFAULT_ZONES[0]);
-  const items = cart.map((item) => quoteProductDelivery(item.product || item, item.quantity, normalizedZone, rules, lang));
+  const items = cart.map((item) => quoteProductDelivery(item.product || item, item.quantity, normalizedZone, rules, lang, settings));
   const unavailableItems = items.filter((item) => !item.available);
   const totalFee = items.reduce((sum, item) => sum + (item.available ? Number(item.fee || 0) : 0), 0);
   const maxEta = items
@@ -256,7 +387,7 @@ export const quoteCartDelivery = (cart: any[], zone: any, rules: any[], lang = "
     .reduce((max, value) => Math.max(max, value), 0);
   const firstHourlyEta = items.find((item) => item.available && getEtaDayValue(item.eta) === 0 && /saa|hour/i.test(item.eta))?.eta;
 
-  return {
+  return applyCartDeliveryAdjustments({
     zoneId: normalizedZone.id,
     zoneName: lang === "sw" ? normalizedZone.labelSw : normalizedZone.labelEn,
     totalFee,
@@ -264,5 +395,7 @@ export const quoteCartDelivery = (cart: any[], zone: any, rules: any[], lang = "
     available: unavailableItems.length === 0,
     items,
     unavailableItems,
-  };
+    quoteMode: "zone_fallback",
+    routeProvider: "zone_rules",
+  }, cart, settings, options);
 };

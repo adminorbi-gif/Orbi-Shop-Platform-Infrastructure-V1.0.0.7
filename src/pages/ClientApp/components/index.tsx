@@ -1800,6 +1800,7 @@ export function CheckoutModal({
         productId: item.product?.id,
         quantity: parseInt(item.quantity, 10) || 1,
       })),
+      applyInsurance: false,
     })
       .then((quote) => {
         if (active) setDeliveryQuote(quote);
@@ -1868,6 +1869,7 @@ export function CheckoutModal({
               }
             : null,
           deliveryQuote,
+          applyInsurance: false,
           deliveryZoneId: selectedDeliveryZone?.id,
           deliveryFee: deliveryCost,
           deliveryEta,

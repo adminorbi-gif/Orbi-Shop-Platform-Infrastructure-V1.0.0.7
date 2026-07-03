@@ -123,6 +123,7 @@ export function CheckoutView({
         productId: item.product?.id,
         quantity: parseInt(item.quantity, 10) || 1,
       })),
+      applyInsurance: false,
     })
       .then((quote) => {
         if (active) setDeliveryQuote(quote);
@@ -170,6 +171,7 @@ export function CheckoutView({
         },
         deliveryFee,
         deliveryQuote,
+        applyInsurance: false,
         deliveryEta: deliveryQuote?.eta || formatDeliveryDays(selectedDeliveryZone, lang),
         operation: details.paymentMethod === "escrow" ? "paysafe" : "cash_on_delivery",
         paymentCategory: details.paymentMethod === "escrow" ? "orbi" : undefined,

@@ -3,6 +3,7 @@ import { supabase, encrypt } from "../lib/supabase.js";
 import { callOrbiPayGateway, getPayServiceKey } from "../lib/orbiPayGateway.js";
 import { quoteCartDelivery } from "../lib/deliveryQuote.js";
 import { quoteCartRouteDelivery } from "../lib/routeDeliveryQuote.js";
+import { getDeliverySettings } from "../lib/deliverySettings.js";
 
 const router = Router();
 
@@ -327,7 +328,7 @@ function buildSellerAllocation(
 
 router.post("/", async (req, res) => {
   try {
-    const { cart, user, paymentMethod, paymentCategory, paymentRail, providerCode, paymentAccount, operation, appliedCoupon, finalTotal, name, phone, address, options, tin, lang, deliveryZone, deliveryZoneId, deliveryFee, deliveryEta, deliveryOrigin, deliveryDestination } = req.body;
+    const { cart, user, paymentMethod, paymentCategory, paymentRail, providerCode, paymentAccount, operation, appliedCoupon, finalTotal, name, phone, address, options, tin, lang, deliveryZone, deliveryZoneId, deliveryFee, deliveryEta, deliveryOrigin, deliveryDestination, applyInsurance } = req.body;
 
     // Gateway contract validation
     if (!paymentCategory || !paymentRail || !operation) {
@@ -398,13 +399,14 @@ router.post("/", async (req, res) => {
           .from("delivery_rules")
           .select("*")
           .order("sort_order", { ascending: true });
+        const deliverySettings = await getDeliverySettings(supabase);
         serverDeliveryQuote = deliveryDestination
           ? await quoteCartRouteDelivery(validatedCart, resolvedZone, rules || [], {
               origin: deliveryOrigin,
               destination: deliveryDestination,
               lang: lang || "sw",
-            })
-          : quoteCartDelivery(validatedCart, resolvedZone, rules || [], lang || "sw");
+            }, deliverySettings, { applyInsurance })
+          : quoteCartDelivery(validatedCart, resolvedZone, rules || [], lang || "sw", deliverySettings, { applyInsurance });
         if (!serverDeliveryQuote.available) {
           return res.status(400).json({
             success: false,
@@ -420,6 +422,8 @@ router.post("/", async (req, res) => {
 
     const oIdBase = "ORD-" + Math.floor(10000 + Math.random() * 90000);
     const deliveryFeeAmount = roundMoney(Math.max(0, Number(serverDeliveryQuote?.totalFee ?? deliveryZone?.price ?? deliveryFee ?? 0)));
+    const deliveryInsuranceFee = roundMoney(Number(serverDeliveryQuote?.insurance?.fee || serverDeliveryQuote?.costBreakdown?.insuranceFee || 0));
+    const deliveryInsuranceCoverage = roundMoney(Number(serverDeliveryQuote?.insurance?.coverage || serverDeliveryQuote?.costBreakdown?.insuranceCoverage || 0));
     const resolvedDeliveryZoneName = serverDeliveryQuote?.zoneName || deliveryZone?.name || null;
     const resolvedDeliveryEta = serverDeliveryQuote?.eta || deliveryEta || deliveryZone?.eta || null;
     const checkoutAllocation = buildSellerAllocation(
@@ -572,6 +576,15 @@ router.post("/", async (req, res) => {
           delivery_zone_name: resolvedDeliveryZoneName,
           delivery_fee: entryIndex === 0 ? deliveryFeeAmount : 0,
           delivery_eta: resolvedDeliveryEta,
+          delivery_quote_id: serverDeliveryQuote?.quoteId || null,
+          delivery_quote_breakdown: serverDeliveryQuote || {},
+          delivery_unavailable_items: serverDeliveryQuote?.unavailableItems || [],
+          delivery_distance_km: serverDeliveryQuote?.items?.find((item: any) => item.route?.distanceKm)?.route?.distanceKm || null,
+          delivery_duration_minutes: serverDeliveryQuote?.items?.find((item: any) => item.route?.durationMinutes)?.route?.durationMinutes || null,
+          delivery_quote_mode: serverDeliveryQuote?.quoteMode || null,
+          delivery_route_provider: serverDeliveryQuote?.routeProvider || null,
+          delivery_insurance_fee: entryIndex === 0 ? deliveryInsuranceFee : 0,
+          delivery_insurance_coverage: entryIndex === 0 ? deliveryInsuranceCoverage : 0,
           payment_reference: encrypt(
             `${orderState.paymentReference}||SPLIT:${oIdBase}:${sellerId}:${sellerTotal}`,
           )

@@ -52,6 +52,27 @@ export interface DeliveryRule {
   sortOrder?: number;
 }
 
+export interface DeliverySettings {
+  basePriceTzs: number;
+  costPerKmTzs: number;
+  costPerKgTzs: number;
+  volumetricDivisor: number;
+  maxDistanceKm: number;
+  maxTotalWeightKg: number;
+  maxPackageWeightKg: number;
+  maxPackageVolumetricKg: number;
+  extraPackageFeeTzs: number;
+  extraPackageDistanceMultiplier: number;
+  bulkyThresholdKg: number;
+  bulkySurchargeTzs: number;
+  fuelSurchargePercent: number;
+  insuranceEnabled: boolean;
+  insuranceRatePercent: number;
+  insuranceMinFeeTzs: number;
+  insuranceMaxCoverageTzs: number;
+  fallbackEnabled: boolean;
+}
+
 export interface DeliveryQuoteItem {
   productId: string;
   name: string;
@@ -81,6 +102,24 @@ export interface DeliveryQuote {
   unavailableItems: DeliveryQuoteItem[];
   quoteMode?: "route_exact" | "route_estimate" | "zone_fallback";
   routeProvider?: "google_routes" | "distance_estimate" | "zone_rules";
+  packageSummary?: {
+    totalItems: number;
+    totalActualWeightKg: number;
+    totalVolumetricWeightKg: number;
+    chargeableWeightKg: number;
+    packageCount: number;
+    declaredValueTzs: number;
+    packagesByActualWeight: number;
+    packagesByVolumetricWeight: number;
+  };
+  insurance?: {
+    enabled: boolean;
+    selected: boolean;
+    fee: number;
+    coverage: number;
+    ratePercent: number;
+  };
+  costBreakdown?: Record<string, any>;
 }
 
 export interface GeoCoordinate {
