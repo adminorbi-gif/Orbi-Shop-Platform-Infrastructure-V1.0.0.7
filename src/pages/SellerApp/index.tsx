@@ -433,16 +433,16 @@ export default function SellerApp({
   };
 
   return (
-    <div className="h-[100dvh] bg-slate-50 font-sans text-slate-800 flex flex-col md:flex-row overflow-hidden relative">
+    <div className="h-[100dvh] bg-[#eef3f8] font-sans text-slate-800 flex flex-col md:flex-row overflow-hidden relative">
       {/* Container Wrapper */}
       <div className="flex-1 flex flex-col md:flex-row w-full h-full">
-        {/* Left Side Navigation (B2B Emerald Branded) */}
-        <aside className="w-full md:w-72 bg-slate-950 text-slate-200 flex-shrink-0 flex flex-col items-stretch border-r border-slate-800">
+        {/* Left Side Navigation (Orbi enterprise branded) */}
+        <aside className="w-full md:w-72 bg-white/95 text-slate-700 flex-shrink-0 flex flex-col items-stretch border-r border-slate-200/80 shadow-[18px_0_50px_rgba(15,23,42,0.06)] backdrop-blur-xl">
           {/* DESKTOP/TABLET SIDEBAR HEADER */}
-          <div className="hidden md:flex p-6 md:p-8 border-b border-white/5 flex flex-col gap-4">
+          <div className="hidden md:flex p-6 md:p-8 border-b border-slate-200/80 flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold overflow-hidden shadow-inner shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-900 flex items-center justify-center text-white font-bold overflow-hidden shadow-sm shrink-0">
                   {seller.avatar ? (
                     <img
                       src={seller.avatar}
@@ -454,10 +454,10 @@ export default function SellerApp({
                   )}
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-sm font-black truncate text-white uppercase tracking-wider">
+                  <h2 className="text-sm font-black truncate text-slate-950 uppercase tracking-wider">
                     {seller.name}
                   </h2>
-                  <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-0.5">
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">
                     Orbi Merchant
                   </p>
                 </div>
@@ -466,19 +466,19 @@ export default function SellerApp({
               {/* Language switcher flag */}
               <button
                 onClick={() => setLang(lang === "sw" ? "en" : "sw")}
-                className="hover:scale-105 active:scale-95 transition bg-white/5 border border-white/10 rounded-xl px-2.5 py-1 text-xs font-semibold flex items-center gap-1.5 cursor-pointer text-slate-300"
+                className="hover:scale-105 active:scale-95 transition bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1 text-xs font-semibold flex items-center gap-1.5 cursor-pointer text-slate-700 shadow-sm"
               >
                 {lang === "sw" ? "EN" : "SW"}
               </button>
             </div>
 
             {/* Plan Badge */}
-            <div className="bg-white/5 border border-white/10 p-3.5 rounded-2xl flex items-center justify-between">
+            <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl flex items-center justify-between shadow-sm">
               <div>
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">
                   {lang === "sw" ? "MPANGO WA DUKA" : "STORE PLAN"}
                 </p>
-                <p className="text-xs font-black text-amber-400 uppercase tracking-wide mt-0.5">
+                <p className="text-xs font-black text-slate-950 uppercase tracking-wide mt-0.5">
                   {seller.isPro &&
                   seller.proUntil &&
                   seller.proUntil > Date.now()
@@ -488,7 +488,7 @@ export default function SellerApp({
               </div>
               <button
                 onClick={() => setTab("booster")}
-                className="bg-amber-400/10 hover:bg-amber-400/20 text-amber-400 text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-amber-400/20 shadow-sm shrink-0 cursor-pointer transition active:scale-95 duration-100"
+                className="bg-amber-50 hover:bg-amber-100 text-amber-700 text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-amber-200 shadow-sm shrink-0 cursor-pointer transition active:scale-95 duration-100"
               >
                 {seller.isPro && seller.proUntil && seller.proUntil > Date.now()
                   ? "GOLD"
@@ -498,9 +498,9 @@ export default function SellerApp({
           </div>
 
           {/* MOBILE SLIM HEADER */}
-          <div className="flex md:hidden px-4 py-2.5 border-b border-white/5 items-center justify-between bg-slate-950 w-full shadow-md text-white select-none">
+          <div className="flex md:hidden px-4 py-2.5 border-b border-slate-200/80 items-center justify-between bg-white/95 w-full shadow-sm text-slate-900 select-none backdrop-blur-xl">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold overflow-hidden shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-slate-950 border border-slate-900 flex items-center justify-center text-white font-bold overflow-hidden shrink-0">
                 {seller.avatar ? (
                   <img
                     src={seller.avatar}
@@ -512,10 +512,10 @@ export default function SellerApp({
                 )}
               </div>
               <div className="min-w-0">
-                <h2 className="text-xs font-black truncate uppercase tracking-tight text-white leading-none">
+                <h2 className="text-xs font-black truncate uppercase tracking-tight text-slate-950 leading-none">
                   {seller.name}
                 </h2>
-                <span className="text-[8px] text-amber-400 font-black uppercase tracking-widest mt-0.5 block leading-none">
+                <span className="text-[8px] text-amber-600 font-black uppercase tracking-widest mt-0.5 block leading-none">
                   {seller.isPro &&
                   seller.proUntil &&
                   seller.proUntil > Date.now()
@@ -528,14 +528,14 @@ export default function SellerApp({
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => setLang(lang === "sw" ? "en" : "sw")}
-                className="hover:scale-105 active:scale-95 transition bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-200"
+                className="hover:scale-105 active:scale-95 transition bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-700"
               >
                 {lang === "sw" ? "EN" : "SW"}
               </button>
 
               <button
                 onClick={() => (window.location.href = "/")}
-                className="bg-emerald-55 border border-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 p-1.5 rounded-lg flex items-center justify-center"
+                className="bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 p-1.5 rounded-lg flex items-center justify-center"
                 title={lang === "sw" ? "Soko Kuu" : "Main Soko"}
               >
                 <Store size={13} />
@@ -543,7 +543,7 @@ export default function SellerApp({
 
               <button
                 onClick={onLogout}
-                className="text-rose-400 hover:text-rose-500 bg-red-500/10 p-1.5 rounded-lg border border-red-500/20 flex items-center justify-center"
+                className="text-rose-600 hover:text-rose-700 bg-rose-50 p-1.5 rounded-lg border border-rose-100 flex items-center justify-center"
                 title={lang === "sw" ? "Ondoka" : "Log out"}
               >
                 <LogOut size={13} />
@@ -555,7 +555,7 @@ export default function SellerApp({
           <nav className="hidden md:flex p-4 flex-col gap-2 text-xs font-bold uppercase tracking-widest flex-1 overflow-y-auto">
             <button
               onClick={() => setTab("dashboard")}
-              className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-left transition duration-150 cursor-pointer ${tab === "dashboard" ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 font-black" : "text-slate-400 hover:bg-white/5 hover:text-slate-100"}`}
+              className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-left transition duration-150 cursor-pointer ${tab === "dashboard" ? "bg-slate-950 text-white shadow-lg shadow-slate-950/15 font-black" : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"}`}
             >
               <LayoutDashboard size={18} />
               <span>
@@ -565,7 +565,7 @@ export default function SellerApp({
 
             <button
               onClick={() => setTab("products")}
-              className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-left transition duration-150 cursor-pointer ${tab === "products" ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 font-black" : "text-slate-400 hover:bg-white/5 hover:text-slate-100"}`}
+              className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-left transition duration-150 cursor-pointer ${tab === "products" ? "bg-slate-950 text-white shadow-lg shadow-slate-950/15 font-black" : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"}`}
             >
               <div className="flex items-center gap-3.5">
                 <Package size={18} />
@@ -575,7 +575,7 @@ export default function SellerApp({
               </div>
               {sellerProducts.length > 0 && (
                 <span
-                  className={`text-[10px] px-2 py-0.5 rounded-lg ${tab === "products" ? "bg-white text-emerald-700" : "bg-white/10 text-slate-300"}`}
+                  className={`text-[10px] px-2 py-0.5 rounded-lg ${tab === "products" ? "bg-white text-slate-950" : "bg-slate-100 text-slate-600"}`}
                 >
                   {sellerProducts.length}
                 </span>
@@ -584,7 +584,7 @@ export default function SellerApp({
 
             <button
               onClick={() => setTab("orders")}
-              className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-left transition duration-150 cursor-pointer ${tab === "orders" ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 font-black" : "text-slate-400 hover:bg-white/5 hover:text-slate-100"}`}
+              className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-left transition duration-150 cursor-pointer ${tab === "orders" ? "bg-slate-950 text-white shadow-lg shadow-slate-950/15 font-black" : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"}`}
             >
               <div className="flex items-center gap-3.5">
                 <ShoppingCart size={18} />
@@ -594,7 +594,7 @@ export default function SellerApp({
               </div>
               {sellerOrders.length > 0 && (
                 <span
-                  className={`text-[10px] px-2 py-0.5 rounded-lg ${tab === "orders" ? "bg-white text-emerald-700" : "bg-white/10 text-slate-300"}`}
+                  className={`text-[10px] px-2 py-0.5 rounded-lg ${tab === "orders" ? "bg-white text-slate-950" : "bg-slate-100 text-slate-600"}`}
                 >
                   {sellerOrders.length}
                 </span>
@@ -603,7 +603,7 @@ export default function SellerApp({
 
             <button
               onClick={() => setTab("ai_copilot")}
-              className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-left transition duration-150 cursor-pointer ${tab === "ai_copilot" ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-orange-500/10 font-black" : "text-slate-400 hover:bg-white/5 hover:text-slate-100"}`}
+              className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-left transition duration-150 cursor-pointer ${tab === "ai_copilot" ? "bg-gradient-to-r from-slate-950 to-slate-800 text-white shadow-lg shadow-slate-950/15 font-black" : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"}`}
             >
               <Sparkles size={18} className="animate-pulse" />
               <span>
@@ -615,7 +615,7 @@ export default function SellerApp({
 
             <button
               onClick={() => setTab("marketing")}
-              className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-left transition duration-150 cursor-pointer ${tab === "marketing" ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 font-black" : "text-slate-400 hover:bg-white/5 hover:text-slate-100"}`}
+              className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-left transition duration-150 cursor-pointer ${tab === "marketing" ? "bg-slate-950 text-white shadow-lg shadow-slate-950/15 font-black" : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"}`}
             >
               <Megaphone size={18} />
               <span>{lang === "sw" ? "Promote & Ads" : "Sponsored Ads"}</span>
@@ -623,7 +623,7 @@ export default function SellerApp({
 
             <button
               onClick={() => setTab("booster")}
-              className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-left transition duration-150 cursor-pointer ${tab === "booster" ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/10 font-black animate-in fade-in" : "text-slate-400 hover:bg-white/5 hover:text-slate-100"}`}
+              className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-left transition duration-150 cursor-pointer ${tab === "booster" ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/10 font-black animate-in fade-in" : "text-slate-500 hover:bg-amber-50 hover:text-slate-950"}`}
             >
               <Zap
                 size={18}
@@ -640,7 +640,7 @@ export default function SellerApp({
 
             <button
               onClick={() => setTab("settings")}
-              className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-left transition duration-150 cursor-pointer ${tab === "settings" ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 font-black" : "text-slate-400 hover:bg-white/5 hover:text-slate-100"}`}
+              className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-left transition duration-150 cursor-pointer ${tab === "settings" ? "bg-slate-950 text-white shadow-lg shadow-slate-950/15 font-black" : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"}`}
             >
               <SettingsIcon size={18} />
               <span>
@@ -650,7 +650,7 @@ export default function SellerApp({
           </nav>
 
           {/* MOBILE NAVIGATION STRIP */}
-          <div className="flex md:hidden bg-slate-900 leading-none py-2 px-2.5 overflow-x-auto scrollbar-none border-b border-white/5 gap-1.5 w-full items-center select-none sticky top-[48px] z-20 backdrop-blur-md">
+          <div className="flex md:hidden bg-white/95 leading-none py-2 px-2.5 overflow-x-auto scrollbar-none border-b border-slate-200/80 gap-1.5 w-full items-center select-none sticky top-[48px] z-20 backdrop-blur-xl shadow-sm">
             {[
               { id: "dashboard", label: "Dash", icon: LayoutDashboard },
               {
@@ -692,8 +692,8 @@ export default function SellerApp({
                       ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-sm font-black scale-[1.03]"
                       : tabItem.gold
                         ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-sm font-black scale-[1.03]"
-                        : "bg-emerald-600 text-white shadow-sm font-black scale-[1.03]"
-                    : "bg-white/5 text-slate-400 border border-white/[0.04] hover:bg-white/10"
+                        : "bg-slate-950 text-white shadow-sm font-black scale-[1.03]"
+                    : "bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100"
                 }`}
               >
                 <div className="relative leading-none">
@@ -704,7 +704,7 @@ export default function SellerApp({
                         ? "text-white"
                         : tabItem.gold
                           ? "text-amber-400"
-                          : "text-slate-400"
+                          : "text-slate-500"
                     }
                   />
                   {tabItem.badge && tabItem.badge > 0 ? (
@@ -721,16 +721,16 @@ export default function SellerApp({
           </div>
 
           {/* Footer controls (Desktop only) */}
-          <div className="hidden md:flex p-6 border-t border-white/5 flex flex-col gap-3">
+          <div className="hidden md:flex p-5 border-t border-slate-200/80 flex flex-col gap-3 bg-slate-50/60">
             <button
               onClick={() => (window.location.href = "/")}
-              className="w-full bg-white/5 border border-white/10 text-slate-300 py-3 rounded-2xl text-xs font-black uppercase tracking-wider hover:bg-white/10 active:scale-95 transition cursor-pointer text-center"
+              className="w-full bg-white border border-slate-200 text-slate-700 py-3 rounded-2xl text-xs font-black uppercase tracking-wider hover:bg-slate-50 active:scale-95 transition cursor-pointer text-center shadow-sm"
             >
               {lang === "sw" ? "Tembelea Soko Kuu" : "Main Shopping Soko"}
             </button>
             <button
               onClick={onLogout}
-              className="w-full bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 py-3 rounded-2xl text-xs font-black uppercase tracking-wider active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full bg-rose-50 border border-rose-100 text-rose-600 hover:bg-rose-100 py-3 rounded-2xl text-xs font-black uppercase tracking-wider active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer"
             >
               <LogOut size={14} />
               <span>{lang === "sw" ? "Ondoka" : "Log out"}</span>
@@ -739,7 +739,7 @@ export default function SellerApp({
         </aside>
 
         {/* Right Content Area */}
-        <main className="flex-1 bg-[#f5f8fb] p-3 sm:p-4 md:p-5 overflow-y-auto h-full flex flex-col items-center">
+        <main className="flex-1 bg-[#eef3f8] p-3 sm:p-4 md:p-5 overflow-y-auto h-full flex flex-col items-center">
           <div className="w-full max-w-7xl flex-1 flex flex-col">
             {/* Active Toast notifications */}
             {alertMsg && (
@@ -760,8 +760,9 @@ export default function SellerApp({
             {/* VIEW: DASHBOARD Overview */}
             {tab === "dashboard" && (
               <div className="space-y-3 animate-in fade-in duration-200">
-                <div className="seller-dashboard-hero rounded-[1.65rem] border border-slate-200/70 bg-white/95 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 overflow-hidden relative">
-                  <div className="absolute right-0 top-0 h-28 w-28 translate-x-8 -translate-y-8 rounded-full bg-emerald-500/10 pointer-events-none" />
+                <div className="seller-dashboard-hero rounded-[1.65rem] border border-slate-200/80 bg-white/95 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 overflow-hidden relative">
+                  <div className="absolute right-0 top-0 h-28 w-28 translate-x-8 -translate-y-8 rounded-full bg-slate-950/[0.04] pointer-events-none" />
+                  <div className="absolute -right-10 -bottom-12 h-32 w-32 rounded-full bg-blue-500/10 blur-sm pointer-events-none" />
                   <div>
                     <h1 className="text-xl sm:text-2xl font-display font-black text-slate-900 leading-tight">
                       {lang === "sw"
@@ -774,9 +775,9 @@ export default function SellerApp({
                         : "Your merchant command center: sales, stock, orders, and payouts in one focused view."}
                     </p>
                   </div>
-                  <div className="bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-2xl flex items-center gap-2.5 relative z-10">
+                  <div className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-2xl flex items-center gap-2.5 relative z-10 shadow-sm">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-700">
                       {lang === "sw"
                         ? "DUKA LIPO MTANDAONI"
                         : "Merchant Terminal Active"}
@@ -871,13 +872,13 @@ export default function SellerApp({
                   </div>
 
                   {/* Wallet / Request Payout Card (Innovative Instant Draw-down) */}
-                  <div className="seller-stat-card bg-gradient-to-br from-emerald-600 to-emerald-800 text-white p-3 rounded-[1.2rem] border border-emerald-700 shadow-sm relative overflow-hidden group @container min-w-0 flex flex-col justify-between">
+                  <div className="seller-stat-card bg-gradient-to-br from-slate-950 to-slate-800 text-white p-3 rounded-[1.2rem] border border-slate-900 shadow-sm relative overflow-hidden group @container min-w-0 flex flex-col justify-between">
                     <div>
                       <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full translate-x-12 -translate-y-12"></div>
                       <div className="bg-white/10 text-white w-8 h-8 rounded-xl flex items-center justify-center mb-2 shrink-0">
                         <Coins size={18} />
                       </div>
-                      <p className="seller-stat-label text-[9px] text-emerald-200 font-bold uppercase tracking-widest truncate">
+                      <p className="seller-stat-label text-[9px] text-slate-300 font-bold uppercase tracking-widest truncate">
                         {lang === "sw" ? "SALDO YA KUTOA" : "PAYOUT BALANCE"}
                       </p>
                       <div
@@ -894,7 +895,7 @@ export default function SellerApp({
                     </div>
                     <button
                       onClick={() => setIsPayoutRequesting(true)}
-                      className="mt-2 shrink-0 cursor-pointer w-full bg-white text-emerald-800 text-[9px] font-black uppercase py-1.5 rounded-xl text-center hover:bg-emerald-50 active:scale-95 transition"
+                      className="mt-2 shrink-0 cursor-pointer w-full bg-white text-slate-950 text-[9px] font-black uppercase py-1.5 rounded-xl text-center hover:bg-slate-100 active:scale-95 transition"
                     >
                       {lang === "sw" ? "Omba Malipo Sasa" : "Request Payout"}
                     </button>
@@ -902,10 +903,15 @@ export default function SellerApp({
                 </div>
 
                 {/* Daily Activity Heatmap */}
-                <div className="bg-white p-3 rounded-[1.25rem] border border-slate-200/70 shadow-sm">
-                  <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2.5">
-                    {lang === "sw" ? "Mwenendo wa Oda (Heatmap)" : "Order Activity Heatmap"}
-                  </h3>
+                <div className="bg-white p-3 rounded-[1.25rem] border border-slate-200/80 shadow-sm overflow-hidden">
+                  <div className="mb-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                      {lang === "sw" ? "Mwenendo wa Oda" : "Order Activity"}
+                    </h3>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                      {lang === "sw" ? "Saa na siku zenye oda nyingi" : "Peak sales hours"}
+                    </span>
+                  </div>
                   <OrderHeatmap orders={orders} />
                 </div>
 
