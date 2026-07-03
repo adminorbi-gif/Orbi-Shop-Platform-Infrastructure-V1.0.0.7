@@ -25,6 +25,7 @@ import {
   PromotionalBanner,
   DeliveryZone,
   DeliveryQuote,
+  GooglePlaceDetails,
 } from "../../../types";
 import {
   DEFAULT_DELIVERY_ZONES,
@@ -35,6 +36,7 @@ import {
 } from "../../../lib/deliveryZones";
 import { getProductPriceForQty } from "../../../utils/pricing";
 import { navigateTo } from "../../../utils/navigation";
+import GooglePlacePicker from "../../../components/GooglePlacePicker";
 import {
   CustomerProfileShell,
   ProfileTabs,
@@ -1516,51 +1518,6 @@ export function ContactSection({ lang, user }: { lang: Lang; user: Customer | nu
   );
 }
 
-const DELIVERY_HUBS = [
-  {
-    id: "dar-kariakoo",
-    shortLabelSw: "Kariakoo",
-    shortLabelEn: "Kariakoo Hub",
-    address: "Kariakoo Hub - Dar es Salaam, Mtaa wa Swahili, Plot 42",
-    cost: 2000,
-  },
-  {
-    id: "dar-mbezi",
-    shortLabelSw: "Mbezi Mwisho",
-    shortLabelEn: "Mbezi Terminal",
-    address: "Mbezi Terminal Hub - Dar es Salaam, Morogoro Road",
-    cost: 4000,
-  },
-  {
-    id: "posta-mpya",
-    shortLabelSw: "Posta Mpya",
-    shortLabelEn: "Posta Mpya Hub",
-    address: "Posta Mpya Hub - Dar es Salaam, Ghorofa ya Makumbusho",
-    cost: 3000,
-  },
-  {
-    id: "arusha-clock",
-    shortLabelSw: "Arusha Town",
-    shortLabelEn: "Arusha Clock",
-    address: "Clocktower Hub - Arusha Town, Boma Road Roundabout",
-    cost: 6000,
-  },
-  {
-    id: "mwanza-capri",
-    shortLabelSw: "Mwanza Town",
-    shortLabelEn: "Mwanza Capri",
-    address: "Capri Point Hub - Mwanza City, Lake Zone Area",
-    cost: 8000,
-  },
-  {
-    id: "dodoma-cath",
-    shortLabelSw: "Dodoma Hub",
-    shortLabelEn: "Dodoma Capital",
-    address: "Capital Cathedral Hub - Dodoma, Cathedral Hill, Uhuru Way",
-    cost: 5000,
-  },
-];
-
 export function CheckoutModal({
   cart,
   total,
@@ -1587,6 +1544,7 @@ export function CheckoutModal({
   const [phone, setPhone] = useState(defaultPhone);
   const [customerTin, setCustomerTin] = useState(user?.tin || "");
   const [address, setAddress] = useState("");
+  const [selectedDeliveryPlace, setSelectedDeliveryPlace] = useState<GooglePlaceDetails | null>(null);
   const [paymentMethod, setPaymentMethod] = useState("mno_tz");
   const [step, setStep] = useState(1);
   const [loadingMsg, setLoadingMsg] = useState("");
@@ -1830,6 +1788,14 @@ export function CheckoutModal({
     db.getDeliveryQuote({
       zoneId: selectedDeliveryZoneId,
       lang,
+      destination: selectedDeliveryPlace
+        ? {
+            lat: selectedDeliveryPlace.lat,
+            lng: selectedDeliveryPlace.lng,
+            address: selectedDeliveryPlace.formattedAddress,
+            placeId: selectedDeliveryPlace.placeId,
+          }
+        : undefined,
       cart: cart.map((item: any) => ({
         productId: item.product?.id,
         quantity: parseInt(item.quantity, 10) || 1,
@@ -1849,7 +1815,7 @@ export function CheckoutModal({
     return () => {
       active = false;
     };
-  }, [selectedDeliveryZoneId, cart, lang]);
+  }, [selectedDeliveryZoneId, selectedDeliveryPlace, cart, lang]);
 
   const confirm = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1905,6 +1871,15 @@ export function CheckoutModal({
           deliveryZoneId: selectedDeliveryZone?.id,
           deliveryFee: deliveryCost,
           deliveryEta,
+          deliveryDestination: selectedDeliveryPlace
+            ? {
+                lat: selectedDeliveryPlace.lat,
+                lng: selectedDeliveryPlace.lng,
+                address: selectedDeliveryPlace.formattedAddress,
+                placeId: selectedDeliveryPlace.placeId,
+                googleMapsUri: selectedDeliveryPlace.googleMapsUri,
+              }
+            : null,
           name,
           phone,
           address,
@@ -2577,25 +2552,25 @@ export function CheckoutModal({
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1 text-slate-500">
-                  Anwani ya Kufikisha (Location)
-                </label>
-                <textarea
-                  required
+                <GooglePlacePicker
+                  lang={lang}
                   value={address}
-                  onBlur={() => handleBlur('address')}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className={`w-full border p-2.5 rounded-lg outline-none transition-all ${touched.address && currentErrors.address ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/10' : 'focus:border-primary focus:ring-2 focus:ring-primary/10'}`}
-                  rows={2}
+                  selectedPlace={selectedDeliveryPlace}
+                  onAddressChange={setAddress}
+                  onPlaceSelect={setSelectedDeliveryPlace}
+                  label={lang === "sw" ? "Anwani ya Kufikisha (Google Maps)" : "Delivery address (Google Maps)"}
                   placeholder={
                     lang === "sw"
-                      ? "Weka anwani yako ya kufikishiwa mzigo..."
-                      : "Enter your physical delivery address..."
+                      ? "Tafuta mtaa, jengo, duka au eneo..."
+                      : "Search street, building, shop, or area..."
                   }
-                ></textarea>
-                {touched.address && currentErrors.address && (
-                  <p className="text-[11px] text-red-500 font-medium mt-1 ml-1 flex items-center gap-1"><Info size={12}/> {currentErrors.address}</p>
-                )}
+                  error={touched.address ? currentErrors.address : ""}
+                  helperText={
+                    lang === "sw"
+                      ? "Chagua eneo kutoka Google ili mfumo upate distance na gharama sahihi."
+                      : "Choose a Google location so delivery distance and fees are calculated accurately."
+                  }
+                />
 
                 {/* Interactive Store Locator & Carrier Map */}
                 <div className="mt-2 bg-slate-900 text-white p-3 rounded-xl border border-slate-750 flex flex-col gap-2 shadow-inner">
@@ -2648,161 +2623,14 @@ export function CheckoutModal({
                     ) : null}
                   </div>
 
-                  {/* Tanzania stylized mini SVG Map */}
-                  <div className="relative h-28 bg-slate-950 rounded-lg overflow-hidden border border-white/5 flex items-center justify-center">
-                    <svg
-                      viewBox="0 0 320 180"
-                      className="w-full h-full opacity-90"
-                    >
-                      {/* Stylized TZ map */}
-                      <path
-                        d="M 60,10 L 220,15 L 280,100 L 270,170 L 130,165 L 50,110 Z"
-                        fill="#1e293b"
-                        stroke="#334155"
-                        strokeWidth="1.5"
-                        strokeDasharray="3"
-                      />
-                      {/* Water bodies */}
-                      <circle
-                        cx="110"
-                        cy="15"
-                        r="12"
-                        fill="#0274b7"
-                        opacity="0.4"
-                      />
-                      <path
-                        d="M 45,50 Q 25,110 35,150"
-                        fill="none"
-                        stroke="#0274b7"
-                        strokeWidth="5"
-                        opacity="0.3"
-                        strokeLinecap="round"
-                      />
-
-                      {/* Hub Pin connections */}
-                      <path
-                        d="M 90,45 L 190,55 L 160,115 L 240,165 L 260,150"
-                        fill="none"
-                        stroke="#ea580c"
-                        strokeWidth="1"
-                        strokeDasharray="2"
-                        opacity="0.25"
-                      />
-
-                      {/* Map Pins */}
-                      {[
-                        {
-                          id: "dar-kariakoo",
-                          label: "Kariakoo",
-                          x: 260,
-                          y: 150,
-                        },
-                        { id: "dar-mbezi", label: "Mbezi", x: 240, y: 165 },
-                        { id: "posta-mpya", label: "Posta", x: 275, y: 140 },
-                        { id: "arusha-clock", label: "Arusha", x: 190, y: 55 },
-                        { id: "mwanza-capri", label: "Mwanza", x: 90, y: 45 },
-                        { id: "dodoma-cath", label: "Dodoma", x: 160, y: 115 },
-                      ].map((p) => {
-                        const hub = [
-                          {
-                            id: "dar-kariakoo",
-                            address:
-                              "Kariakoo Hub - Dar es Salaam, Mtaa wa Swahili, Plot 42",
-                          },
-                          {
-                            id: "dar-mbezi",
-                            address:
-                              "Mbezi Terminal Hub - Dar es Salaam, Morogoro Road",
-                          },
-                          {
-                            id: "posta-mpya",
-                            address:
-                              "Posta Mpya Hub - Dar es Salaam, Ghorofa ya Makumbusho",
-                          },
-                          {
-                            id: "arusha-clock",
-                            address:
-                              "Clocktower Hub - Arusha Town, Boma Road Roundabout",
-                          },
-                          {
-                            id: "mwanza-capri",
-                            address:
-                              "Capri Point Hub - Mwanza City, Lake Zone Area",
-                          },
-                          {
-                            id: "dodoma-cath",
-                            address:
-                              "Capital Cathedral Hub - Dodoma, Cathedral Hill, Uhuru Way",
-                          },
-                        ].find((h) => h.id === p.id);
-                        const isSelected =
-                          address === hub?.address || address.includes(p.label);
-                        return (
-                          <g
-                            key={p.id}
-                            className="cursor-pointer"
-                            onClick={() => {
-                              if (hub) {
-                                setAddress(hub.address);
-                              }
-                            }}
-                          >
-                            {isSelected && (
-                              <circle
-                                cx={p.x}
-                                cy={p.y}
-                                r="8"
-                                className="fill-orange-500/30 stroke-orange-500 animate-pulse"
-                                strokeWidth="0.5"
-                              />
-                            )}
-                            <circle
-                              cx={p.x}
-                              cy={p.y}
-                              r="4"
-                              className={`${isSelected ? "fill-orange-500 stroke-white" : "fill-slate-400 stroke-slate-500"} transition-all`}
-                              strokeWidth="1"
-                            />
-                            <text
-                              x={p.x}
-                              y={p.y - 6}
-                              textAnchor="middle"
-                              className="text-[8px] font-black fill-slate-350 pointer-events-none tracking-tight font-sans"
-                            >
-                              {p.label}
-                            </text>
-                          </g>
-                        );
-                      })}
-                    </svg>
-                  </div>
-
-                  {/* Option pills list */}
-                  <div className="grid grid-cols-3 gap-1">
-                    {DELIVERY_HUBS.map((opt) => {
-                      const isSelected = address === opt.address;
-                      return (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => setAddress(opt.address)}
-                          className={`px-1.5 py-1 text-[9px] font-bold rounded-lg border transition-all text-center leading-tight cursor-pointer font-sans ${
-                            isSelected
-                              ? "bg-orange-500 border-orange-400 text-white"
-                              : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750"
-                          }`}
-                        >
-                          <div className="font-extrabold truncate">
-                            {lang === "sw"
-                              ? opt.shortLabelSw
-                              : opt.shortLabelEn}
-                          </div>
-                          <div className="text-[8px] opacity-80 font-normal">
-                            +{formatCurrency(opt.cost)}
-                          </div>
-                        </button>
-                      );
-                    })}
+                  <div className="rounded-xl border border-white/10 bg-slate-950 p-3 text-[10px] font-semibold text-slate-300">
+                    {selectedDeliveryPlace
+                      ? lang === "sw"
+                        ? "Eneo limethibitishwa kupitia Google Maps. Mfumo utatumia distance halisi kwa quote."
+                        : "Location verified through Google Maps. The system will use real distance for the quote."
+                      : lang === "sw"
+                        ? "Ukichagua eneo la Google, ramani halisi itaonekana juu na gharama itahesabiwa kwa usahihi zaidi."
+                        : "Select a Google location to show the real map above and calculate a more accurate fee."}
                   </div>
                 </div>
               </div>

@@ -307,6 +307,11 @@ router.post("/delivery-rules", async (req, res) => {
 router.get("/service-health", async (req, res) => {
   const checkedAt = new Date().toISOString();
   const services: any[] = [];
+  const googlePlacesKeyConfigured = Boolean(
+    process.env.GOOGLE_MAPS_PLACES_API_KEY ||
+    process.env.GOOGLE_MAPS_API_KEY ||
+    process.env.GOOGLE_MAPS_ROUTES_API_KEY,
+  );
 
   const routeHealth = getRouteDeliveryHealth();
   services.push({
@@ -323,6 +328,20 @@ router.get("/service-health", async (req, res) => {
             ? `Routes API failed recently: ${routeHealth.routesApi.lastError || "unknown error"}`
             : "GOOGLE_MAPS_ROUTES_API_KEY is not configured. Delivery is using fallback rules.",
     meta: routeHealth.routesApi,
+  });
+
+  services.push({
+    id: "google_places",
+    name: "Google Places / Maps Search",
+    group: "Delivery",
+    status: googlePlacesKeyConfigured ? "ready" : "error",
+    message: googlePlacesKeyConfigured
+      ? "Places API key is configured. Checkout, seller pickup, and admin zone search can use Google location data."
+      : "Google Places key is missing. Location search will fall back to manual address entry.",
+    meta: {
+      apiKeyConfigured: googlePlacesKeyConfigured,
+      acceptedEnv: ["GOOGLE_MAPS_PLACES_API_KEY", "GOOGLE_MAPS_API_KEY", "GOOGLE_MAPS_ROUTES_API_KEY"],
+    },
   });
 
   services.push({
@@ -776,6 +795,11 @@ router.get("/sellers", async (req, res) => {
             invoicePhone: s.invoice_phone || undefined,
             invoiceEmail: s.invoice_email || undefined,
             invoiceTerms: s.invoice_terms || undefined,
+            pickupAddress: s.pickup_address || undefined,
+            pickupPlaceId: s.pickup_place_id || undefined,
+            pickupLat: s.pickup_lat ?? undefined,
+            pickupLng: s.pickup_lng ?? undefined,
+            pickupZoneId: s.pickup_zone_id || undefined,
             // Rich verification attributes merged from JSON backup
             isVerifiedSeller: bSeller ? bSeller.isVerifiedSeller || false : false,
             fullName: bSeller ? bSeller.fullName || "" : "",
@@ -933,6 +957,11 @@ router.post("/sellers", async (req, res) => {
           invoice_phone: seller.invoicePhone || null,
           invoice_email: seller.invoiceEmail || null,
           invoice_terms: seller.invoiceTerms || null,
+          pickup_address: seller.pickupAddress || seller.invoiceAddress || null,
+          pickup_place_id: seller.pickupPlaceId || null,
+          pickup_lat: seller.pickupLat ?? null,
+          pickup_lng: seller.pickupLng ?? null,
+          pickup_zone_id: seller.pickupZoneId || null,
           legacy_id: !isUuid ? seller.id : undefined
         };
         
@@ -978,6 +1007,11 @@ router.put("/sellers/:id", async (req, res) => {
     if (updates.description !== undefined) payload.description = updates.description;
     if (updates.invoice_company_name !== undefined) payload.invoice_company_name = updates.invoice_company_name;
     if (updates.invoice_address !== undefined) payload.invoice_address = updates.invoice_address;
+    if (updates.pickup_address !== undefined) payload.pickup_address = updates.pickup_address;
+    if (updates.pickup_place_id !== undefined) payload.pickup_place_id = updates.pickup_place_id;
+    if (updates.pickup_lat !== undefined) payload.pickup_lat = updates.pickup_lat;
+    if (updates.pickup_lng !== undefined) payload.pickup_lng = updates.pickup_lng;
+    if (updates.pickup_zone_id !== undefined) payload.pickup_zone_id = updates.pickup_zone_id;
     if (updates.invoice_phone !== undefined) payload.invoice_phone = updates.invoice_phone;
     if (updates.invoice_email !== undefined) payload.invoice_email = updates.invoice_email;
     if (updates.invoice_terms !== undefined) payload.invoice_terms = updates.invoice_terms;

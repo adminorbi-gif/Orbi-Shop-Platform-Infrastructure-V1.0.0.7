@@ -7,7 +7,8 @@ import { PhotoQualityGuide } from "../../../components/PhotoQualityGuide";
 import { supabase } from "../../../lib/supabase";
 import { formatCurrency } from "../../../lib/storage";
 import { PriceDisplay } from "../../../components/PriceDisplay";
-import { Product, Order, SellerProfile, Niche } from "../../../types";
+import GooglePlacePicker from "../../../components/GooglePlacePicker";
+import { Product, Order, SellerProfile, Niche, GooglePlaceDetails } from "../../../types";
 
 
 export function AICopilotWidget({
@@ -219,6 +220,16 @@ export function StoreSettingsForm({
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [invCompany, setInvCompany] = useState(seller.invoiceCompanyName || "");
   const [invAddress, setInvAddress] = useState(seller.invoiceAddress || "");
+  const [pickupPlace, setPickupPlace] = useState<GooglePlaceDetails | null>(
+    seller.pickupLat && seller.pickupLng
+      ? {
+          placeId: seller.pickupPlaceId || "",
+          formattedAddress: seller.pickupAddress || seller.invoiceAddress || "",
+          lat: Number(seller.pickupLat),
+          lng: Number(seller.pickupLng),
+        }
+      : null,
+  );
   const [invPhone, setInvPhone] = useState(seller.invoicePhone || "");
   const [invEmail, setInvEmail] = useState(seller.invoiceEmail || "");
   const [invTerms, setInvTerms] = useState(seller.invoiceTerms || "");
@@ -285,6 +296,10 @@ export function StoreSettingsForm({
         description: bDesc,
         invoice_company_name: invCompany,
         invoice_address: invAddress,
+        pickup_address: pickupPlace?.formattedAddress || invAddress,
+        pickup_place_id: pickupPlace?.placeId || seller.pickupPlaceId || null,
+        pickup_lat: pickupPlace?.lat ?? null,
+        pickup_lng: pickupPlace?.lng ?? null,
         invoice_phone: invPhone,
         invoice_email: invEmail,
         invoice_terms: invTerms,
@@ -529,15 +544,24 @@ export function StoreSettingsForm({
                 />
               </div>
               <div className="space-y-1.55">
-                <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                  {lang === "sw" ? "Anwani ya Ofisi" : "Office Address"}
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Samora Tower, Dar es Salaam"
+                <GooglePlacePicker
+                  lang={lang}
                   value={invAddress}
-                  onChange={(e) => setInvAddress(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200/80 hover:border-slate-300 p-3.5 rounded-2xl text-xs font-semibold outline-none focus:border-slate-900 focus:bg-white transition"
+                  selectedPlace={pickupPlace}
+                  onAddressChange={setInvAddress}
+                  onPlaceSelect={setPickupPlace}
+                  compact
+                  label={lang === "sw" ? "Eneo la Duka / Pickup" : "Store / Pickup Location"}
+                  placeholder={
+                    lang === "sw"
+                      ? "Tafuta eneo la duka kwenye Google Maps..."
+                      : "Search store location on Google Maps..."
+                  }
+                  helperText={
+                    lang === "sw"
+                      ? "Eneo hili hutumika kuhesabu distance kutoka duka hadi kwa mteja."
+                      : "This location is used to calculate distance from store to customer."
+                  }
                 />
               </div>
             </div>

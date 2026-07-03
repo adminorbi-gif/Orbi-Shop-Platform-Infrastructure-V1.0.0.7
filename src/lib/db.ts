@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import { supabase } from './supabase';
-import { Product, Promotion, Order, Customer, Message, Niche, SellerProfile, SubscriptionPlan, MarketplaceAd, Review, PromotionalBanner, OrderStatusLog, DeliveryZone, DeliveryRule, DeliveryQuote } from '../types';
+import { Product, Promotion, Order, Customer, Message, Niche, SellerProfile, SubscriptionPlan, MarketplaceAd, Review, PromotionalBanner, OrderStatusLog, DeliveryZone, DeliveryRule, DeliveryQuote, GeoCoordinate, GooglePlaceDetails, GooglePlaceSuggestion } from '../types';
 
 let sessionRefreshPromise: Promise<string> | null = null;
 
@@ -410,11 +410,21 @@ export const db = {
     const res = await apiFetch('/api/v1/settings/service-health');
     return res.data;
   },
-  getDeliveryQuote: async (payload: { cart: any[]; zoneId: string; lang?: string }): Promise<DeliveryQuote> => {
+  getDeliveryQuote: async (payload: { cart: any[]; zoneId: string; lang?: string; origin?: GeoCoordinate; destination?: GeoCoordinate & { address?: string; placeId?: string } }): Promise<DeliveryQuote> => {
     const res = await apiFetch('/api/v1/delivery/quote', {
       method: 'POST',
       body: JSON.stringify(payload)
     });
+    return res.data;
+  },
+  searchPlaces: async (query: string, lang = "sw"): Promise<GooglePlaceSuggestion[]> => {
+    const params = new URLSearchParams({ q: query, lang });
+    const res = await apiFetch(`/api/v1/places/autocomplete?${params.toString()}`);
+    return res.data || [];
+  },
+  getPlaceDetails: async (placeId: string, lang = "sw"): Promise<GooglePlaceDetails> => {
+    const params = new URLSearchParams({ placeId, lang });
+    const res = await apiFetch(`/api/v1/places/details?${params.toString()}`);
     return res.data;
   },
 

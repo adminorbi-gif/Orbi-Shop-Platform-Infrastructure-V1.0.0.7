@@ -21,6 +21,7 @@ import { supabase } from "../../../lib/supabase";
 import { formatCurrency } from "../../../lib/storage";
 import { PriceDisplay } from "../../../components/PriceDisplay";
 import { db } from "../../../lib/db";
+import GooglePlacePicker from "../../../components/GooglePlacePicker";
 import { quoteProductDelivery } from "../../../lib/deliveryZones";
 import { SchemaValidator } from "../../../utils/schemaValidation";
 import { PhotoQualityGuide } from "../../../components/PhotoQualityGuide";
@@ -39,6 +40,7 @@ import {
   Category,
   DeliveryZone,
   DeliveryRule,
+  GooglePlaceDetails,
 } from "../../../types";
 import {
   Plus,
@@ -742,6 +744,7 @@ export function SellersAdmin({
   const [invoicePhone, setInvoicePhone] = useState("");
   const [invoiceEmail, setInvoiceEmail] = useState("");
   const [invoiceAddress, setInvoiceAddress] = useState("");
+  const [sellerPickupPlace, setSellerPickupPlace] = useState<GooglePlaceDetails | null>(null);
   const [invoiceTerms, setInvoiceTerms] = useState("");
 
   // Custom seller registration & approval states
@@ -774,6 +777,16 @@ export function SellersAdmin({
       setInvoicePhone(s.invoicePhone || "");
       setInvoiceEmail(s.invoiceEmail || "");
       setInvoiceAddress(s.invoiceAddress || "");
+      setSellerPickupPlace(
+        s.pickupLat && s.pickupLng
+          ? {
+              placeId: s.pickupPlaceId || "",
+              formattedAddress: s.pickupAddress || s.invoiceAddress || "",
+              lat: Number(s.pickupLat),
+              lng: Number(s.pickupLng),
+            }
+          : null,
+      );
       setInvoiceTerms(s.invoiceTerms || "");
       // Set values we read from the profile
       setPassword(s.password || "");
@@ -793,6 +806,7 @@ export function SellersAdmin({
       setInvoicePhone("");
       setInvoiceEmail("");
       setInvoiceAddress("");
+      setSellerPickupPlace(null);
       setInvoiceTerms("");
       // Set defaults for new ones
       setPassword("");
@@ -827,6 +841,10 @@ export function SellersAdmin({
             invoicePhone,
             invoiceEmail,
             invoiceAddress,
+            pickupAddress: sellerPickupPlace?.formattedAddress || invoiceAddress,
+            pickupPlaceId: sellerPickupPlace?.placeId || s.pickupPlaceId,
+            pickupLat: sellerPickupPlace?.lat,
+            pickupLng: sellerPickupPlace?.lng,
             invoiceTerms,
             password: password ? password.trim() : s.password,
             mustChangePassword,
@@ -855,6 +873,10 @@ export function SellersAdmin({
           invoicePhone,
           invoiceEmail,
           invoiceAddress,
+          pickupAddress: sellerPickupPlace?.formattedAddress || invoiceAddress,
+          pickupPlaceId: sellerPickupPlace?.placeId,
+          pickupLat: sellerPickupPlace?.lat,
+          pickupLng: sellerPickupPlace?.lng,
           invoiceTerms,
           password: password ? password.trim() : "123456", // Default temporary if empty
           mustChangePassword,
@@ -1662,14 +1684,24 @@ export function SellersAdmin({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs mb-1 font-bold text-slate-600">
-                      Invoice Address
-                    </label>
-                    <input
-                      type="text"
+                    <GooglePlacePicker
+                      lang={lang === "sw" ? "sw" : "en"}
                       value={invoiceAddress}
-                      onChange={(e) => setInvoiceAddress(e.target.value)}
-                      className="w-full border border-slate-300 p-2.5 rounded-lg text-sm"
+                      selectedPlace={sellerPickupPlace}
+                      onAddressChange={setInvoiceAddress}
+                      onPlaceSelect={setSellerPickupPlace}
+                      compact
+                      label={lang === "sw" ? "Eneo la Seller / Pickup" : "Seller / Pickup Location"}
+                      placeholder={
+                        lang === "sw"
+                          ? "Tafuta eneo la duka kwenye Google Maps..."
+                          : "Search seller store on Google Maps..."
+                      }
+                      helperText={
+                        lang === "sw"
+                          ? "Hii itatumika kwa route delivery na ramani sahihi."
+                          : "Used for route delivery and accurate map data."
+                      }
                     />
                   </div>
                 </div>
@@ -11562,12 +11594,14 @@ export function SettingsAdmin() {
     terms: "",
     paymentOptions: [],
   });
+  const [globalOfficePlace, setGlobalOfficePlace] = useState<GooglePlaceDetails | null>(null);
   const [sysNiches, setSysNiches] = useState<Niche[]>([]);
   const [savedProfile, setSavedProfile] = useState(false);
   const [savedLoyalty, setSavedLoyalty] = useState(false);
   const [nichesSaved, setNichesSaved] = useState(false);
   const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>([]);
   const [deliveryRules, setDeliveryRules] = useState<DeliveryRule[]>([]);
+  const [deliveryZonePlaces, setDeliveryZonePlaces] = useState<Record<string, GooglePlaceDetails | null>>({});
   const [deliverySaved, setDeliverySaved] = useState(false);
   const [serviceHealth, setServiceHealth] = useState<any>(null);
   const [serviceHealthLoading, setServiceHealthLoading] = useState(false);
@@ -12729,19 +12763,30 @@ export function SettingsAdmin() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider">
-                    {isSw
-                      ? "Anuani ya Ofisi / Kazi"
-                      : "Physical Headquarters Address"}
-                  </label>
-                  <input
-                    type="text"
+                  <GooglePlacePicker
+                    lang={isSw ? "sw" : "en"}
                     value={settings.address || ""}
-                    onChange={(e) =>
-                      setSettings({ ...settings, address: e.target.value })
+                    selectedPlace={globalOfficePlace}
+                    onAddressChange={(value) =>
+                      setSettings({ ...settings, address: value })
                     }
-                    className="w-full bg-slate-50 border border-slate-200/80 hover:border-slate-300 p-3.5 rounded-2xl text-xs font-semibold outline-none focus:border-indigo-600 focus:bg-white transition"
-                    placeholder="e.g. Plot 43, Samora Ave, Dar es Salaam"
+                    onPlaceSelect={setGlobalOfficePlace}
+                    compact
+                    label={
+                      isSw
+                        ? "Anuani ya Ofisi / Kazi"
+                        : "Physical Headquarters Address"
+                    }
+                    placeholder={
+                      isSw
+                        ? "Tafuta ofisi kwenye Google Maps..."
+                        : "Search headquarters on Google Maps..."
+                    }
+                    helperText={
+                      isSw
+                        ? "Tumia Google Places ili kuepuka makosa ya eneo."
+                        : "Use Google Places to avoid location spelling and map errors."
+                    }
                   />
                 </div>
 
@@ -13385,6 +13430,48 @@ export function SettingsAdmin() {
                           {isSw ? "Futa" : "Remove"}
                         </button>
                       </div>
+                    </div>
+
+                    <div className="mb-3">
+                      <GooglePlacePicker
+                        lang={isSw ? "sw" : "en"}
+                        value={zone.name || zone.labelSw || zone.labelEn || ""}
+                        selectedPlace={deliveryZonePlaces[String(zone.id || idx)] || null}
+                        onAddressChange={(value) => {
+                          const copy = [...deliveryZones];
+                          copy[idx] = {
+                            ...copy[idx],
+                            name: value,
+                            labelSw: copy[idx].labelSw || value,
+                            labelEn: copy[idx].labelEn || value,
+                          };
+                          setDeliveryZones(copy);
+                        }}
+                        onPlaceSelect={(place) => {
+                          setDeliveryZonePlaces((prev) => ({
+                            ...prev,
+                            [String(zone.id || idx)]: place,
+                          }));
+                          if (place) {
+                            const copy = [...deliveryZones];
+                            copy[idx] = {
+                              ...copy[idx],
+                              name: place.name || place.formattedAddress,
+                              labelSw: place.name || place.formattedAddress,
+                              labelEn: place.name || place.formattedAddress,
+                            };
+                            setDeliveryZones(copy);
+                          }
+                        }}
+                        compact
+                        label={isSw ? "Tafuta region/place kwenye Google" : "Search region/place on Google"}
+                        placeholder={isSw ? "Mfano: Dar es Salaam, Arusha, Mwanza..." : "Example: Dar es Salaam, Arusha, Mwanza..."}
+                        helperText={
+                          isSw
+                            ? "Hii inasaidia admin kuweka jina sahihi la eneo kabla ya kuweka bei na siku."
+                            : "This helps admins set an accurate zone name before configuring fees and ETA."
+                        }
+                      />
                     </div>
 
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
@@ -16599,6 +16686,16 @@ export function SellerSettingsSelf({
   const [invoiceAddress, setInvoiceAddress] = useState(
     seller.invoiceAddress || "",
   );
+  const [pickupPlace, setPickupPlace] = useState<GooglePlaceDetails | null>(
+    seller.pickupLat && seller.pickupLng
+      ? {
+          placeId: seller.pickupPlaceId || "",
+          formattedAddress: seller.pickupAddress || seller.invoiceAddress || "",
+          lat: Number(seller.pickupLat),
+          lng: Number(seller.pickupLng),
+        }
+      : null,
+  );
   const [invoiceTerms, setInvoiceTerms] = useState(seller.invoiceTerms || "");
   const [businessLogo, setBusinessLogo] = useState(seller.businessLogo || "");
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -16640,6 +16737,10 @@ export function SellerSettingsSelf({
           invoicePhone,
           invoiceEmail,
           invoiceAddress,
+          pickupAddress: pickupPlace?.formattedAddress || invoiceAddress,
+          pickupPlaceId: pickupPlace?.placeId || s.pickupPlaceId,
+          pickupLat: pickupPlace?.lat,
+          pickupLng: pickupPlace?.lng,
           invoiceTerms,
           businessLogo,
         };
@@ -16774,14 +16875,23 @@ export function SellerSettingsSelf({
             />
           </div>
           <div>
-            <label className="block text-sm mb-1.5 font-bold text-slate-700">
-              {lang === "sw" ? "Anuani (Address/Location)" : "Address/Location"}
-            </label>
-            <input
-              type="text"
+            <GooglePlacePicker
+              lang={lang === "sw" ? "sw" : "en"}
               value={invoiceAddress}
-              onChange={(e) => setInvoiceAddress(e.target.value)}
-              className="w-full border border-slate-300 p-3 rounded-xl outline-none focus:border-orange-500 bg-slate-50 text-sm font-medium"
+              selectedPlace={pickupPlace}
+              onAddressChange={setInvoiceAddress}
+              onPlaceSelect={setPickupPlace}
+              label={lang === "sw" ? "Eneo la duka / Pickup" : "Store / Pickup Location"}
+              placeholder={
+                lang === "sw"
+                  ? "Tafuta eneo la duka kwenye Google Maps..."
+                  : "Search store location on Google Maps..."
+              }
+              helperText={
+                lang === "sw"
+                  ? "Eneo hili litasaidia delivery quote kutumia distance sahihi."
+                  : "This helps delivery quotes use the correct route distance."
+              }
             />
           </div>
         </div>

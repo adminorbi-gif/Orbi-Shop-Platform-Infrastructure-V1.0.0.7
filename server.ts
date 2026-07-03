@@ -31,6 +31,7 @@ import messagesRouter from "./server/routes/messages.js";
 import newslettersRouter from "./server/routes/newsletters.js";
 import ordersRouter from "./server/routes/orders.js";
 import paymentsRouter from "./server/routes/payments.js";
+import placesRouter from "./server/routes/places.js";
 import productsRouter from "./server/routes/products.js";
 import promotionsRouter from "./server/routes/promotions.js";
 import reviewsRouter from "./server/routes/reviews.js";
@@ -176,6 +177,7 @@ async function startServer() {
   app.use("/api/v1/orders", ordersRouter);
   app.use("/api/v1/payments", paymentsRouter);
   app.use("/api/orbi-pay", paymentsRouter);
+  app.use("/api/v1/places", placesRouter);
   app.use("/api/v1/products", productsRouter);
   app.use("/api/v1/campaigns", promotionsRouter);
   app.use("/api/v1/reviews", reviewsRouter);

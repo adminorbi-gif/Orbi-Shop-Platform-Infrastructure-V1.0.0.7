@@ -83,6 +83,26 @@ export interface DeliveryQuote {
   routeProvider?: "google_routes" | "distance_estimate" | "zone_rules";
 }
 
+export interface GeoCoordinate {
+  lat: number;
+  lng: number;
+}
+
+export interface GooglePlaceSuggestion {
+  placeId: string;
+  description: string;
+  mainText?: string;
+  secondaryText?: string;
+}
+
+export interface GooglePlaceDetails extends GeoCoordinate {
+  placeId: string;
+  name?: string;
+  formattedAddress: string;
+  googleMapsUri?: string;
+  addressComponents?: any[];
+}
+
 export interface InvoiceSettings {
   companyName: string;
   address: string;
