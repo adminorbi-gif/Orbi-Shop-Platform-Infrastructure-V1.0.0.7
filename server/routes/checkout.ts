@@ -197,6 +197,60 @@ function mapOrderStateFromGateway(outcome: ReturnType<typeof normalizeGatewayOut
   };
 }
 
+function roundMoney(value: number) {
+  return Math.round((Number(value) || 0) * 100) / 100;
+}
+
+function buildSellerAllocation(
+  sellerGroups: Record<string, any[]>,
+  payableTotalInput: number,
+) {
+  const sellerEntries = Object.entries(sellerGroups).map(([sellerId, sellerItems]) => {
+    const grossTotal = roundMoney(
+      sellerItems.reduce((sum: number, item: any) => {
+        const actualPrice = getProductPriceForQty(item.product, item.quantity);
+        return sum + actualPrice * (parseInt(item.quantity, 10) || 1);
+      }, 0),
+    );
+
+    return {
+      sellerId,
+      sellerItems,
+      grossTotal,
+      payableTotal: 0,
+    };
+  });
+
+  const grossCartTotal = roundMoney(
+    sellerEntries.reduce((sum, item) => sum + item.grossTotal, 0),
+  );
+  const payableTotal = roundMoney(
+    Math.max(0, Math.min(Number(payableTotalInput) || grossCartTotal, grossCartTotal)),
+  );
+
+  if (grossCartTotal <= 0 || payableTotal <= 0) {
+    throw new Error("Checkout total must be greater than zero.");
+  }
+
+  let allocated = 0;
+  sellerEntries.forEach((entry, index) => {
+    if (index === sellerEntries.length - 1) {
+      entry.payableTotal = roundMoney(payableTotal - allocated);
+      return;
+    }
+
+    const share = entry.grossTotal / grossCartTotal;
+    entry.payableTotal = roundMoney(payableTotal * share);
+    allocated = roundMoney(allocated + entry.payableTotal);
+  });
+
+  return {
+    grossCartTotal,
+    payableTotal,
+    sellerEntries,
+  };
+}
+
 router.post("/", async (req, res) => {
   try {
     const { cart, user, paymentMethod, paymentCategory, paymentRail, providerCode, paymentAccount, operation, appliedCoupon, finalTotal, name, phone, address, options, tin, lang } = req.body;
@@ -249,15 +303,30 @@ router.post("/", async (req, res) => {
     });
     const validatedCart = await Promise.all(stockCheckPromises);
 
-    const oIdBase = "ORD-" + Math.floor(10000 + Math.random() * 90000);
-    const methodObj = options?.find((po: any) => po.id === paymentMethod);
-
     const sellerGroups: { [key: string]: any[] } = {};
     validatedCart.forEach((c: any) => {
       const sellerId = c.product.sellerId || "system";
       if (!sellerGroups[sellerId]) sellerGroups[sellerId] = [];
       sellerGroups[sellerId].push(c);
     });
+
+    const oIdBase = "ORD-" + Math.floor(10000 + Math.random() * 90000);
+    const checkoutAllocation = buildSellerAllocation(
+      sellerGroups,
+      Number(finalTotal),
+    );
+    const settlementSplits = checkoutAllocation.sellerEntries.map((entry) => ({
+      orderId: `${oIdBase}-${entry.sellerId}`,
+      sellerId: entry.sellerId,
+      grossAmount: entry.grossTotal,
+      payableAmount: entry.payableTotal,
+      currency: "TZS",
+      settlementAccount: "paysafe",
+      itemCount: entry.sellerItems.reduce(
+        (sum: number, item: any) => sum + (parseInt(item.quantity, 10) || 1),
+        0,
+      ),
+    }));
 
     const oIds: string[] = [];
     const successfulOrders: any[] = [];
@@ -275,95 +344,84 @@ router.post("/", async (req, res) => {
       }
     }
     
-    for (const sellerId in sellerGroups) {
-      const sellerItems = sellerGroups[sellerId];
-      const sellerTotal = sellerItems.reduce((sum: number, item: any) => {
-        const actualPrice = getProductPriceForQty(item.product, item.quantity);
-        return sum + actualPrice * (parseInt(item.quantity, 10) || 1);
-      }, 0);
-      const oId = `${oIdBase}-${sellerId}`;
-      
-      // Construct the normalized payment intent as required by Gateway
-      const paymentIntent = {
-        serviceCode: "orbi-shop",
-        operation: operation, // Validated to be 'paysafe'
-        reference: oId,
-        amount: sellerTotal,
-        currency: "TZS",
-        paymentCategory: paymentRoute.paymentCategory,
-        paymentRail: paymentRoute.paymentRail,
-        providerCode: paymentRoute.providerCode,
-        customer: {
-          type: dbCustomerId ? "user" : "external_customer",
-          userId: dbCustomerId,
-          name: name,
-          phone: phone
-        },
-        merchant: {
-          merchantId: sellerId,
-          settlementAccount: "paysafe"
-        },
-        metadata: {
-          orderId: oId,
-          checkoutMode: "secure_escrow",
+    const serviceKey = getPayServiceKey();
+    if (!serviceKey) {
+      console.error("[PAYSAFE_GATEWAY] ORBI_SHOP_PAY_API_KEY is not configured in the environment.");
+      return res.status(500).json({ success: false, error: "Payment Gateway configuration error. Please contact support." });
+    }
+
+    let aggregateGatewayOutcome: ReturnType<typeof normalizeGatewayOutcome>;
+    try {
+      const result = await callOrbiPayGateway("/v1/paysafe/escrows", {
+        method: "POST",
+        body: {
+          reference: String(oIdBase),
+          amount: checkoutAllocation.payableTotal,
+          currency: "TZS",
           paymentCategory: paymentRoute.paymentCategory,
           paymentRail: paymentRoute.paymentRail,
           providerCode: paymentRoute.providerCode,
-          paymentAccountHint: paymentRoute.paymentAccount ? `${paymentRoute.paymentAccount.slice(0, 3)}***${paymentRoute.paymentAccount.slice(-3)}` : undefined,
-          settlementPolicy: "paysafe_hold_required"
-        }
+          confirm: true,
+          description: "ORBI Shop protected checkout",
+          buyer: {
+            type: dbCustomerId ? "user" : "external_customer",
+            userId: dbCustomerId,
+            name,
+            phone,
+            email: user?.email || "",
+          },
+          seller: {
+            userId: "orbi-shop-paysafe",
+            walletId: "paysafe",
+          },
+          settlementSplits,
+          metadata: {
+            orderId: oIdBase,
+            checkoutMode: "secure_escrow",
+            checkoutType: settlementSplits.length > 1 ? "multi_seller_split" : "single_seller",
+            paymentCategory: paymentRoute.paymentCategory,
+            paymentRail: paymentRoute.paymentRail,
+            providerCode: paymentRoute.providerCode,
+            paymentAccountHint: paymentRoute.paymentAccount ? `${paymentRoute.paymentAccount.slice(0, 3)}***${paymentRoute.paymentAccount.slice(-3)}` : undefined,
+            settlementPolicy: "paysafe_hold_required",
+            grossCartTotal: checkoutAllocation.grossCartTotal,
+            payableTotal: checkoutAllocation.payableTotal,
+            settlementSplits,
+          },
+        },
+      });
+      console.log(`[PAYSAFE_GATEWAY] Live aggregate escrow created for ${oIdBase} ->`, result);
+      aggregateGatewayOutcome = normalizeGatewayOutcome(result, oIdBase, paymentRoute);
+    } catch (e: any) {
+      console.error(`[PAYSAFE_GATEWAY] Live Orbi Pay split checkout error for ${oIdBase}:`, e.message);
+      const timeoutLike = e.status === 504 || e.code === "ORBI_PAY_GATEWAY_TIMEOUT";
+      return res.status(e.status || 400).json({
+        success: false,
+        error: timeoutLike
+          ? "Payment route timed out before confirmation. No order was finalized. Please wait a moment and retry, or contact support if money was deducted."
+          : e.message || "Payment Gateway failed to process transaction.",
+        code: e.code || (timeoutLike ? "ORBI_PAY_GATEWAY_TIMEOUT" : "ORBI_PAY_GATEWAY_ERROR"),
+        retryable: timeoutLike || e.status >= 500,
+        details: e.details || null,
+        settlementSplits,
+      });
+    }
+
+    for (const entry of checkoutAllocation.sellerEntries) {
+      const sellerId = entry.sellerId;
+      const sellerItems = entry.sellerItems;
+      const sellerTotal = entry.payableTotal;
+      const oId = `${oIdBase}-${sellerId}`;
+
+      const gatewayOutcome = {
+        ...aggregateGatewayOutcome,
+        reference: oId,
+        splitReference: aggregateGatewayOutcome.reference,
+        splitAmount: sellerTotal,
+        grossAmount: entry.grossTotal,
+        sellerId,
       };
-
-      const serviceKey = getPayServiceKey();
-      if (serviceKey) {
-        try {
-          const result = await callOrbiPayGateway("/v1/paysafe/escrows", {
-            method: "POST",
-            body: {
-              reference: String(oId),
-              amount: Number(sellerTotal),
-              currency: "TZS",
-              paymentCategory: paymentIntent.paymentCategory,
-              paymentRail: paymentIntent.paymentRail,
-              providerCode: paymentIntent.providerCode,
-              confirm: true,
-              description: "ORBI Shop protected checkout",
-              buyer: {
-                type: dbCustomerId ? "user" : "external_customer",
-                userId: dbCustomerId,
-                name: name,
-                phone: phone,
-                email: user?.email || ""
-              },
-              seller: {
-                userId: sellerId,
-                walletId: "paysafe"
-              },
-              metadata: paymentIntent.metadata
-            }
-          });
-          console.log(`[PAYSAFE_GATEWAY] Live Escrow Created for ${oId} ->`, result);
-          gatewayResults.push(normalizeGatewayOutcome(result, oId, paymentRoute));
-        } catch (e: any) {
-          console.error(`[PAYSAFE_GATEWAY] Live Orbi Pay Error for ${oId}:`, e.message);
-          // If the gateway hard fails, we must abort the transaction safely
-          const timeoutLike = e.status === 504 || e.code === "ORBI_PAY_GATEWAY_TIMEOUT";
-          return res.status(e.status || 400).json({
-            success: false,
-            error: timeoutLike
-              ? "Payment route timed out before confirmation. No order was finalized. Please wait a moment and retry, or contact support if money was deducted."
-              : e.message || "Payment Gateway failed to process transaction.",
-            code: e.code || (timeoutLike ? "ORBI_PAY_GATEWAY_TIMEOUT" : "ORBI_PAY_GATEWAY_ERROR"),
-            retryable: timeoutLike || e.status >= 500,
-            details: e.details || null
-          });
-        }
-      } else {
-        console.error("[PAYSAFE_GATEWAY] ORBI_SHOP_PAY_API_KEY is not configured in the environment.");
-        return res.status(500).json({ success: false, error: "Payment Gateway configuration error. Please contact support." });
-      }
-
-      const gatewayOutcome = gatewayResults[gatewayResults.length - 1] || normalizeGatewayOutcome(null, oId, paymentRoute);
+      gatewayResults.push(gatewayOutcome as any);
       const orderState = mapOrderStateFromGateway(gatewayOutcome);
 
       const { data: oRow, error: oError } = await supabase
@@ -379,7 +437,9 @@ router.post("/", async (req, res) => {
           payment_method_name: paymentRoute.paymentCategory,
           total: sellerTotal,
           status: orderState.dbStatus,
-          payment_reference: encrypt(orderState.paymentReference)
+          payment_reference: encrypt(
+            `${orderState.paymentReference}||SPLIT:${oIdBase}:${sellerId}:${sellerTotal}`,
+          )
         }])
         .select("id")
         .single();
@@ -402,7 +462,7 @@ router.post("/", async (req, res) => {
         return supabase.from("products").update({ stock: newStock }).eq("id", c.dbProductId);
       });
       await Promise.all(stockUpdatePromises);
-      successfulOrders.push({ oId, orderRowId: oRow.id, sellerId, sellerTotal, sellerItems });
+      successfulOrders.push({ oId, orderRowId: oRow.id, sellerId, sellerTotal, sellerItems, grossTotal: entry.grossTotal });
     }
 
     // Fire-and-forget notifications

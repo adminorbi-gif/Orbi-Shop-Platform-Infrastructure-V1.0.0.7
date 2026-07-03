@@ -27,6 +27,16 @@ import {
 import { getProductPriceForQty } from "../../../utils/pricing";
 import { navigateTo } from "../../../utils/navigation";
 import {
+  CustomerProfileShell,
+  ProfileTabs,
+  type CustomerProfileTab,
+} from "../profile/CustomerProfileShell";
+import { ProfileSettingsTab } from "../profile/ProfileSettingsTab";
+import { ProfileOrdersTab } from "../profile/ProfileOrdersTab";
+import { ProfileMessagesTab } from "../profile/ProfileMessagesTab";
+import { ProfileRewardsTab } from "../profile/ProfileRewardsTab";
+import { ProfileLocatorTab } from "../profile/ProfileLocatorTab";
+import {
   ShoppingCart,
   Search,
   User,
@@ -47,6 +57,7 @@ import {
   Mail,
   Globe,
   LogOut,
+  Settings,
   CheckCircle2,
   ShieldCheck,
   Truck,
@@ -4420,7 +4431,7 @@ export function CustomerProfile({
   lang: string;
   orders: Order[];
   onViewInvoice: (o: Order) => void;
-  initialTab?: "orders" | "track" | "messages" | "rewards" | "locator";
+  initialTab?: CustomerProfileTab;
   aiChatHistory: any[];
   sendAIChatMessage: (msg: string) => Promise<void>;
   isAILoading: boolean;
@@ -4447,9 +4458,9 @@ export function CustomerProfile({
   onLogout?: () => void;
 }) {
   const { showAlert, showConfirm } = useDialog();
-  const [tab, setTab] = useState<
-    "orders" | "track" | "messages" | "rewards" | "locator"
-  >(initialTab as any);
+  const [tab, setTab] = useState<CustomerProfileTab>(
+    initialTab as CustomerProfileTab,
+  );
   const [showDeliveryConfirmModal, setShowDeliveryConfirmModal] =
     useState(false);
   const [selectedConfirmOrder, setSelectedConfirmOrder] =
@@ -5256,14 +5267,8 @@ export function CustomerProfile({
   };
 
   return (
-    <div
-      className={`w-full mx-auto px-4 sm:px-6 py-6 md:py-8 flex flex-col h-full animate-fade-in transition-all duration-300 ${
-        tab === "messages"
-          ? "max-w-5xl min-[720px]:mr-[400px] md:mr-[440px] min-[720px]:w-[calc(100%-400px)] md:w-[calc(100%-440px)] min-[720px]:max-w-none"
-          : "max-w-5xl"
-      }`}
-    >
-      <div className="flex items-center justify-between mb-6 sm:mb-8">
+    <CustomerProfileShell>
+      <div className="sticky top-0 z-30 flex items-center justify-between gap-3 mb-4 sm:mb-8 shrink-0 bg-slate-50/95 backdrop-blur-xl py-2 -mx-3 px-3 sm:-mx-6 sm:px-6">
         <h2 className="text-xl sm:text-2xl font-black text-slate-800 flex items-center gap-2">
           <span className="p-1.5 bg-primary/10 rounded-xl text-primary shrink-0">
             <User size={22} className="sm:w-6 sm:h-6" />
@@ -5272,17 +5277,17 @@ export function CustomerProfile({
         </h2>
         <button
           onClick={onClose}
-          className="bg-white border border-slate-200 text-slate-600 px-3.5 sm:px-5 py-2 rounded-xl hover:bg-slate-50 transition border font-bold text-xs sm:text-sm shadow-sm"
+          className="bg-white border border-slate-200 text-slate-600 px-3.5 sm:px-5 min-h-11 rounded-xl hover:bg-slate-50 transition font-bold text-xs sm:text-sm shadow-sm shrink-0"
         >
           {lang === "sw" ? "Rudi Kwenye Duka" : "Back to Store"}
         </button>
       </div>
 
       {/* Top Profile Header Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 mb-6 sm:mb-8 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 mb-4 sm:mb-8 items-stretch shrink-0">
         {/* Left Col: Digital Loyalty Member Pass Card */}
         <div className="lg:col-span-12 xl:col-span-5 flex flex-col md:grid md:grid-cols-2 lg:grid-cols-1 xl:flex xl:flex-col gap-6">
-          <div className="relative overflow-hidden rounded-3xl bg-slate-950 p-6 text-white shadow-xl border border-white/10 flex flex-col justify-between min-h-[220px] group transition-all duration-300 hover:shadow-2xl hover:border-white/20 select-none">
+          <div className="relative overflow-hidden rounded-3xl bg-slate-950 p-4 sm:p-6 text-white shadow-xl border border-white/10 flex flex-col justify-between min-h-[138px] sm:min-h-[220px] group transition-all duration-300 hover:shadow-2xl hover:border-white/20 select-none">
             {/* Background elements to create depth */}
             <div className="absolute top-0 right-0 w-36 h-36 bg-gradient-to-bl from-amber-500/20 to-purple-500/0 rounded-full blur-xl pointer-events-none -mr-8 -mt-8" />
             <div className="absolute -bottom-8 -left-8 w-28 h-28 bg-indigo-500/10 rounded-full blur-xl pointer-events-none" />
@@ -5311,12 +5316,12 @@ export function CustomerProfile({
             </div>
 
             {/* Mid Balance Section */}
-            <div className="my-4 z-10">
+            <div className="my-3 sm:my-4 z-10">
               <span className="text-[9px] uppercase tracking-widest text-indigo-200/70 block mb-0.5 font-mono">
                 {lang === "sw" ? "Alama Zilizolundikana" : "Accumulated Points"}
               </span>
               <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl sm:text-4xl font-black tracking-tight text-white font-mono bg-gradient-to-r from-red-200 via-amber-200 to-yellow-100 bg-clip-text text-transparent">
+                <span className="text-2xl sm:text-4xl font-black tracking-tight text-white font-mono bg-gradient-to-r from-red-200 via-amber-200 to-yellow-100 bg-clip-text text-transparent">
                   {pPoints}
                 </span>
                 <span className="text-[10px] text-amber-300 font-extrabold tracking-wide">
@@ -5378,7 +5383,7 @@ export function CustomerProfile({
         </div>
 
         {/* Right Col: Details Hub Section */}
-        <div className="lg:col-span-12 xl:col-span-7 bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div className="hidden lg:flex lg:col-span-12 xl:col-span-7 bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm flex-col justify-between">
           <div>
             <div className="flex justify-between items-center mb-5 sm:mb-6">
               <div>
@@ -5648,8 +5653,15 @@ export function CustomerProfile({
         id="orbi-portal-tabs-container"
         className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col flex-1"
       >
+        <ProfileTabs
+          tab={tab}
+          setTab={setTab}
+          lang={lang}
+          unreadCount={tabUnreadCount}
+        />
+
         {/* On Desktop/Tablet: Classic Top Header Row */}
-        <div className="hidden sm:flex border-b border-slate-100 bg-slate-50/70 overflow-x-auto scrollbar-none sticky top-0 z-20 backdrop-blur-md">
+        <div className="hidden">
           <button
             onClick={() => setTab("orders")}
             className={`px-4 sm:px-6 py-3.5 sm:py-4 font-bold flex items-center justify-center gap-2 border-b-2 transition text-xs sm:text-sm shrink-0 flex-1 sm:flex-initial ${tab === "orders" ? "border-primary text-primary bg-white" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}
@@ -5690,15 +5702,22 @@ export function CustomerProfile({
             <MapPin size={16} className="text-orange-500 shrink-0" />
             <span>{lang === "sw" ? "Zamani & Usafiri" : "Carrier Map"}</span>
           </button>
+          <button
+            onClick={() => setTab("settings")}
+            className={`px-4 sm:px-6 py-3.5 sm:py-4 font-bold flex items-center justify-center gap-2 border-b-2 transition text-xs sm:text-sm shrink-0 relative flex-1 sm:flex-initial ${tab === "settings" ? "border-primary text-primary bg-white" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}
+          >
+            <Settings size={16} className="text-slate-500 shrink-0" />
+            <span>{lang === "sw" ? "Mipangilio" : "Settings"}</span>
+          </button>
         </div>
 
-        {/* On Mobile: Native-like 5-column grid with icons and short, auto-adjusting text */}
-        <div className="flex sm:hidden border-b border-slate-100 bg-slate-50/90 py-1.5 sticky top-0 z-20 backdrop-blur-md w-full justify-around items-center gap-0.5 px-0.5 select-none overflow-hidden">
+        {/* On Mobile: Native-like tab rail with full-size touch targets */}
+        <div className="hidden">
           {/* Button 1: Orders */}
           <button
             type="button"
             onClick={() => setTab("orders")}
-            className={`flex flex-col items-center justify-center flex-1 min-w-0 py-1 rounded-xl transition-all duration-150 ${
+            className={`flex flex-col items-center justify-center min-w-[4.8rem] min-h-14 px-2 py-2 rounded-xl transition-all duration-150 snap-start ${
               tab === "orders"
                 ? "text-primary bg-primary/5 font-black scale-[1.03]"
                 : "text-slate-500 hover:text-slate-700"
@@ -5717,7 +5736,7 @@ export function CustomerProfile({
           <button
             type="button"
             onClick={() => setTab("track")}
-            className={`flex flex-col items-center justify-center flex-1 min-w-0 py-1 rounded-xl transition-all duration-150 ${
+            className={`flex flex-col items-center justify-center min-w-[4.8rem] min-h-14 px-2 py-2 rounded-xl transition-all duration-150 snap-start ${
               tab === "track"
                 ? "text-primary bg-primary/5 font-black scale-[1.03]"
                 : "text-slate-500 hover:text-slate-700"
@@ -5736,7 +5755,7 @@ export function CustomerProfile({
           <button
             type="button"
             onClick={() => setTab("messages")}
-            className={`flex flex-col items-center justify-center flex-1 min-w-0 py-1 rounded-xl transition-all duration-150 relative ${
+            className={`flex flex-col items-center justify-center min-w-[4.8rem] min-h-14 px-2 py-2 rounded-xl transition-all duration-150 relative snap-start ${
               tab === "messages"
                 ? "text-primary bg-primary/5 font-black scale-[1.03]"
                 : "text-slate-500 hover:text-slate-700"
@@ -5762,7 +5781,7 @@ export function CustomerProfile({
           <button
             type="button"
             onClick={() => setTab("rewards")}
-            className={`flex flex-col items-center justify-center flex-1 min-w-0 py-1 rounded-xl transition-all duration-150 ${
+            className={`flex flex-col items-center justify-center min-w-[4.8rem] min-h-14 px-2 py-2 rounded-xl transition-all duration-150 snap-start ${
               tab === "rewards"
                 ? "text-primary bg-primary/5 font-black scale-[1.03]"
                 : "text-slate-500 hover:text-slate-700"
@@ -5781,7 +5800,7 @@ export function CustomerProfile({
           <button
             type="button"
             onClick={() => setTab("locator")}
-            className={`flex flex-col items-center justify-center flex-1 min-w-0 py-1 rounded-xl transition-all duration-150 ${
+            className={`flex flex-col items-center justify-center min-w-[4.8rem] min-h-14 px-2 py-2 rounded-xl transition-all duration-150 snap-start ${
               tab === "locator"
                 ? "text-primary bg-primary/5 font-black scale-[1.03]"
                 : "text-slate-500 hover:text-slate-700"
@@ -5795,11 +5814,333 @@ export function CustomerProfile({
               {lang === "sw" ? "Ramani" : "Map"}
             </span>
           </button>
+
+          {/* Button 6: Settings */}
+          <button
+            type="button"
+            onClick={() => setTab("settings")}
+            className={`flex flex-col items-center justify-center min-w-[4.8rem] min-h-14 px-2 py-2 rounded-xl transition-all duration-150 snap-start ${
+              tab === "settings"
+                ? "text-primary bg-primary/5 font-black scale-[1.03]"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <Settings
+              size={17}
+              className={`shrink-0 mb-0.5 ${tab === "settings" ? "text-primary" : "text-slate-400"}`}
+            />
+            <span className="text-[10px] tracking-tight font-semibold text-center truncate w-full px-0.5 block leading-none">
+              {lang === "sw" ? "Settings" : "Settings"}
+            </span>
+          </button>
         </div>
 
-        <div className="p-3 sm:p-6 flex-1 overflow-y-auto bg-slate-50/50">
-          {tab === "orders" && (
+        <div
+          className={`p-3 sm:p-6 flex-1 bg-slate-50/50 touch-pan-y [overscroll-behavior:contain] [-webkit-overflow-scrolling:touch] pb-[calc(1rem+env(safe-area-inset-bottom))] ${
+            tab === "messages" ? "overflow-hidden" : "overflow-y-auto"
+          }`}
+        >
+          {tab === "settings" && (
+            <ProfileSettingsTab
+              lang={lang}
+              user={user}
+              editName={editName}
+              editPhone={editPhone}
+              editEmail={editEmail}
+              editAddress={editAddress}
+              isEditMode={isEditMode}
+              isSavingProfile={isSavingProfile}
+              localOrdersCount={localOrders.length}
+              points={pPoints}
+              unreadCount={tabUnreadCount}
+              onSetEditName={setEditName}
+              onSetEditPhone={setEditPhone}
+              onSetEditEmail={setEditEmail}
+              onSetEditAddress={setEditAddress}
+              onToggleEdit={() => {
+                if (isEditMode) {
+                  setEditName(user.name);
+                  setEditPhone(user.phone);
+                  setEditEmail(user.email);
+                  setEditAddress(
+                    localStorage.getItem(
+                      "orbi_user_default_address_" + user.id,
+                    ) ||
+                      (user as any).address ||
+                      "",
+                  );
+                }
+                setIsEditMode(!isEditMode);
+              }}
+              onSaveProfile={handleSaveProfile}
+              onLogout={onLogout}
+              onClose={onClose}
+              onGoOrders={() => setTab("orders")}
+              onGoMessages={() => setTab("messages")}
+              onGoRewards={() => setTab("rewards")}
+            />
+          )}
+          {false && tab === "settings" && (
             <div className="space-y-4">
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-primary font-black">
+                      {lang === "sw" ? "Akaunti yangu" : "My account"}
+                    </p>
+                    <h3 className="text-lg sm:text-xl font-black text-slate-900 mt-1">
+                      {lang === "sw"
+                        ? "Taarifa na mipangilio"
+                        : "Profile and settings"}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed">
+                      {lang === "sw"
+                        ? "Badili taarifa za mawasiliano, anwani ya kufikisha, na udhibiti akaunti yako."
+                        : "Update contact details, delivery address, and account controls."}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {onLogout && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onLogout();
+                          onClose();
+                        }}
+                        className="min-h-11 px-3.5 rounded-2xl border border-rose-200 bg-rose-50 text-rose-700 font-black text-xs flex items-center gap-2 hover:bg-rose-100 transition"
+                      >
+                        <LogOut size={15} />
+                        {lang === "sw" ? "Ondoka" : "Logout"}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isEditMode) {
+                          setEditName(user.name);
+                          setEditPhone(user.phone);
+                          setEditEmail(user.email);
+                          setEditAddress(
+                            localStorage.getItem(
+                              "orbi_user_default_address_" + user.id,
+                            ) ||
+                              (user as any).address ||
+                              "",
+                          );
+                        }
+                        setIsEditMode(!isEditMode);
+                      }}
+                      className={`min-h-11 px-4 rounded-2xl font-black text-xs flex items-center gap-2 transition ${
+                        isEditMode
+                          ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                          : "bg-slate-950 text-white hover:bg-slate-800"
+                      }`}
+                    >
+                      {isEditMode ? <X size={15} /> : <Settings size={15} />}
+                      {isEditMode
+                        ? lang === "sw"
+                          ? "Ghairi"
+                          : "Cancel"
+                        : lang === "sw"
+                          ? "Hariri"
+                          : "Edit"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-4 sm:p-6">
+                  {isEditMode ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                      <label className="flex flex-col gap-1.5">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                          {lang === "sw" ? "Jina kamili" : "Full name"}
+                        </span>
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="min-h-12 bg-slate-50 border border-slate-200 text-slate-900 px-4 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1.5">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                          {lang === "sw" ? "Namba ya simu" : "Phone number"}
+                        </span>
+                        <input
+                          type="tel"
+                          name="settings_phone"
+                          autoComplete="tel"
+                          value={editPhone}
+                          onChange={(e) => setEditPhone(e.target.value)}
+                          className="min-h-12 bg-slate-50 border border-slate-200 text-slate-900 px-4 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1.5 sm:col-span-2">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                          {lang === "sw" ? "Barua pepe" : "Email address"}
+                        </span>
+                        <input
+                          type="email"
+                          name="settings_email"
+                          autoComplete="email"
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
+                          className="min-h-12 bg-slate-50 border border-slate-200 text-slate-900 px-4 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1.5 sm:col-span-2">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                          {lang === "sw"
+                            ? "Anwani ya uwasilishaji"
+                            : "Default delivery address"}
+                        </span>
+                        <textarea
+                          rows={4}
+                          value={editAddress}
+                          onChange={(e) => setEditAddress(e.target.value)}
+                          className="bg-slate-50 border border-slate-200 text-slate-900 px-4 py-3 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition resize-y min-h-[110px]"
+                          placeholder={
+                            lang === "sw"
+                              ? "Mfano: Kijitonyama, Dar es Salaam"
+                              : "e.g. Kijitonyama, Dar es Salaam"
+                          }
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        disabled={isSavingProfile}
+                        onClick={handleSaveProfile}
+                        className="sm:col-span-2 min-h-12 rounded-2xl bg-gradient-to-r from-primary to-indigo-600 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-60"
+                      >
+                        {isSavingProfile ? (
+                          <>
+                            <RefreshCw size={16} className="animate-spin" />
+                            {lang === "sw" ? "Inahifadhi..." : "Saving..."}
+                          </>
+                        ) : (
+                          <>
+                            <Check size={16} />
+                            {lang === "sw"
+                              ? "Hifadhi mabadiliko"
+                              : "Save changes"}
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {[
+                        {
+                          icon: User,
+                          label: lang === "sw" ? "Jina" : "Name",
+                          value: user.name,
+                          tone: "bg-indigo-50 text-indigo-600",
+                        },
+                        {
+                          icon: Phone,
+                          label: lang === "sw" ? "Simu" : "Phone",
+                          value: user.phone || "N/A",
+                          tone: "bg-amber-50 text-amber-600",
+                        },
+                        {
+                          icon: Mail,
+                          label: lang === "sw" ? "Barua pepe" : "Email",
+                          value: user.email || "N/A",
+                          tone: "bg-teal-50 text-teal-600",
+                        },
+                        {
+                          icon: MapPin,
+                          label:
+                            lang === "sw"
+                              ? "Anwani ya kufikisha"
+                              : "Delivery address",
+                          value:
+                            editAddress ||
+                            (lang === "sw"
+                              ? "Haijawekwa bado"
+                              : "Not set yet"),
+                          tone: "bg-orange-50 text-orange-600",
+                        },
+                      ].map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <div
+                            key={item.label}
+                            className="min-w-0 rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 flex items-start gap-3"
+                          >
+                            <span
+                              className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${item.tone}`}
+                            >
+                              <Icon size={17} />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-[10px] uppercase tracking-wider text-slate-400 font-black">
+                                {item.label}
+                              </p>
+                              <p
+                                className="text-sm font-bold text-slate-800 break-words"
+                                title={String(item.value)}
+                              >
+                                {item.value}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setTab("orders")}
+                  className="min-h-14 rounded-2xl bg-white border border-slate-200 p-4 text-left shadow-sm hover:border-primary/30 hover:shadow-md transition"
+                >
+                  <Package size={18} className="text-primary mb-2" />
+                  <p className="font-black text-slate-900 text-sm">
+                    {lang === "sw" ? "Oda zangu" : "My orders"}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {localOrders.length} {lang === "sw" ? "jumla" : "total"}
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTab("messages")}
+                  className="min-h-14 rounded-2xl bg-white border border-slate-200 p-4 text-left shadow-sm hover:border-primary/30 hover:shadow-md transition"
+                >
+                  <MessageSquare size={18} className="text-primary mb-2" />
+                  <p className="font-black text-slate-900 text-sm">
+                    {lang === "sw" ? "Msaada" : "Support"}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {tabUnreadCount > 0
+                      ? `${tabUnreadCount} ${lang === "sw" ? "mpya" : "new"}`
+                      : lang === "sw"
+                        ? "Hakuna mpya"
+                        : "No new messages"}
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTab("rewards")}
+                  className="min-h-14 rounded-2xl bg-white border border-slate-200 p-4 text-left shadow-sm hover:border-primary/30 hover:shadow-md transition"
+                >
+                  <Sparkles size={18} className="text-amber-500 mb-2" />
+                  <p className="font-black text-slate-900 text-sm">
+                    {lang === "sw" ? "Zawadi" : "Rewards"}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {pPoints} {lang === "sw" ? "alama" : "points"}
+                  </p>
+                </button>
+              </div>
+            </div>
+          )}
+          {tab === "orders" && (
+            <ProfileOrdersTab>
               {localOrders.length === 0 ? (
                 <div className="text-center py-12 text-slate-500">
                   <Package className="w-12 h-12 mx-auto text-slate-300 mb-3" />
@@ -6567,7 +6908,7 @@ export function CustomerProfile({
                   );
                 })
               )}
-            </div>
+            </ProfileOrdersTab>
           )}
 
           {tab === "track" && (
@@ -7174,8 +7515,8 @@ export function CustomerProfile({
             </div>
           )}
           {tab === "messages" && (
-            <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-sm flex justify-center items-center sm:p-4 md:p-8 min-[720px]:bg-transparent min-[720px]:backdrop-blur-none min-[720px]:pointer-events-none p-0 min-[720px]:p-0 min-[720px]:left-auto min-[720px]:right-0 min-[720px]:w-[400px] md:min-[720px]:w-[440px] min-[720px]:h-full animate-in fade-in duration-200">
-              <div className="w-full h-full sm:h-[90vh] min-[720px]:h-full max-w-4xl min-[720px]:max-w-none bg-slate-50 sm:rounded-3xl min-[720px]:rounded-none shadow-2xl flex flex-col overflow-hidden relative border border-slate-700/50 min-[720px]:border-l min-[720px]:border-y-0 min-[720px]:border-r-0 min-[720px]:border-slate-200 pointer-events-auto">
+            <ProfileMessagesTab>
+              <div className="w-full h-full bg-slate-50 flex flex-col overflow-hidden relative">
                 {/* Unified Chat Header */}
                 {isSelectionMode && profileChatMode === "live" ? (
                   <div className="bg-slate-900 text-white p-3 border-b border-rose-950 flex items-center justify-between shrink-0 flex-wrap gap-2 animate-fade-in">
@@ -7314,7 +7655,7 @@ export function CustomerProfile({
                 {/* Chat Messages Log */}
                 <div
                   ref={chatContainerRef}
-                  className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50/70 space-y-4 flex flex-col [background-image:radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:16px_16px]"
+                  className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50/70 space-y-4 flex flex-col [background-image:radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:16px_16px] touch-pan-y [overscroll-behavior:contain] [-webkit-overflow-scrolling:touch]"
                 >
                   {profileChatMode === "ai" ? (
                     /* =======================================
@@ -7826,7 +8167,7 @@ export function CustomerProfile({
                                 ? "Uliza Orbi AI kuhusu bidhaa au duka letu..."
                                 : "Ask Orbi AI about our products or shop..."
                           }
-                          className="flex-1 border border-slate-200/85 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all font-medium bg-slate-50/50"
+                          className="flex-1 min-h-11 border border-slate-200/85 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all font-medium bg-slate-50/50"
                         />
                         <button
                           type="submit"
@@ -7834,7 +8175,7 @@ export function CustomerProfile({
                             isAILoading ||
                             (!aiInputMessage.trim() && !aiSelectedImage)
                           }
-                          className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-xl text-xs font-black shrink-0 transition-colors cursor-pointer"
+                          className="px-4 min-h-11 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-xl text-xs font-black shrink-0 transition-colors cursor-pointer"
                         >
                           {lang === "sw" ? "Tuma" : "Send"}
                         </button>
@@ -7856,7 +8197,7 @@ export function CustomerProfile({
                 ) : (
                   <form
                     onSubmit={sendProfileMessage}
-                    className="bg-slate-100 border-t border-slate-200 p-3.5 shrink-0 flex flex-col gap-2 relative"
+                    className="bg-slate-100 border-t border-slate-200 p-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom))] shrink-0 flex flex-col gap-2 relative"
                   >
                     {showTagSuggestions && filteredTagProducts.length > 0 && (
                       <div className="absolute bottom-full left-3.5 right-3.5 mb-2 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-54 overflow-y-auto flex flex-col divide-y divide-slate-100 animate-in fade-in slide-in-from-bottom-2 duration-150">
@@ -8085,7 +8426,7 @@ export function CustomerProfile({
                   </form>
                 )}
               </div>
-            </div>
+            </ProfileMessagesTab>
           )}
 
           {tab === "rewards" &&
@@ -8194,10 +8535,7 @@ export function CustomerProfile({
               ];
 
               return (
-                <div
-                  className="space-y-6 animate-in fade-in duration-200"
-                  key={forcePointsUpdate}
-                >
+                <ProfileRewardsTab>
                   {/* Visual Progressive Ring & Preferred Card layout */}
                   <div
                     className={`bg-gradient-to-br ${tierColor} rounded-3xl p-6 text-white relative overflow-hidden shadow-2xl border border-white/10 flex flex-col lg:flex-row gap-6 items-center justify-between`}
@@ -8833,12 +9171,13 @@ export function CustomerProfile({
                       )}
                     </div>
                   </div>
-                </div>
+                </ProfileRewardsTab>
               );
             })()}
 
           {tab === "locator" && (
-            <div className="space-y-6 animate-in fade-in duration-200 font-sans">
+            <ProfileLocatorTab>
+            <div className="animate-in fade-in duration-200 font-sans">
               <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
                 <h3 className="font-extrabold text-slate-800 text-lg mb-2 flex items-center gap-2">
                   <MapPin size={22} className="text-orange-500 animate-pulse" />
@@ -9059,6 +9398,7 @@ export function CustomerProfile({
                 </div>
               </div>
             </div>
+            </ProfileLocatorTab>
           )}
         </div>
       </div>
@@ -9210,6 +9550,6 @@ export function CustomerProfile({
           </div>
         </div>
       )}
-    </div>
+    </CustomerProfileShell>
   );
 }

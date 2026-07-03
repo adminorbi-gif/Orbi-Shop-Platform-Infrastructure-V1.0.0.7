@@ -225,6 +225,20 @@ async function findOrderForWebhook(orderId: string) {
   return byLegacyId.data || null;
 }
 
+function resolveSettlementSplitsFromPaymentIntent(paymentIntent: any) {
+  const metadata = paymentIntent?.metadata || {};
+  const splits = paymentIntent?.settlementSplits || metadata?.settlementSplits || [];
+  return Array.isArray(splits)
+    ? splits
+        .map((split: any) => ({
+          orderId: String(split?.orderId || split?.shopOrderId || "").trim(),
+          sellerId: String(split?.sellerId || "").trim(),
+          payableAmount: Number(split?.payableAmount || split?.amount || 0),
+        }))
+        .filter((split) => split.orderId)
+    : [];
+}
+
 async function handleOrbiPayWebhook(req: any, res: any) {
   try {
     verifyOrbiPayWebhook(req);
@@ -248,6 +262,45 @@ async function handleOrbiPayWebhook(req: any, res: any) {
 
     const order = await findOrderForWebhook(orderId);
     if (!order) {
+      const settlementSplits = resolveSettlementSplitsFromPaymentIntent(paymentIntent);
+      if (settlementSplits.length > 0) {
+        const mapped = mapGatewayStatusToOrderState(status);
+        const updatedOrders: any[] = [];
+
+        for (const split of settlementSplits) {
+          const childOrder = await findOrderForWebhook(split.orderId);
+          if (!childOrder) continue;
+
+          const paymentReference = `ESCROW:${mapped.orderState}:${mapped.paymentStatus}||${reference}||SPLIT:${orderId}:${split.sellerId || "seller"}:${split.payableAmount || 0}`;
+          const { data: updated, error } = await supabase
+            .from("orders")
+            .update({
+              status: mapped.dbStatus,
+              payment_reference: encrypt(paymentReference),
+              payment_method: "orbi_paysafe",
+              payment_method_name: "ORBI PaySafe",
+            })
+            .eq("id", childOrder.id)
+            .select("id,legacy_id,status")
+            .maybeSingle();
+
+          if (error) throw error;
+          if (updated) updatedOrders.push(updated);
+        }
+
+        return res.json({
+          received: true,
+          processed: updatedOrders.length > 0,
+          eventId: eventId || null,
+          orderId,
+          status,
+          mappedOrderState: mapped.orderState,
+          mappedPaymentStatus: mapped.paymentStatus,
+          splitOrdersUpdated: updatedOrders.length,
+          splitOrdersExpected: settlementSplits.length,
+        });
+      }
+
       return res.status(202).json({
         received: true,
         processed: false,

@@ -669,7 +669,7 @@ const { showAlert, showConfirm } = useDialog();
   const [showProfile, setShowProfile] = useState(false);
   const [showTrackOrder, setShowTrackOrder] = useState(false);
   const [profileInitialTab, setProfileInitialTab] = useState<
-    "orders" | "track" | "messages" | "rewards" | "locator"
+    "orders" | "track" | "messages" | "rewards" | "locator" | "settings"
   >("orders");
   const [showCheckout, setShowCheckout] = useState(false);
   const [showSecureOrderAuthPrompt, setShowSecureOrderAuthPrompt] =
@@ -851,8 +851,20 @@ const { showAlert, showConfirm } = useDialog();
       // 6. Handle Profile page and its active initial tab
       const hasProfile = search.get("profile") === "true" || search.get("page") === "profile";
       if (cur.showProfile !== hasProfile) setShowProfile(hasProfile);
+      const allowedProfileTabs = new Set([
+        "orders",
+        "track",
+        "messages",
+        "rewards",
+        "locator",
+        "settings",
+      ]);
       const profTab = search.get("profile-tab") as any;
-      if (profTab && cur.profileInitialTab !== profTab) {
+      if (
+        profTab &&
+        allowedProfileTabs.has(profTab) &&
+        cur.profileInitialTab !== profTab
+      ) {
         setProfileInitialTab(profTab);
       }
 

@@ -1,7 +1,7 @@
 {
   "name": "Orbi Shop",
   "short_name": "Orbi Shop",
-  "description": "Orbi Shop marketplace for secure shopping, verified sellers, and reliable delivery.",
+  "description": "Orbi Shop marketplace for secure shopping, verified sellers, protected payments, and reliable delivery.",
   "id": "/",
   "start_url": "/?source=pwa",
   "scope": "/",
@@ -9,8 +9,9 @@
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#f8fafc",
-  "theme_color": "#ff4c00",
+  "theme_color": "#1e293b",
   "categories": ["shopping", "business", "finance"],
+  "prefer_related_applications": false,
   "lang": "sw-TZ",
   "dir": "ltr",
   "icons": [
