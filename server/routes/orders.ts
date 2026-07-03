@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { supabase, getSupabase, encrypt, decryptObject, decrypt } from "../lib/supabase.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { clearCachedValue, sendResilientJson, withTimeout } from "../lib/apiResilience.js";
 
 const router = Router();
 
@@ -140,8 +141,12 @@ export const allowedTransitions: Record<string, string[]> = {
 
 // GET /api/v1/orders - Retrieve order listings and items
 router.get("/", requireAuth, async (req, res) => {
-  try {
-    let selectRes = await getSupabase(req).from('orders').select(`*, items:order_items(*)`).or('is_archived.eq.false,is_archived.is.null').order('created_at', { ascending: false }).limit(1000);
+  return sendResilientJson(res, "orders:list", async () => {
+    let selectRes = await withTimeout(
+      getSupabase(req).from('orders').select(`*, items:order_items(*)`).or('is_archived.eq.false,is_archived.is.null').order('created_at', { ascending: false }).limit(1000),
+      7000,
+      "orders query",
+    );
     if (selectRes.error) throw selectRes.error;
     const data = selectRes.data;
 
@@ -190,11 +195,8 @@ router.get("/", requireAuth, async (req, res) => {
       };
     });
 
-    res.json({ success: true, data: mapped });
-  } catch (error: any) {
-    console.error("GET /api/v1/orders error:", error.message);
-    res.status(500).json({ success: false, error: error.message });
-  }
+    return mapped;
+  }, { ttlMs: 15000, timeoutMs: 8000, label: "orders list", fallback: [] });
 });
 
 // POST /api/v1/orders - Update order metadata (status, payment reference)
@@ -581,6 +583,7 @@ router.post("/", requireAuth, requireRole("admin", "staff"), async (req, res) =>
         } catch(e) {}
       }
     }
+    clearCachedValue("orders:");
     res.json({ success: true });
   } catch (error: any) {
     console.error("POST /api/v1/orders error:", error.message);
@@ -749,6 +752,7 @@ router.delete("/:id", requireAuth, requireRole("admin"), async (req, res) => {
     }
 
     if (error) throw error;
+    clearCachedValue("orders:");
     res.json({ success: true, count, data });
 
   } catch (error: any) {

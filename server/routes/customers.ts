@@ -1,12 +1,17 @@
 import { Router } from "express";
 import { supabase, getSupabase, encrypt, decryptObject } from "../lib/supabase.js";
+import { clearCachedValue, sendResilientJson, withTimeout } from "../lib/apiResilience.js";
 
 const router = Router();
 
 // GET /api/v1/customers - Fetch customer registers
 router.get("/", async (req, res) => {
-  try {
-    let selectRes = await getSupabase(req).from('customers').select('*').order('registered_at', { ascending: false }).limit(1000);
+  return sendResilientJson(res, "customers:list", async () => {
+    let selectRes = await withTimeout(
+      getSupabase(req).from('customers').select('*').order('registered_at', { ascending: false }).limit(1000),
+      7000,
+      "customers query",
+    );
     if (selectRes.error) throw selectRes.error;
     const data = selectRes.data;
 
@@ -27,11 +32,8 @@ router.get("/", async (req, res) => {
       tin: c.tin || ''
     }));
 
-    res.json({ success: true, data: mapped });
-  } catch (error: any) {
-    console.error("GET /api/v1/customers error:", error.message);
-    res.status(500).json({ success: false, error: error.message });
-  }
+    return mapped;
+  }, { ttlMs: 30000, timeoutMs: 8000, label: "customers list" });
 });
 
 // POST /api/v1/customers/:id/reset-password - Secure password overrides
@@ -42,6 +44,7 @@ router.post("/:id/reset-password", async (req, res) => {
     const encryptedPassword = encrypt(password, true);
     const { error } = await getSupabase(req).from('customers').update({ password: encryptedPassword }).eq('id', id);
     if (error) throw error;
+    clearCachedValue("customers:");
     res.json({ success: true });
   } catch (error: any) {
     console.error("POST /api/v1/customers/:id/reset-password error:", error.message);
@@ -67,6 +70,7 @@ router.put("/:id", async (req, res) => {
 
     const { error } = await getSupabase(req).from('customers').update(payload).eq('id', id);
     if (error) throw error;
+    clearCachedValue("customers:");
     res.json({ success: true });
   } catch (error: any) {
     console.error("PUT /api/v1/customers/:id error:", error.message);
@@ -80,6 +84,7 @@ router.delete("/:id", async (req, res) => {
     const { id } = req.params;
     const { error } = await getSupabase(req).from('customers').delete().eq('id', id);
     if (error) throw error;
+    clearCachedValue("customers:");
     res.json({ success: true });
   } catch (error: any) {
     console.error("DELETE /api/v1/customers/:id error:", error.message);

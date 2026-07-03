@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { getAdminSupabase, getSupabase } from "../lib/supabase.js";
+import { clearCachedValue, sendResilientJson, withTimeout } from "../lib/apiResilience.js";
 
 const router = Router();
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -19,8 +20,12 @@ const safeErrorMessage = (error: any) => {
 
 // GET /api/v1/messages - Retrieve message board items
 router.get("/", async (req, res) => {
-  try {
-    const { data, error } = await getMessagesDb(req).from('messages').select('*').order('created_at', { ascending: false }).limit(1000);
+  return sendResilientJson(res, "messages:list", async () => {
+    const { data, error } = await withTimeout(
+      getMessagesDb(req).from('messages').select('*').order('created_at', { ascending: false }).limit(1000),
+      7000,
+      "messages query",
+    );
     if (error) throw error;
 
     const mapped = (data || []).map(m => ({
@@ -34,11 +39,8 @@ router.get("/", async (req, res) => {
       isRead: m.is_read
     }));
 
-    res.json({ success: true, data: mapped });
-  } catch (error: any) {
-    console.error("GET /api/v1/messages error:", safeErrorMessage(error));
-    res.status(503).json({ success: false, error: "Message service is temporarily unavailable." });
-  }
+    return mapped;
+  }, { ttlMs: 15000, timeoutMs: 8000, label: "messages list" });
 });
 
 // POST /api/v1/messages/mark-read - Mark multiple messages as read
@@ -70,6 +72,7 @@ router.post("/mark-read", async (req, res) => {
       if (legacyError) console.error("Error updating legacy messages:", legacyError);
     }
 
+    clearCachedValue("messages:");
     res.json({ success: true });
   } catch (error: any) {
     console.error("POST /api/v1/messages/mark-read error:", safeErrorMessage(error));
@@ -118,6 +121,7 @@ router.post("/", async (req, res) => {
     }
 
     if (result.error) throw result.error;
+    clearCachedValue("messages:");
 
     // Dispatch automatic confirmation for merchant applications
     const textMsg = msg.message || "";
@@ -207,6 +211,7 @@ router.delete("/:id", async (req, res) => {
       await deleteByColumn("legacy_id");
     }
 
+    clearCachedValue("messages:");
     res.json({ success: true, deletedCount });
   } catch (error: any) {
     console.error("DELETE /api/v1/messages/:id error:", safeErrorMessage(error));

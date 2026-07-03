@@ -2,6 +2,7 @@ import { Router } from "express";
 import { supabase, getSupabase, encrypt, decrypt, decryptObject } from "../lib/supabase.js";
 import { GoogleGenAI, Type } from "@google/genai";
 import { getRouteDeliveryHealth } from "../lib/routeDeliveryQuote.js";
+import { clearCachedValue, sendResilientJson, withTimeout } from "../lib/apiResilience.js";
 
 const router = Router();
 
@@ -297,6 +298,7 @@ router.post("/delivery-rules", async (req, res) => {
       if (error) throw error;
     }
 
+    clearCachedValue("settings:sellers");
     res.json({ success: true });
   } catch (error: any) {
     console.error("POST /api/v1/settings/delivery-rules error:", error.message);
@@ -755,10 +757,14 @@ router.post("/staff", async (req, res) => {
 
 // 4. SELLERS
 router.get("/sellers", async (req, res) => {
-  try {
+  return sendResilientJson(res, "settings:sellers", async () => {
     let backupSellers: any[] = [];
     try {
-      const { data: bData } = await getSupabase(req).from('promotions').select('description').eq('title', 'SYSTEM_SELLERS').maybeSingle();
+      const { data: bData } = await withTimeout(
+        getSupabase(req).from('promotions').select('description').eq('title', 'SYSTEM_SELLERS').maybeSingle(),
+        5000,
+        "seller backup query",
+      );
       if (bData && bData.description) {
         try {
           const parsed = JSON.parse(bData.description);
@@ -772,7 +778,11 @@ router.get("/sellers", async (req, res) => {
     }
 
     try {
-      const { data, error } = await getSupabase(req).from('sellers').select('*').order('name', { ascending: true });
+      const { data, error } = await withTimeout(
+        getSupabase(req).from('sellers').select('*').order('name', { ascending: true }),
+        7000,
+        "sellers query",
+      );
       if (!error && data && data.length > 0) {
         const decryptedData = decryptObject(data);
         const mapped = decryptedData.map((s: any) => {
@@ -811,19 +821,26 @@ router.get("/sellers", async (req, res) => {
             password: bSeller ? bSeller.password || "" : ""
           };
         });
-        return res.json({ success: true, data: mapped });
+        return mapped;
       }
     } catch (e) {}
 
-    const { data } = await getSupabase(req).from('promotions').select('description').eq('title', 'SYSTEM_SELLERS').maybeSingle();
+    const { data } = await withTimeout(
+      getSupabase(req).from('promotions').select('description').eq('title', 'SYSTEM_SELLERS').maybeSingle(),
+      5000,
+      "seller fallback query",
+    );
     let sellersList = [{ id: 'S1', name: 'Orbi Official', description: 'Official products directly provided by Orbi Shop.', avatar: 'https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png' }];
     if (data && data.description) {
       try { sellersList = JSON.parse(data.description); } catch(pe) {}
     }
-    res.json({ success: true, data: sellersList });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
-  }
+    return sellersList;
+  }, {
+    ttlMs: 30000,
+    timeoutMs: 9000,
+    label: "sellers settings",
+    fallback: [{ id: 'S1', name: 'Orbi Official', description: 'Official products directly provided by Orbi Shop.', avatar: 'https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png' }],
+  });
 });
 
 router.post("/sellers", async (req, res) => {
@@ -1022,6 +1039,7 @@ router.put("/sellers/:id", async (req, res) => {
 
     const { error } = await getSupabase(req).from('sellers').update(payload).eq('id', id);
     if (error) throw error;
+    clearCachedValue("settings:sellers");
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -1030,8 +1048,12 @@ router.put("/sellers/:id", async (req, res) => {
 
 // 5. PAYOUTS
 router.get("/payouts", async (req, res) => {
-  try {
-    let selectRes = await getSupabase(req).from('payouts').select('*').order('requested_at', { ascending: false });
+  return sendResilientJson(res, "settings:payouts", async () => {
+    let selectRes = await withTimeout(
+      getSupabase(req).from('payouts').select('*').order('requested_at', { ascending: false }),
+      7000,
+      "payouts query",
+    );
     if (selectRes.error) throw selectRes.error;
     const data = selectRes.data;
 
@@ -1043,10 +1065,8 @@ router.get("/payouts", async (req, res) => {
       requestedAt: new Date(p.requested_at).getTime(),
       paidAt: p.paid_at ? new Date(p.paid_at).getTime() : undefined
     }));
-    res.json({ success: true, data: mapped });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
-  }
+    return mapped;
+  }, { ttlMs: 30000, timeoutMs: 8000, label: "payouts settings", fallback: [] });
 });
 
 router.post("/payouts", async (req, res) => {
@@ -1063,6 +1083,7 @@ router.post("/payouts", async (req, res) => {
     } else {
       await getSupabase(req).from('payouts').insert([payload]);
     }
+    clearCachedValue("settings:payouts");
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });

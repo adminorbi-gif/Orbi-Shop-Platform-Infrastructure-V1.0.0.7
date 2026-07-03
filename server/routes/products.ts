@@ -3,6 +3,7 @@ import { getSupabase, supabase } from "../lib/supabase.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { sendOrbiTalkDirectEmail, sendOrbiTalkDirectSMS } from "./talk.js";
 import { inferProductDeliveryPolicy, shouldAutoInferDeliveryPolicy } from "../lib/productDeliveryPolicy.js";
+import { clearCachedValue, sendResilientJson, withTimeout } from "../lib/apiResilience.js";
 
 const router = Router();
 
@@ -205,8 +206,12 @@ async function dispatchPriceDropNotifications(product: any, previousPrice: numbe
 
 // GET /api/v1/products - Fetch all products
 router.get("/", async (req, res) => {
-  try {
-    let selectRes = await getSupabase(req).from('products').select('*').order('created_at', { ascending: false }).limit(1000);
+  return sendResilientJson(res, "products:list", async () => {
+    let selectRes = await withTimeout(
+      getSupabase(req).from('products').select('*').order('created_at', { ascending: false }).limit(1000),
+      7000,
+      "products query",
+    );
     if (selectRes.error) throw selectRes.error;
 
     const data = selectRes.data;
@@ -265,11 +270,8 @@ router.get("/", async (req, res) => {
       };
     });
 
-    res.json({ success: true, data: mapped });
-  } catch (error: any) {
-    console.error("GET /api/v1/products error:", error.message);
-    res.status(500).json({ success: false, error: error.message });
-  }
+    return mapped;
+  }, { ttlMs: 30000, timeoutMs: 8000, label: "products list", fallback: [] });
 });
 
 // POST /api/v1/products - Create/Update product
@@ -378,6 +380,7 @@ router.post("/", requireAuth, requireRole("admin", "seller"), async (req, res) =
     }
 
     if (result.error) throw result.error;
+    clearCachedValue("products:");
     const nextStock = normalizeProductStock(result.data?.stock ?? product.stock);
     const nextPrice = normalizeMoney(result.data?.price ?? product.price);
     if (previousStock <= 0 && nextStock > 0) {
@@ -408,6 +411,7 @@ router.delete("/:id", requireAuth, requireRole("admin"), async (req, res) => {
       error = retry.error;
     }
     if (error) throw error;
+    clearCachedValue("products:");
     res.json({ success: true });
   } catch (error: any) {
     console.error("DELETE /api/v1/products/:id error:", error.message || error);
@@ -426,6 +430,7 @@ router.delete("/niche/:niche", requireAuth, requireRole("admin"), async (req, re
       error = retry.error;
     }
     if (error) throw error;
+    clearCachedValue("products:");
     res.json({ success: true });
   } catch (error: any) {
     console.error("DELETE /api/v1/products/niche/:niche error:", error.message || error);
@@ -458,6 +463,7 @@ router.post("/niche/rename", requireAuth, requireRole("admin"), async (req, res)
       }
     }
 
+    clearCachedValue("products:");
     res.json({ success: true, updatedCount: products?.length || 0 });
   } catch (error: any) {
     console.error("POST /api/v1/products/niche/rename error:", error.message || error);
