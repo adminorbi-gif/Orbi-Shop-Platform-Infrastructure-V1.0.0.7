@@ -347,7 +347,16 @@ router.post("/", async (req, res) => {
         } catch (e: any) {
           console.error(`[PAYSAFE_GATEWAY] Live Orbi Pay Error for ${oId}:`, e.message);
           // If the gateway hard fails, we must abort the transaction safely
-          return res.status(e.status || 400).json({ success: false, error: e.message || "Payment Gateway failed to process transaction." });
+          const timeoutLike = e.status === 504 || e.code === "ORBI_PAY_GATEWAY_TIMEOUT";
+          return res.status(e.status || 400).json({
+            success: false,
+            error: timeoutLike
+              ? "Payment route timed out before confirmation. No order was finalized. Please wait a moment and retry, or contact support if money was deducted."
+              : e.message || "Payment Gateway failed to process transaction.",
+            code: e.code || (timeoutLike ? "ORBI_PAY_GATEWAY_TIMEOUT" : "ORBI_PAY_GATEWAY_ERROR"),
+            retryable: timeoutLike || e.status >= 500,
+            details: e.details || null
+          });
         }
       } else {
         console.error("[PAYSAFE_GATEWAY] ORBI_SHOP_PAY_API_KEY is not configured in the environment.");

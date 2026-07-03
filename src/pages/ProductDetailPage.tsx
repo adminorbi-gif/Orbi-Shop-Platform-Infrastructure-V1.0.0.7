@@ -469,8 +469,8 @@ export default function ProductDetailPage({
   };
 
   const handleNotify = async () => {
-    if (!notifyEmail || !notifyPhone) {
-      showAlert("Tafadhali jaza barua pepe na namba ya simu", "error");
+    if (!notifyEmail && !notifyPhone) {
+      showAlert(lang === "sw" ? "Tafadhali weka barua pepe au namba ya simu" : "Please enter email or phone number", "error");
       return;
     }
     setNotifying(true);

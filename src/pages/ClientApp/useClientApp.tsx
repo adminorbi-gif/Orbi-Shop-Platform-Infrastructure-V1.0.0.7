@@ -443,7 +443,12 @@ const { showAlert, showConfirm } = useDialog();
             fetch("/api/ads/track", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ adId: adObj.id, action: "impression" }),
+              keepalive: true,
+              body: JSON.stringify({
+                adId: adObj.id,
+                action: "impression",
+                visitorId,
+              }),
             }).catch((e) => console.log("Impression track skipped", e)),
           ),
         );
@@ -454,16 +459,26 @@ const { showAlert, showConfirm } = useDialog();
     };
 
     recordImpressions();
-  }, [activeMarketplaceAds, countedAds]);
+  }, [activeMarketplaceAds, countedAds, visitorId]);
 
   const handleMarketplaceAdClick = async (ad: MarketplaceAd) => {
     try {
-      // Safe, concurrent-friendly server registration of clicks
-      fetch("/api/ads/track", {
+      // Billable CPC event. This is separate from general visitor analytics.
+      const trackClick = fetch("/api/ads/track", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adId: ad.id, action: "click" }),
+        keepalive: true,
+        body: JSON.stringify({
+          adId: ad.id,
+          action: "click",
+          visitorId,
+        }),
       }).catch((e) => console.warn("Ad click tracking error ignored", e));
+
+      await Promise.race([
+        trackClick,
+        new Promise((resolve) => window.setTimeout(resolve, 450)),
+      ]);
 
       if (ad.link) {
         window.location.href = ad.link;

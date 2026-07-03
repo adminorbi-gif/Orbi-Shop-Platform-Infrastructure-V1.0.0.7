@@ -1882,13 +1882,19 @@ export function CheckoutModal({
         setLoadingMsg("");
         setStep(3);
       } else {
+        const timeoutLike = resp.status === 504 || data?.code === "ORBI_PAY_GATEWAY_TIMEOUT";
         setGatewayResponse({
-          status: "failed",
+          status: timeoutLike ? "processing" : "failed",
           rawStatus: `http_${resp.status}`,
-          message: data?.error || "Failed to process order securely.",
+          message: data?.error || (timeoutLike
+            ? (lang === "sw"
+              ? "Njia ya malipo imechelewa kujibu. Usirudie kulipa mara nyingi; jaribu tena baada ya muda mfupi au wasiliana nasi kama pesa imekatwa."
+              : "The payment route took too long to respond. Do not pay repeatedly; retry shortly or contact support if money was deducted.")
+            : "Failed to process order securely."),
           paymentCategory: selectedPaymentRoute.category,
           paymentRail: selectedPaymentRoute.rail,
           providerCode: selectedPaymentRoute.providerCode || null,
+          retryable: Boolean(data?.retryable || timeoutLike),
         });
         setLoadingMsg("");
         setStep(3);

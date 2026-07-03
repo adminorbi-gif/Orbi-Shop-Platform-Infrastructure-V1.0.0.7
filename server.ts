@@ -20,6 +20,7 @@ import rateLimit from "express-rate-limit";
 import { createServer as createViteServer } from "vite";
 
 import adminRouter from "./server/routes/admin.js";
+import adsRouter from "./server/routes/ads.js";
 import aiRouter from "./server/routes/ai.js";
 import analyticsRouter from "./server/routes/analytics.js";
 import authRouter from "./server/routes/auth.js";
@@ -160,6 +161,7 @@ async function startServer() {
 
   // Mount API Routes
   app.use("/api/v1/admin", adminRouter);
+  app.use("/api/ads", adsRouter);
   app.use("/api/v1/ai", aiRouter);
   app.use("/api/v1/analytics", analyticsRouter);
   app.use("/api/analytics", analyticsRouter);

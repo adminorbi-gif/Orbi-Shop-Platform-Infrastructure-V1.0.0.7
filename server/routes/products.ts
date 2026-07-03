@@ -1,8 +1,206 @@
 import { Router } from "express";
 import { getSupabase, supabase } from "../lib/supabase.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { sendOrbiTalkDirectEmail, sendOrbiTalkDirectSMS } from "./talk.js";
 
 const router = Router();
+
+function normalizeProductStock(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function normalizeMoney(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function buildProductUrl(productId: string) {
+  const appUrl = (process.env.APP_URL || "https://shop.orbifinancial.com").replace(/\/$/, "");
+  return `${appUrl}/#/products?product=${encodeURIComponent(productId)}`;
+}
+
+async function dispatchBackInStockNotifications(product: any) {
+  try {
+    const productId = String(product?.id || "");
+    if (!productId) return;
+
+    const { data: pending, error } = await supabase
+      .from("stock_notifications")
+      .select("id, email, phone_number, phone, notified")
+      .eq("product_id", productId)
+      .eq("notified", false)
+      .limit(250);
+
+    if (error) {
+      console.warn("[Stock Automation] Failed to load pending stock notifications:", error.message);
+      return;
+    }
+
+    const notifications = pending || [];
+    if (notifications.length === 0) return;
+
+    const productName = product?.name || "Bidhaa uliyoomba";
+    const productUrl = buildProductUrl(productId);
+    const subject = `${productName} imerudi dukani`;
+    const body = [
+      `Habari,`,
+      ``,
+      `${productName} imerudi kwenye stock ya Orbi Shop.`,
+      `Unaweza kuiangalia na kuagiza hapa: ${productUrl}`,
+      ``,
+      `Asante kwa kutumia Orbi Shop.`
+    ].join("\n");
+
+    for (const notice of notifications) {
+      const requestId = `stock-return-${productId}-${notice.id}`;
+      const email = typeof notice.email === "string" ? notice.email.trim() : "";
+      const phone = String(notice.phone_number || notice.phone || "").trim();
+      let delivered = false;
+      let lastError = "";
+
+      if (email) {
+        const result = await sendOrbiTalkDirectEmail({
+          recipient: email,
+          subject,
+          body,
+          requestId,
+          senderName: "ORBI Shop",
+          senderEmail: "shop@orbifinancial.com",
+          messageType: "transactional"
+        });
+        delivered = Boolean(result?.success);
+        lastError = result?.error || "";
+      }
+
+      if (phone) {
+        const result = await sendOrbiTalkDirectSMS({
+          recipient: phone,
+          body: `${productName} imerudi kwenye stock. Agiza hapa: ${productUrl}`,
+          requestId: `${requestId}-sms`
+        });
+        delivered = delivered || Boolean(result?.success);
+        lastError = result?.error || lastError;
+      }
+
+      if (delivered) {
+        const updateResult = await supabase
+          .from("stock_notifications")
+          .update({ notified: true, notified_at: new Date().toISOString(), last_error: null })
+          .eq("id", notice.id);
+        if (updateResult.error) {
+          await supabase
+            .from("stock_notifications")
+            .update({ notified: true })
+            .eq("id", notice.id);
+        }
+      } else if (lastError) {
+        const updateResult = await supabase
+          .from("stock_notifications")
+          .update({ last_error: lastError })
+          .eq("id", notice.id);
+        if (updateResult.error) {
+          console.warn("[Stock Automation] Failed to persist stock notification error:", updateResult.error.message);
+        }
+      }
+    }
+  } catch (error: any) {
+    console.error("[Stock Automation] Back-in-stock dispatch failed:", error.message || error);
+  }
+}
+
+async function dispatchPriceDropNotifications(product: any, previousPrice: number, nextPrice: number) {
+  try {
+    const productId = String(product?.id || "");
+    if (!productId || !(previousPrice > nextPrice)) return;
+
+    const { data: pending, error } = await supabase
+      .from("price_alerts")
+      .select("id, email, phone, notified, target_price")
+      .eq("product_id", productId)
+      .eq("notified", false)
+      .limit(250);
+
+    if (error) {
+      console.warn("[Price Alert Automation] Failed to load pending price alerts:", error.message);
+      return;
+    }
+
+    const alerts = (pending || []).filter((alert: any) => {
+      const target = normalizeMoney(alert.target_price);
+      return target <= 0 || nextPrice <= target;
+    });
+    if (alerts.length === 0) return;
+
+    const productName = product?.name || "Bidhaa uliyoomba";
+    const productUrl = buildProductUrl(productId);
+    const priceText = `TSh ${Math.round(nextPrice).toLocaleString("en-US")}`;
+    const subject = `${productName} imeshuka bei`;
+    const body = [
+      `Habari,`,
+      ``,
+      `${productName} imeshuka bei hadi ${priceText}.`,
+      `Unaweza kuiangalia na kuagiza hapa: ${productUrl}`,
+      ``,
+      `Asante kwa kutumia Orbi Shop.`
+    ].join("\n");
+
+    for (const alert of alerts) {
+      const requestId = `price-drop-${productId}-${alert.id}`;
+      const email = typeof alert.email === "string" ? alert.email.trim() : "";
+      const phone = String(alert.phone || "").trim();
+      let delivered = false;
+      let lastError = "";
+
+      if (email) {
+        const result = await sendOrbiTalkDirectEmail({
+          recipient: email,
+          subject,
+          body,
+          requestId,
+          senderName: "ORBI Shop",
+          senderEmail: "shop@orbifinancial.com",
+          messageType: "transactional"
+        });
+        delivered = Boolean(result?.success);
+        lastError = result?.error || "";
+      }
+
+      if (phone) {
+        const result = await sendOrbiTalkDirectSMS({
+          recipient: phone,
+          body: `${productName} imeshuka bei hadi ${priceText}. Agiza hapa: ${productUrl}`,
+          requestId: `${requestId}-sms`
+        });
+        delivered = delivered || Boolean(result?.success);
+        lastError = result?.error || lastError;
+      }
+
+      if (delivered) {
+        const updateResult = await supabase
+          .from("price_alerts")
+          .update({ notified: true, notified_at: new Date().toISOString(), current_price: nextPrice, last_error: null })
+          .eq("id", alert.id);
+        if (updateResult.error) {
+          await supabase
+            .from("price_alerts")
+            .update({ notified: true })
+            .eq("id", alert.id);
+        }
+      } else if (lastError) {
+        const updateResult = await supabase
+          .from("price_alerts")
+          .update({ last_error: lastError })
+          .eq("id", alert.id);
+        if (updateResult.error) {
+          console.warn("[Price Alert Automation] Failed to persist price alert error:", updateResult.error.message);
+        }
+      }
+    }
+  } catch (error: any) {
+    console.error("[Price Alert Automation] Dispatch failed:", error.message || error);
+  }
+}
 
 // GET /api/v1/products - Fetch all products
 router.get("/", async (req, res) => {
@@ -61,6 +259,21 @@ router.get("/", async (req, res) => {
 router.post("/", requireAuth, requireRole("admin", "seller"), async (req, res) => {
   try {
     const product = req.body;
+    const isExistingProduct = Boolean(product.id && !product.id.startsWith('PRD-') && product.id.length > 20);
+    let previousStock = 0;
+    let previousPrice = 0;
+
+    if (isExistingProduct) {
+      const previous = await supabase
+        .from("products")
+        .select("id, stock, price")
+        .eq("id", product.id)
+        .maybeSingle();
+      if (!previous.error && previous.data) {
+        previousStock = normalizeProductStock(previous.data.stock);
+        previousPrice = normalizeMoney(previous.data.price);
+      }
+    }
 
     const trySave = async (withVisible: boolean, useServiceRole = false) => {
       let finalTags = product.tags ? [...product.tags] : [];
@@ -96,7 +309,7 @@ router.post("/", requireAuth, requireRole("admin", "seller"), async (req, res) =
 
       const activeClient = useServiceRole ? supabase : getSupabase(req);
 
-      if (product.id && !product.id.startsWith('PRD-') && product.id.length > 20) {
+      if (isExistingProduct) {
         return activeClient.from('products').update(payload).eq('id', product.id).select().single();
       } else {
         return activeClient.from('products').insert([payload]).select().single();
@@ -117,6 +330,18 @@ router.post("/", requireAuth, requireRole("admin", "seller"), async (req, res) =
     }
 
     if (result.error) throw result.error;
+    const nextStock = normalizeProductStock(result.data?.stock ?? product.stock);
+    const nextPrice = normalizeMoney(result.data?.price ?? product.price);
+    if (previousStock <= 0 && nextStock > 0) {
+      dispatchBackInStockNotifications(result.data).catch((notifyErr) => {
+        console.error("[Stock Automation] Async dispatch failed:", notifyErr?.message || notifyErr);
+      });
+    }
+    if (previousPrice > nextPrice) {
+      dispatchPriceDropNotifications(result.data, previousPrice, nextPrice).catch((notifyErr) => {
+        console.error("[Price Alert Automation] Async dispatch failed:", notifyErr?.message || notifyErr);
+      });
+    }
     res.json({ success: true, id: result.data.id });
   } catch (error: any) {
     console.error("POST /api/v1/products error:", error.message || error);

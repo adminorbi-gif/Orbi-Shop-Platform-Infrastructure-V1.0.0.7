@@ -476,6 +476,8 @@ export const db = {
       method: 'POST',
       body: JSON.stringify({
         productId: notification.productId,
+        email: notification.email,
+        phone: notification.phone,
         phoneNumber: notification.phone
       })
     });
@@ -498,7 +500,7 @@ export const db = {
         })
       });
     } catch (err) {
-      console.warn("Saving price alert to Supabase failed, fallback to offline localStorage.", err);
+      console.warn("Saving price alert through backend API failed, fallback to offline localStorage.", err);
       const fallbackKey = 'orbishop_price_alerts';
       const current = localStorage.getItem(fallbackKey);
       let list = [];

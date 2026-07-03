@@ -57,8 +57,9 @@ export async function callOrbiPayGateway(path: string, options: PayGatewayReques
       ? `ORBI Pay Gateway timed out after ${timeoutMs}ms`
       : error?.message || "ORBI Pay Gateway is unreachable";
     const gatewayError = new Error(message);
-    (gatewayError as any).status = 502;
-    (gatewayError as any).details = { gateway: baseUrl, path, timeoutMs };
+    (gatewayError as any).status = error?.name === "AbortError" ? 504 : 502;
+    (gatewayError as any).code = error?.name === "AbortError" ? "ORBI_PAY_GATEWAY_TIMEOUT" : "ORBI_PAY_GATEWAY_UNREACHABLE";
+    (gatewayError as any).details = { gateway: baseUrl, path, timeoutMs, retryable: true };
     throw gatewayError;
   } finally {
     clearTimeout(timeout);
@@ -76,6 +77,11 @@ export async function callOrbiPayGateway(path: string, options: PayGatewayReques
     const message = data?.message || data?.error || `ORBI Pay Gateway request failed with HTTP ${response.status}`;
     const error = new Error(message);
     (error as any).status = response.status;
+    (error as any).code = response.status === 504
+      ? "ORBI_PAY_GATEWAY_TIMEOUT"
+      : response.status >= 500
+        ? "ORBI_PAY_GATEWAY_UPSTREAM_ERROR"
+        : "ORBI_PAY_GATEWAY_DECLINED";
     (error as any).details = data;
     throw error;
   }

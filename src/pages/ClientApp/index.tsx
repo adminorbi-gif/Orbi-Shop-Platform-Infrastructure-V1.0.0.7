@@ -3564,6 +3564,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const deliveryPromise = p.stock > 0
     ? (lang === "sw" ? "Delivery ipo" : "Delivery available")
     : (lang === "sw" ? "Haipatikani sasa" : "Currently unavailable");
+  const { showAlert } = useDialog();
 
   const avgRating = useMemo(() => {
     if (!reviews || reviews.length === 0) return 0;
@@ -3608,6 +3609,66 @@ const ProductCard: React.FC<ProductCardProps> = ({
     const link = `${window.location.origin}/?product=${p.id}`;
     const text = `${t((lang || "sw") as Lang, "prod.wa_inquiry")} ${prodName} (${link})`;
     return `https://wa.me/${clean}?text=${encodeURIComponent(text)}`;
+  };
+
+  const requestAlertContact = () => {
+    const email = window.prompt(
+      lang === "sw"
+        ? "Weka email yako kwa taarifa. Unaweza kuacha wazi kama unataka kutumia simu tu."
+        : "Enter your email for updates. You may leave it blank if you prefer phone only.",
+      "",
+    )?.trim() || "";
+
+    const phone = window.prompt(
+      lang === "sw"
+        ? "Weka namba yako ya simu kwa taarifa. Unaweza kuacha wazi kama umetumia email."
+        : "Enter your phone number for updates. You may leave it blank if you entered email.",
+      "",
+    )?.trim() || "";
+
+    return { email, phone };
+  };
+
+  const handleStockNotify = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onInteract) onInteract();
+    const { email, phone } = requestAlertContact();
+    if (!email && !phone) {
+      showAlert(lang === "sw" ? "Tafadhali weka email au simu." : "Please enter email or phone.", "error");
+      return;
+    }
+    try {
+      await db.addStockNotification({ productId: p.id, email, phone });
+      showAlert(
+        lang === "sw"
+          ? "Tumepokea ombi lako. Tutakujulisha bidhaa ikirudi sokoni."
+          : "Alert saved. We will notify you when this item is back in stock.",
+        "success",
+      );
+    } catch (err: any) {
+      showAlert(err?.message || (lang === "sw" ? "Imeshindikana kuhifadhi taarifa." : "Failed to save alert."), "error");
+    }
+  };
+
+  const handlePriceDropNotify = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onInteract) onInteract();
+    const { email, phone } = requestAlertContact();
+    if (!email && !phone) {
+      showAlert(lang === "sw" ? "Tafadhali weka email au simu." : "Please enter email or phone.", "error");
+      return;
+    }
+    try {
+      await db.addPriceDropAlert({ productId: p.id, email, phone });
+      showAlert(
+        lang === "sw"
+          ? "Tumehifadhi taarifa. Tutakujulisha bei ikipungua."
+          : "Price alert saved. We will notify you when the price drops.",
+        "success",
+      );
+    } catch (err: any) {
+      showAlert(err?.message || (lang === "sw" ? "Imeshindikana kuhifadhi taarifa." : "Failed to save alert."), "error");
+    }
   };
 
   return (
@@ -3822,17 +3883,26 @@ const ProductCard: React.FC<ProductCardProps> = ({
             )}
 
             {!isOutOfStock ? (
-              <div className="grid w-full grid-cols-[44px_1fr] gap-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAdd(false);
-                  }}
-                  className="flex min-w-0 items-center justify-center rounded-2xl border border-slate-200 bg-white px-2 py-2.5 text-slate-700 transition-colors hover:border-[#ff4c00]/60 hover:text-[#ff4c00]"
-                  title={lang === "sw" ? "Weka kwenye kikapu" : "Add to Cart"}
-                >
-                  <ShoppingCart size={15} className="shrink-0" />
-                </button>
+              <div className="grid w-full grid-cols-[42px_1fr] gap-2">
+                <div className="grid min-w-0 grid-rows-2 gap-1.5">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAdd(false);
+                    }}
+                    className="flex min-w-0 items-center justify-center rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-slate-700 transition-colors hover:border-[#ff4c00]/60 hover:text-[#ff4c00]"
+                    title={lang === "sw" ? "Weka kwenye kikapu" : "Add to Cart"}
+                  >
+                    <ShoppingCart size={14} className="shrink-0" />
+                  </button>
+                  <button
+                    onClick={handlePriceDropNotify}
+                    className="flex min-w-0 items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-2 py-1.5 text-amber-700 transition-colors hover:bg-amber-100"
+                    title={lang === "sw" ? "Nijulishe bei ikishuka" : "Notify price drop"}
+                  >
+                    <Bell size={13} className="shrink-0" />
+                  </button>
+                </div>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -3847,10 +3917,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
               </div>
             ) : (
               <button
-                disabled
-                className="flex w-full items-center justify-center rounded-2xl border border-slate-200 px-3 py-2.5 text-[11px] font-bold text-slate-400 sm:text-xs"
+                onClick={handleStockNotify}
+                className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[11px] font-black text-amber-700 transition hover:bg-amber-100 sm:text-xs"
+                title={lang === "sw" ? "Nijulishe bidhaa ikirudi" : "Notify when available"}
               >
-                <span className="min-w-0 break-words">{lang === "sw" ? "Imeisha" : "Sold Out"}</span>
+                <Bell size={13} className="shrink-0" />
+                <span className="min-w-0 break-words">{lang === "sw" ? "Nijulishe ikirudi" : "Notify me"}</span>
               </button>
             )}
 
