@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { supabase, encrypt } from "../lib/supabase.js";
 import { callOrbiPayGateway, getPayServiceKey } from "../lib/orbiPayGateway.js";
+import { quoteCartDelivery } from "../lib/deliveryQuote.js";
 
 const router = Router();
 
@@ -84,6 +85,22 @@ function mapDbProduct(row: any, fallback: any = {}) {
     tags: tagsList,
     sellerId: row?.seller_id || (sellerTag ? sellerTag.split(":")[1] : fallback.sellerId) || "system",
     wholesaleTiers: Array.isArray(row?.wholesale_tiers) ? row.wholesale_tiers : (Array.isArray(fallback.wholesaleTiers) ? fallback.wholesaleTiers : []),
+    weightKg: Number(row?.weight_kg ?? fallback.weightKg ?? 1),
+    lengthCm: row?.length_cm ?? fallback.lengthCm,
+    widthCm: row?.width_cm ?? fallback.widthCm,
+    heightCm: row?.height_cm ?? fallback.heightCm,
+    deliveryClass: row?.delivery_class || fallback.deliveryClass || "standard",
+    fragile: row?.fragile ?? fallback.fragile ?? false,
+    oversized: row?.oversized ?? fallback.oversized ?? false,
+    requiresColdChain: row?.requires_cold_chain ?? fallback.requiresColdChain ?? false,
+    hazardous: row?.hazardous ?? fallback.hazardous ?? false,
+    digitalProduct: row?.digital_product ?? fallback.digitalProduct ?? false,
+    requiresDeliveryQuote: row?.requires_delivery_quote ?? fallback.requiresDeliveryQuote ?? false,
+    deliveryScope: row?.delivery_scope || fallback.deliveryScope || "national",
+    deliveryPolicySource: row?.delivery_policy_source || fallback.deliveryPolicySource || "auto",
+    deliveryHandlingNotes: row?.delivery_handling_notes || fallback.deliveryHandlingNotes || "",
+    blockedDeliveryZoneIds: Array.isArray(row?.blocked_delivery_zone_ids) ? row.blocked_delivery_zone_ids : (fallback.blockedDeliveryZoneIds || []),
+    sellerOriginZoneId: row?.seller_origin_zone_id || fallback.sellerOriginZoneId,
   };
 }
 
@@ -253,7 +270,7 @@ function buildSellerAllocation(
 
 router.post("/", async (req, res) => {
   try {
-    const { cart, user, paymentMethod, paymentCategory, paymentRail, providerCode, paymentAccount, operation, appliedCoupon, finalTotal, name, phone, address, options, tin, lang } = req.body;
+    const { cart, user, paymentMethod, paymentCategory, paymentRail, providerCode, paymentAccount, operation, appliedCoupon, finalTotal, name, phone, address, options, tin, lang, deliveryZone, deliveryZoneId, deliveryFee, deliveryEta } = req.body;
 
     // Gateway contract validation
     if (!paymentCategory || !paymentRail || !operation) {
@@ -310,12 +327,43 @@ router.post("/", async (req, res) => {
       sellerGroups[sellerId].push(c);
     });
 
+    const selectedZoneId = deliveryZoneId || deliveryZone?.id;
+    let serverDeliveryQuote: any = null;
+    if (selectedZoneId) {
+      const { data: zones } = await supabase
+        .from("delivery_zones")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true });
+      const resolvedZone = (zones || []).find((zone: any) => String(zone.id) === String(selectedZoneId));
+      if (resolvedZone) {
+        const { data: rules } = await supabase
+          .from("delivery_rules")
+          .select("*")
+          .order("sort_order", { ascending: true });
+        serverDeliveryQuote = quoteCartDelivery(validatedCart, resolvedZone, rules || [], lang || "sw");
+        if (!serverDeliveryQuote.available) {
+          return res.status(400).json({
+            success: false,
+            error: "DELIVERY_UNAVAILABLE",
+            message: lang === "sw"
+              ? "Baadhi ya bidhaa haziwezi kufikishwa kwenye eneo ulilochagua."
+              : "Some cart items cannot be delivered to the selected zone.",
+            deliveryQuote: serverDeliveryQuote,
+          });
+        }
+      }
+    }
+
     const oIdBase = "ORD-" + Math.floor(10000 + Math.random() * 90000);
+    const deliveryFeeAmount = roundMoney(Math.max(0, Number(serverDeliveryQuote?.totalFee ?? deliveryZone?.price ?? deliveryFee ?? 0)));
+    const resolvedDeliveryZoneName = serverDeliveryQuote?.zoneName || deliveryZone?.name || null;
+    const resolvedDeliveryEta = serverDeliveryQuote?.eta || deliveryEta || deliveryZone?.eta || null;
     const checkoutAllocation = buildSellerAllocation(
       sellerGroups,
-      Number(finalTotal),
+      Math.max(0, Number(finalTotal || 0) - deliveryFeeAmount),
     );
-    const settlementSplits = checkoutAllocation.sellerEntries.map((entry) => ({
+    const productSettlementSplits = checkoutAllocation.sellerEntries.map((entry) => ({
       orderId: `${oIdBase}-${entry.sellerId}`,
       sellerId: entry.sellerId,
       grossAmount: entry.grossTotal,
@@ -327,6 +375,21 @@ router.post("/", async (req, res) => {
         0,
       ),
     }));
+    const settlementSplits = [
+      ...productSettlementSplits,
+      ...(deliveryFeeAmount > 0
+        ? [{
+            orderId: `${oIdBase}-delivery`,
+            sellerId: "orbi-shop-delivery",
+            grossAmount: deliveryFeeAmount,
+            payableAmount: deliveryFeeAmount,
+            currency: "TZS",
+            settlementAccount: "delivery_operations",
+            itemCount: 0,
+          }]
+        : []),
+    ];
+    const gatewayChargeTotal = roundMoney(checkoutAllocation.payableTotal + deliveryFeeAmount);
 
     const oIds: string[] = [];
     const successfulOrders: any[] = [];
@@ -356,7 +419,7 @@ router.post("/", async (req, res) => {
         method: "POST",
         body: {
           reference: String(oIdBase),
-          amount: checkoutAllocation.payableTotal,
+          amount: gatewayChargeTotal,
           currency: "TZS",
           paymentCategory: paymentRoute.paymentCategory,
           paymentRail: paymentRoute.paymentRail,
@@ -385,7 +448,12 @@ router.post("/", async (req, res) => {
             paymentAccountHint: paymentRoute.paymentAccount ? `${paymentRoute.paymentAccount.slice(0, 3)}***${paymentRoute.paymentAccount.slice(-3)}` : undefined,
             settlementPolicy: "paysafe_hold_required",
             grossCartTotal: checkoutAllocation.grossCartTotal,
-            payableTotal: checkoutAllocation.payableTotal,
+            productPayableTotal: checkoutAllocation.payableTotal,
+            deliveryFee: deliveryFeeAmount,
+            payableTotal: gatewayChargeTotal,
+            deliveryZone: resolvedDeliveryZoneName,
+            deliveryEta: resolvedDeliveryEta,
+            deliveryQuote: serverDeliveryQuote,
             settlementSplits,
           },
         },
@@ -407,7 +475,7 @@ router.post("/", async (req, res) => {
       });
     }
 
-    for (const entry of checkoutAllocation.sellerEntries) {
+    for (const [entryIndex, entry] of checkoutAllocation.sellerEntries.entries()) {
       const sellerId = entry.sellerId;
       const sellerItems = entry.sellerItems;
       const sellerTotal = entry.payableTotal;
@@ -437,6 +505,10 @@ router.post("/", async (req, res) => {
           payment_method_name: paymentRoute.paymentCategory,
           total: sellerTotal,
           status: orderState.dbStatus,
+          delivery_zone_id: selectedZoneId || null,
+          delivery_zone_name: resolvedDeliveryZoneName,
+          delivery_fee: entryIndex === 0 ? deliveryFeeAmount : 0,
+          delivery_eta: resolvedDeliveryEta,
           payment_reference: encrypt(
             `${orderState.paymentReference}||SPLIT:${oIdBase}:${sellerId}:${sellerTotal}`,
           )

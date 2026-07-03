@@ -1,8 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { X, ArrowLeft, ShieldCheck, Zap, Info, ChevronRight, CheckCircle2, MapPin, Phone, User as UserIcon, Tag, CreditCard, Lock, ArrowRight, Package } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { PriceDisplay } from "../PriceDisplay";
 import { formatCurrency } from "../../lib/storage";
+import { db } from "../../lib/db";
+import type { DeliveryQuote, DeliveryZone } from "../../types";
+import { DEFAULT_DELIVERY_ZONES, formatDeliveryDays, getDeliveryZoneName, normalizeDeliveryZones } from "../../lib/deliveryZones";
 
 interface CheckoutViewProps {
   showCheckout: boolean;
@@ -41,6 +44,13 @@ export function CheckoutView({
   const [touched, setTouched] = useState({ name: false, phone: false, address: false });
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [isOrdering, setIsOrdering] = useState(false);
+  const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>(DEFAULT_DELIVERY_ZONES);
+  const [selectedDeliveryZoneId, setSelectedDeliveryZoneId] = useState(DEFAULT_DELIVERY_ZONES[0].id);
+  const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuote | null>(null);
+  const [deliveryQuoteLoading, setDeliveryQuoteLoading] = useState(false);
+  const selectedDeliveryZone = useMemo(() => {
+    return normalizeDeliveryZones(deliveryZones).find((zone) => zone.id === selectedDeliveryZoneId) || normalizeDeliveryZones(deliveryZones)[0];
+  }, [deliveryZones, selectedDeliveryZoneId]);
 
   const getErrors = () => {
     const errs: any = {};
@@ -76,8 +86,59 @@ export function CheckoutView({
   }, 0);
 
   const discount = appliedCoupon ? (subtotal * appliedCoupon.discountPercentage / 100) : 0;
-  const deliveryFee = 2500; // Default flat fee
+  const deliveryFee = Number(deliveryQuote?.totalFee ?? selectedDeliveryZone?.price ?? 0);
   const total = subtotal - discount + deliveryFee;
+
+  useEffect(() => {
+    let active = true;
+    db.getDeliveryZones()
+      .then((zones) => {
+        if (!active) return;
+        const normalized = normalizeDeliveryZones(zones);
+        setDeliveryZones(normalized);
+        setSelectedDeliveryZoneId((current) => normalized.some((zone) => zone.id === current) ? current : normalized[0].id);
+      })
+      .catch(() => {
+        if (active) setDeliveryZones(DEFAULT_DELIVERY_ZONES);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    if (!selectedDeliveryZoneId || cart.length === 0) {
+      setDeliveryQuote(null);
+      return () => {
+        active = false;
+      };
+    }
+
+    setDeliveryQuoteLoading(true);
+    db.getDeliveryQuote({
+      zoneId: selectedDeliveryZoneId,
+      lang,
+      cart: cart.map((item: any) => ({
+        productId: item.product?.id,
+        quantity: parseInt(item.quantity, 10) || 1,
+      })),
+    })
+      .then((quote) => {
+        if (active) setDeliveryQuote(quote);
+      })
+      .catch((error) => {
+        console.warn("Delivery quote failed, using fallback zone fee:", error);
+        if (active) setDeliveryQuote(null);
+      })
+      .finally(() => {
+        if (active) setDeliveryQuoteLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedDeliveryZoneId, cart, lang]);
 
   const validateCoupon = () => {
     const found = coupons.find(c => c.code === details.couponCode && c.active);
@@ -91,11 +152,25 @@ export function CheckoutView({
   const onSubmit = async () => {
     setIsOrdering(true);
     try {
+      if (deliveryQuote && !deliveryQuote.available) {
+        throw new Error(lang === "sw" ? "Baadhi ya bidhaa hazifiki eneo ulilochagua." : "Some items cannot be delivered to the selected zone.");
+      }
       await handlePlaceOrder({
         ...details,
         cart,
         appliedCoupon,
         finalTotal: total,
+        deliveryZone: {
+          id: selectedDeliveryZone.id,
+          name: deliveryQuote?.zoneName || getDeliveryZoneName(selectedDeliveryZone, lang),
+          price: deliveryFee,
+          minDays: selectedDeliveryZone.minDays,
+          maxDays: selectedDeliveryZone.maxDays,
+          eta: deliveryQuote?.eta || formatDeliveryDays(selectedDeliveryZone, lang),
+        },
+        deliveryFee,
+        deliveryQuote,
+        deliveryEta: deliveryQuote?.eta || formatDeliveryDays(selectedDeliveryZone, lang),
         operation: details.paymentMethod === "escrow" ? "paysafe" : "cash_on_delivery",
         paymentCategory: details.paymentMethod === "escrow" ? "orbi" : undefined,
         paymentRail: details.paymentMethod === "escrow" ? "orbi_wallet" : undefined
@@ -183,6 +258,34 @@ export function CheckoutView({
                       </button>
                     </div>
                   )}
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-3">
+                    <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      {lang === "sw" ? "Eneo la Usafirishaji" : "Delivery zone"}
+                    </label>
+                    <select
+                      value={selectedDeliveryZoneId}
+                      onChange={(e) => setSelectedDeliveryZoneId(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-xs font-bold text-slate-700 outline-none focus:border-primary"
+                    >
+                      {normalizeDeliveryZones(deliveryZones).map((zone) => (
+                        <option key={zone.id} value={zone.id}>
+                          {getDeliveryZoneName(zone, lang)} · {formatDeliveryDays(zone, lang)} · {formatCurrency(zone.price)}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-2 text-[10px] font-bold text-slate-500">
+                      {deliveryQuoteLoading
+                        ? (lang === "sw" ? "Inahesabu usafirishaji..." : "Calculating delivery...")
+                        : `${deliveryQuote?.zoneName || getDeliveryZoneName(selectedDeliveryZone, lang)} · ${deliveryQuote?.eta || formatDeliveryDays(selectedDeliveryZone, lang)} · ${formatCurrency(deliveryFee)}`}
+                    </p>
+                    {deliveryQuote?.unavailableItems?.length ? (
+                      <div className="mt-2 rounded-xl border border-rose-100 bg-rose-50 p-3 text-[11px] font-bold text-rose-700">
+                        {lang === "sw" ? "Hazifiki eneo hili:" : "Unavailable for this zone:"}{" "}
+                        {deliveryQuote.unavailableItems.map((item) => item.name).join(", ")}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               </div>
 
@@ -199,7 +302,7 @@ export function CheckoutView({
                 )}
                 <div className="flex justify-between text-xs font-bold text-slate-400">
                   <span>Delivery</span>
-                  <span className="text-slate-600">{formatCurrency(deliveryFee)}</span>
+                  <span className="text-slate-600">{deliveryQuoteLoading ? "..." : formatCurrency(deliveryFee)}</span>
                 </div>
                 <div className="flex justify-between items-center pt-2">
                   <span className="text-sm font-black text-slate-900 uppercase">{lang === "sw" ? "Jumla Kuu" : "Grand Total"}</span>
@@ -297,7 +400,7 @@ export function CheckoutView({
                       setTouched({ name: true, phone: true, address: true });
                       if (isValid) setStep(2);
                     }}
-                    disabled={!isValid && (touched.name && touched.phone && touched.address)}
+                    disabled={(!isValid && (touched.name && touched.phone && touched.address)) || deliveryQuoteLoading || Boolean(deliveryQuote?.unavailableItems?.length)}
                     className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-3 hover:bg-primary transition-all active:scale-95 disabled:opacity-50"
                   >
                     <span>{lang === "sw" ? "Endelea na Malipo" : "Continue to Payment"}</span>
@@ -395,7 +498,7 @@ export function CheckoutView({
                     <button onClick={() => setStep(2)} disabled={isOrdering} className="px-6 py-4 border border-slate-200 text-slate-400 hover:text-slate-900 rounded-2xl font-black text-sm uppercase tracking-wider transition-all disabled:opacity-50">Back</button>
                     <button 
                       onClick={onSubmit}
-                      disabled={isOrdering}
+                      disabled={isOrdering || deliveryQuoteLoading || Boolean(deliveryQuote?.unavailableItems?.length)}
                       className="flex-1 bg-primary text-white py-4 rounded-2xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-3 shadow-lg shadow-orange-100 hover:bg-slate-900 transition-all active:scale-95 disabled:opacity-50"
                     >
                       {isOrdering ? (

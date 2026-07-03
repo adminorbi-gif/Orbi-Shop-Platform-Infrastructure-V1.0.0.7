@@ -182,7 +182,11 @@ router.get("/", requireAuth, async (req, res) => {
         paymentReference: parsed.paymentReference,
         riderName: o.rider_name || undefined,
         riderPhone: o.rider_phone || undefined,
-        riderVehicle: o.rider_vehicle || undefined
+        riderVehicle: o.rider_vehicle || undefined,
+        deliveryZoneId: o.delivery_zone_id || undefined,
+        deliveryZoneName: o.delivery_zone_name || undefined,
+        deliveryFee: Number(o.delivery_fee || 0),
+        deliveryEta: o.delivery_eta || undefined
       };
     });
 
@@ -646,7 +650,11 @@ router.get("/:id", requireAuth, async (req, res) => {
       paymentReference: parsed.paymentReference,
       riderName: o.rider_name || undefined,
       riderPhone: o.rider_phone || undefined,
-      riderVehicle: o.rider_vehicle || undefined
+      riderVehicle: o.rider_vehicle || undefined,
+      deliveryZoneId: o.delivery_zone_id || undefined,
+      deliveryZoneName: o.delivery_zone_name || undefined,
+      deliveryFee: Number(o.delivery_fee || 0),
+      deliveryEta: o.delivery_eta || undefined
     };
 
     res.json({ success: true, data: item });

@@ -156,6 +156,20 @@ class SchemaValidator {
             price: Number(t.price || 0),
           }))
         : undefined,
+      deliveryClass: data.deliveryClass ? String(data.deliveryClass).toLowerCase() : "standard",
+      weightKg: Math.max(0, Number(data.weightKg || 1)),
+      lengthCm: data.lengthCm === undefined ? undefined : Math.max(0, Number(data.lengthCm || 0)),
+      widthCm: data.widthCm === undefined ? undefined : Math.max(0, Number(data.widthCm || 0)),
+      heightCm: data.heightCm === undefined ? undefined : Math.max(0, Number(data.heightCm || 0)),
+      fragile: Boolean(data.fragile),
+      oversized: Boolean(data.oversized),
+      requiresColdChain: Boolean(data.requiresColdChain),
+      digitalProduct: Boolean(data.digitalProduct),
+      requiresDeliveryQuote: Boolean(data.requiresDeliveryQuote),
+      deliveryScope: data.deliveryScope || "national",
+      deliveryPolicySource: data.deliveryPolicySource || "auto",
+      deliveryHandlingNotes: data.deliveryHandlingNotes ? String(data.deliveryHandlingNotes) : undefined,
+      blockedDeliveryZoneIds: Array.isArray(data.blockedDeliveryZoneIds) ? data.blockedDeliveryZoneIds.map(String) : [],
     };
 
     console.info("[SchemaValidator] Product validated success:", validated);

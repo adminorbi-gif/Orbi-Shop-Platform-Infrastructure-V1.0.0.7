@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Product, SellerProfile, Customer } from "../types";
+import { Product, SellerProfile, Customer, DeliveryZone } from "../types";
 import { formatCurrency } from "../lib/storage";
 import {
   X,
@@ -35,6 +35,13 @@ import { useDialog } from "../components/CustomDialogContext";
 import { PriceDisplay } from "../components/PriceDisplay";
 import { parseWholesaleTiersFromText, getProductPriceForQty } from "../utils/pricing";
 import { AppBarBackgroundSlider } from "../components/AppBarBackgroundSlider";
+import {
+  DEFAULT_DELIVERY_ZONES,
+  formatDeliveryDays,
+  formatDeliveryZoneSummary,
+  getDeliveryZoneName,
+  normalizeDeliveryZones,
+} from "../lib/deliveryZones";
 
 // Inline Flag assets styled exactly as in the main app layout
 const TanzaniaFlag = () => (
@@ -231,31 +238,18 @@ export default function ProductDetailPage({
   const isOutOfStock = product.stock <= 0;
 
   const [qty, setQty] = useState(1);
-  const [selectedRegion, setSelectedRegion] = useState("Dar es Salaam");
+  const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>(DEFAULT_DELIVERY_ZONES);
+  const [selectedDeliveryZoneId, setSelectedDeliveryZoneId] = useState(DEFAULT_DELIVERY_ZONES[0].id);
+  const selectedDeliveryZone = useMemo(() => {
+    return normalizeDeliveryZones(deliveryZones).find((zone) => zone.id === selectedDeliveryZoneId) || normalizeDeliveryZones(deliveryZones)[0];
+  }, [deliveryZones, selectedDeliveryZoneId]);
 
   const deliveryEstimates = useMemo(() => {
-    const baseDays = 1; // standard seller processing time
-    let addDaysMin = 0;
-    let addDaysMax = 0;
-    
-    switch(selectedRegion) {
-      case "Dar es Salaam":
-        addDaysMin = 0; addDaysMax = 1; break;
-      case "Arusha":
-      case "Mwanza":
-      case "Dodoma":
-        addDaysMin = 1; addDaysMax = 2; break;
-      case "Zanzibar":
-        addDaysMin = 2; addDaysMax = 3; break;
-      default:
-        addDaysMin = 2; addDaysMax = 4; break;
-    }
-    
     const minDate = new Date();
-    minDate.setDate(minDate.getDate() + baseDays + addDaysMin);
+    minDate.setDate(minDate.getDate() + Number(selectedDeliveryZone.minDays || 0));
     
     const maxDate = new Date();
-    maxDate.setDate(maxDate.getDate() + baseDays + addDaysMax);
+    maxDate.setDate(maxDate.getDate() + Number(selectedDeliveryZone.maxDays || selectedDeliveryZone.minDays || 0));
     
     const formatOpts: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' };
     const locale = lang === 'sw' ? 'sw-TZ' : 'en-US';
@@ -264,7 +258,7 @@ export default function ProductDetailPage({
       min: minDate.toLocaleDateString(locale, formatOpts),
       max: maxDate.toLocaleDateString(locale, formatOpts)
     };
-  }, [selectedRegion, lang]);
+  }, [selectedDeliveryZone, lang]);
 
   const tiers = useMemo(() => {
     return (product.wholesaleTiers && product.wholesaleTiers.length > 0)
@@ -414,6 +408,23 @@ export default function ProductDetailPage({
       active = false;
     };
   }, [product.id]);
+
+  useEffect(() => {
+    let active = true;
+    db.getDeliveryZones()
+      .then((zones) => {
+        if (!active) return;
+        const normalized = normalizeDeliveryZones(zones);
+        setDeliveryZones(normalized);
+        setSelectedDeliveryZoneId((current) => normalized.some((zone) => zone.id === current) ? current : normalized[0].id);
+      })
+      .catch(() => {
+        if (active) setDeliveryZones(DEFAULT_DELIVERY_ZONES);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Make sure imgIdx stays within bounds if product changes
   if (product.images.length > 0 && imgIdx >= product.images.length && imgIdx !== 0) {
@@ -927,6 +938,9 @@ export default function ProductDetailPage({
                         <Calendar size={12} className="text-blue-400 shrink-0" />
                         <span className="text-blue-900 font-bold">{deliveryEstimates.min} - {deliveryEstimates.max}</span>
                       </p>
+                      <p className="mt-1 text-[11px] font-bold text-slate-500">
+                        {formatDeliveryZoneSummary(selectedDeliveryZone, lang)}
+                      </p>
                     </div>
                   </div>
                   
@@ -934,15 +948,14 @@ export default function ProductDetailPage({
                     <MapPin size={14} className="text-slate-400 ml-2.5" />
                     <select 
                       className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer appearance-none py-2 pl-1.5 pr-8 w-full"
-                      value={selectedRegion}
-                      onChange={(e) => setSelectedRegion(e.target.value)}
+                      value={selectedDeliveryZoneId}
+                      onChange={(e) => setSelectedDeliveryZoneId(e.target.value)}
                     >
-                      <option value="Dar es Salaam">Dar es Salaam</option>
-                      <option value="Arusha">Arusha</option>
-                      <option value="Mwanza">Mwanza</option>
-                      <option value="Dodoma">Dodoma</option>
-                      <option value="Zanzibar">Zanzibar</option>
-                      <option value="Other Regions">{lang === "sw" ? "Mikoa Mingine" : "Other Regions"}</option>
+                      {normalizeDeliveryZones(deliveryZones).map((zone) => (
+                        <option key={zone.id} value={zone.id}>
+                          {getDeliveryZoneName(zone, lang)} · {formatDeliveryDays(zone, lang)}
+                        </option>
+                      ))}
                     </select>
                     <div className="absolute right-2 pointer-events-none flex items-center">
                       <ChevronDown size={14} className="text-slate-400" />

@@ -26,6 +26,7 @@ import analyticsRouter from "./server/routes/analytics.js";
 import authRouter from "./server/routes/auth.js";
 import checkoutRouter from "./server/routes/checkout.js";
 import customersRouter from "./server/routes/customers.js";
+import deliveryRouter from "./server/routes/delivery.js";
 import messagesRouter from "./server/routes/messages.js";
 import newslettersRouter from "./server/routes/newsletters.js";
 import ordersRouter from "./server/routes/orders.js";
@@ -169,6 +170,7 @@ async function startServer() {
   app.use("/api/v1/checkout", checkoutRouter);
   app.use("/api/checkout", checkoutRouter);
   app.use("/api/v1/customers", customersRouter);
+  app.use("/api/v1/delivery", deliveryRouter);
   app.use("/api/v1/messages", messagesRouter);
   app.use("/api/v1/newsletters", newslettersRouter);
   app.use("/api/v1/orders", ordersRouter);

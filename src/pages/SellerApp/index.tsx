@@ -14,7 +14,6 @@ import {
   StoreSettingsForm,
   OrderProgressIndicator
 } from './components';
-import { jsPDF } from "jspdf";
 import {
   Package,
   ShoppingCart,
@@ -176,6 +175,7 @@ export default function SellerApp({
     setProdVibe,
     prodPresentationStyle,
     setProdPresentationStyle,
+    smartDeliveryPolicy,
     savingProduct,
     setSavingProduct,
     isGeneratingDesc,
@@ -204,7 +204,8 @@ export default function SellerApp({
     setOrderStatusFilter
   } = useSellerApp({ seller, products, orders, onLogout, lang, setLang, onRefreshData, addToast });
 
-  const downloadReceipt = (payout: any) => {
+  const downloadReceipt = async (payout: any) => {
+    const { jsPDF } = await import("jspdf");
     const doc = new jsPDF();
     doc.setFontSize(18);
     doc.text("Payout Receipt", 20, 20);
@@ -2897,6 +2898,24 @@ export default function SellerApp({
                         ? "Picha ya kwanza itakuwa jalada kuu. Unaweza kupakia moja kwa moja kutoka simu."
                         : "The first image becomes the cover. Upload directly from phone or desktop."}
                     </p>
+                    <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-3">
+                      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-emerald-700">
+                        <Sparkles size={13} />
+                        {lang === "sw" ? "Usafirishaji Smart" : "Smart Delivery"}
+                      </div>
+                      <p className="mt-2 text-xs font-black text-slate-900">
+                        {smartDeliveryPolicy.summary.title}
+                      </p>
+                      <p className="mt-1 text-[10px] font-semibold leading-relaxed text-slate-500">
+                        {lang === "sw"
+                          ? smartDeliveryPolicy.requiresDeliveryQuote
+                            ? "Bidhaa hii itaomba quote maalum kabla ya malipo."
+                            : "Mfumo utapendekeza gharama na maeneo ya usafirishaji kiotomatiki."
+                          : smartDeliveryPolicy.requiresDeliveryQuote
+                            ? "This product will request a custom delivery quote before payment."
+                            : "The system will automatically suggest delivery cost and coverage."}
+                      </p>
+                    </div>
                   </div>
                 </div>
 

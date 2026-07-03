@@ -2,6 +2,7 @@ import { Router } from "express";
 import { getSupabase, supabase } from "../lib/supabase.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { sendOrbiTalkDirectEmail, sendOrbiTalkDirectSMS } from "./talk.js";
+import { inferProductDeliveryPolicy, shouldAutoInferDeliveryPolicy } from "../lib/productDeliveryPolicy.js";
 
 const router = Router();
 
@@ -244,7 +245,23 @@ router.get("/", async (req, res) => {
         sku: parsedSku,
         warranty: parsedWarranty,
         features: Array.isArray(p.features) ? p.features : [],
-        wholesaleTiers: Array.isArray(p.wholesale_tiers) ? p.wholesale_tiers : []
+        wholesaleTiers: Array.isArray(p.wholesale_tiers) ? p.wholesale_tiers : [],
+        weightKg: Number(p.weight_kg || 1),
+        lengthCm: p.length_cm === null || p.length_cm === undefined ? undefined : Number(p.length_cm),
+        widthCm: p.width_cm === null || p.width_cm === undefined ? undefined : Number(p.width_cm),
+        heightCm: p.height_cm === null || p.height_cm === undefined ? undefined : Number(p.height_cm),
+        deliveryClass: p.delivery_class || 'standard',
+        fragile: Boolean(p.fragile),
+        oversized: Boolean(p.oversized),
+        requiresColdChain: Boolean(p.requires_cold_chain),
+        hazardous: Boolean(p.hazardous),
+        digitalProduct: Boolean(p.digital_product),
+        requiresDeliveryQuote: Boolean(p.requires_delivery_quote),
+        deliveryScope: p.delivery_scope || 'national',
+        deliveryPolicySource: p.delivery_policy_source || 'auto',
+        deliveryHandlingNotes: p.delivery_handling_notes || '',
+        blockedDeliveryZoneIds: Array.isArray(p.blocked_delivery_zone_ids) ? p.blocked_delivery_zone_ids : [],
+        sellerOriginZoneId: p.seller_origin_zone_id || undefined
       };
     });
 
@@ -289,6 +306,21 @@ router.post("/", requireAuth, requireRole("admin", "seller"), async (req, res) =
         finalTags = finalTags.filter((t: string) => !t.startsWith('warranty:'));
         finalTags.push(`warranty:${product.warranty}`);
       }
+      const deliveryPolicy = shouldAutoInferDeliveryPolicy(product)
+        ? inferProductDeliveryPolicy(product)
+        : {
+            deliveryClass: product.deliveryClass || "standard",
+            weightKg: Math.max(0, Number(product.weightKg || 1)),
+            fragile: Boolean(product.fragile),
+            oversized: Boolean(product.oversized),
+            requiresColdChain: Boolean(product.requiresColdChain),
+            hazardous: Boolean(product.hazardous),
+            digitalProduct: Boolean(product.digitalProduct),
+            requiresDeliveryQuote: Boolean(product.requiresDeliveryQuote),
+            deliveryScope: product.deliveryScope || "national",
+            deliveryPolicySource: product.deliveryPolicySource || "manual",
+            deliveryHandlingNotes: product.deliveryHandlingNotes || "",
+          };
 
       const payload: any = {
         name: product.name,
@@ -299,6 +331,22 @@ router.post("/", requireAuth, requireRole("admin", "seller"), async (req, res) =
         description: product.description,
         features: Array.isArray(product.features) ? product.features : [],
         wholesale_tiers: Array.isArray(product.wholesaleTiers) ? product.wholesaleTiers : [],
+        weight_kg: Math.max(0, Number(deliveryPolicy.weightKg || product.weightKg || 1)),
+        length_cm: product.lengthCm === undefined || product.lengthCm === "" ? null : Math.max(0, Number(product.lengthCm || 0)),
+        width_cm: product.widthCm === undefined || product.widthCm === "" ? null : Math.max(0, Number(product.widthCm || 0)),
+        height_cm: product.heightCm === undefined || product.heightCm === "" ? null : Math.max(0, Number(product.heightCm || 0)),
+        delivery_class: String(deliveryPolicy.deliveryClass || "standard").toLowerCase(),
+        fragile: Boolean(deliveryPolicy.fragile),
+        oversized: Boolean(deliveryPolicy.oversized),
+        requires_cold_chain: Boolean(deliveryPolicy.requiresColdChain),
+        hazardous: Boolean(deliveryPolicy.hazardous),
+        digital_product: Boolean(deliveryPolicy.digitalProduct),
+        requires_delivery_quote: Boolean(deliveryPolicy.requiresDeliveryQuote),
+        delivery_scope: deliveryPolicy.deliveryScope || "national",
+        delivery_policy_source: deliveryPolicy.deliveryPolicySource || "auto",
+        delivery_handling_notes: deliveryPolicy.deliveryHandlingNotes || "",
+        blocked_delivery_zone_ids: Array.isArray(product.blockedDeliveryZoneIds) ? product.blockedDeliveryZoneIds.map(String) : [],
+        seller_origin_zone_id: product.sellerOriginZoneId || null,
         tags: finalTags,
         images: product.images,
         legacy_id: product.id?.includes('-') ? product.id : undefined

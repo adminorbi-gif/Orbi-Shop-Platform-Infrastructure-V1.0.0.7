@@ -36,6 +36,8 @@ import {
   SubscriptionPlan,
   PromotionalBanner,
   Category,
+  DeliveryZone,
+  DeliveryRule,
 } from "../../../types";
 import {
   Plus,
@@ -2331,6 +2333,19 @@ export function ProductsAdmin({
   const [visible, setVisible] = useState(true);
   const [sku, setSku] = useState("");
   const [warranty, setWarranty] = useState("");
+  const [deliveryClass, setDeliveryClass] = useState("standard");
+  const [weightKg, setWeightKg] = useState("1");
+  const [lengthCm, setLengthCm] = useState("");
+  const [widthCm, setWidthCm] = useState("");
+  const [heightCm, setHeightCm] = useState("");
+  const [fragile, setFragile] = useState(false);
+  const [oversized, setOversized] = useState(false);
+  const [requiresColdChain, setRequiresColdChain] = useState(false);
+  const [digitalProduct, setDigitalProduct] = useState(false);
+  const [requiresDeliveryQuote, setRequiresDeliveryQuote] = useState(false);
+  const [deliveryScope, setDeliveryScope] = useState<"local_only" | "regional" | "national" | "custom_quote">("national");
+  const [deliveryHandlingNotes, setDeliveryHandlingNotes] = useState("");
+  const [blockedDeliveryZoneIds, setBlockedDeliveryZoneIds] = useState<string[]>([]);
   const [features, setFeatures] = useState<
     { name: string; description: string }[]
   >([]);
@@ -2738,6 +2753,19 @@ export function ProductsAdmin({
       setVisible(prod.visible !== false);
       setSku(prod.sku || "");
       setWarranty(prod.warranty || "");
+      setDeliveryClass(prod.deliveryClass || "standard");
+      setWeightKg(String(prod.weightKg || 1));
+      setLengthCm(prod.lengthCm ? String(prod.lengthCm) : "");
+      setWidthCm(prod.widthCm ? String(prod.widthCm) : "");
+      setHeightCm(prod.heightCm ? String(prod.heightCm) : "");
+      setFragile(Boolean(prod.fragile));
+      setOversized(Boolean(prod.oversized));
+      setRequiresColdChain(Boolean(prod.requiresColdChain));
+      setDigitalProduct(Boolean(prod.digitalProduct));
+      setRequiresDeliveryQuote(Boolean(prod.requiresDeliveryQuote));
+      setDeliveryScope((prod.deliveryScope as any) || "national");
+      setDeliveryHandlingNotes(prod.deliveryHandlingNotes || "");
+      setBlockedDeliveryZoneIds(prod.blockedDeliveryZoneIds || []);
       setFeatures(prod.features || []);
       setTaxCode(prod.taxCode || 1);
       setArrangeTier(prod.arrangeTier || "all");
@@ -2766,6 +2794,19 @@ export function ProductsAdmin({
       setVisible(true);
       setSku("");
       setWarranty("");
+      setDeliveryClass("standard");
+      setWeightKg("1");
+      setLengthCm("");
+      setWidthCm("");
+      setHeightCm("");
+      setFragile(false);
+      setOversized(false);
+      setRequiresColdChain(false);
+      setDigitalProduct(false);
+      setRequiresDeliveryQuote(false);
+      setDeliveryScope("national");
+      setDeliveryHandlingNotes("");
+      setBlockedDeliveryZoneIds([]);
       setFeatures([]);
       setTaxCode(1);
       setArrangeTier("all");
@@ -3232,6 +3273,20 @@ export function ProductsAdmin({
       vibe,
       presentationStyle,
       wholesaleTiers: finalWholesaleTiers,
+      deliveryClass,
+      weightKg: Number(weightKg || 1),
+      lengthCm: lengthCm ? Number(lengthCm) : undefined,
+      widthCm: widthCm ? Number(widthCm) : undefined,
+      heightCm: heightCm ? Number(heightCm) : undefined,
+      fragile,
+      oversized,
+      requiresColdChain,
+      digitalProduct,
+      requiresDeliveryQuote,
+      deliveryScope,
+      deliveryPolicySource: "manual",
+      deliveryHandlingNotes,
+      blockedDeliveryZoneIds,
       sellerId: editId
         ? products.find((p) => p.id === editId)?.sellerId
         : currentSeller
@@ -4444,6 +4499,105 @@ export function ProductsAdmin({
                       </div>
                     </div>
                   )}
+                </div>
+
+                <div className="bg-blue-50 border border-blue-100 p-5 rounded-2xl space-y-4 col-span-1 sm:col-span-2">
+                  <div>
+                    <span className="block text-[11px] font-black uppercase text-blue-700 tracking-wider">
+                      {lang === "sw" ? "Akili ya Usafirishaji" : "Delivery Intelligence"}
+                    </span>
+                    <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                      {lang === "sw"
+                        ? "Hizi hutumika kuhesabu gharama halisi ya usafirishaji na kuzuia maeneo yasiyofaa kwa bidhaa hii."
+                        : "Used to calculate real delivery quotes and block unsuitable zones for this product."}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                    <div>
+                      <label className="block text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">{lang === "sw" ? "Aina" : "Class"}</label>
+                      <select value={deliveryClass} onChange={(e) => setDeliveryClass(e.target.value)} className="w-full bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold outline-none focus:border-blue-600">
+                        <option value="standard">{lang === "sw" ? "Kawaida" : "Standard"}</option>
+                        <option value="bulky">{lang === "sw" ? "Kubwa" : "Bulky"}</option>
+                        <option value="heavy">{lang === "sw" ? "Nzito" : "Heavy"}</option>
+                        <option value="special">{lang === "sw" ? "Maalum" : "Special"}</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">{lang === "sw" ? "Uzito Kg" : "Weight Kg"}</label>
+                      <input type="number" min="0" step="0.1" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} className="w-full bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold outline-none focus:border-blue-600" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">{lang === "sw" ? "Urefu cm" : "Length cm"}</label>
+                      <input type="number" min="0" value={lengthCm} onChange={(e) => setLengthCm(e.target.value)} className="w-full bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold outline-none focus:border-blue-600" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">{lang === "sw" ? "Upana cm" : "Width cm"}</label>
+                      <input type="number" min="0" value={widthCm} onChange={(e) => setWidthCm(e.target.value)} className="w-full bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold outline-none focus:border-blue-600" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">{lang === "sw" ? "Kimo cm" : "Height cm"}</label>
+                      <input type="number" min="0" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} className="w-full bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold outline-none focus:border-blue-600" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">{lang === "sw" ? "Wigo" : "Scope"}</label>
+                      <select value={deliveryScope} onChange={(e) => setDeliveryScope(e.target.value as any)} className="w-full bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold outline-none focus:border-blue-600">
+                        <option value="national">{lang === "sw" ? "Nchi nzima" : "National"}</option>
+                        <option value="regional">{lang === "sw" ? "Mikoa iliyochaguliwa" : "Selected regions"}</option>
+                        <option value="local_only">{lang === "sw" ? "Eneo la karibu tu" : "Local only"}</option>
+                        <option value="custom_quote">{lang === "sw" ? "Quote maalum" : "Custom quote"}</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      [fragile, setFragile, lang === "sw" ? "Inavunjika" : "Fragile"],
+                      [oversized, setOversized, lang === "sw" ? "Kubwa" : "Oversized"],
+                      [requiresColdChain, setRequiresColdChain, lang === "sw" ? "Baridi" : "Cold chain"],
+                      [digitalProduct, setDigitalProduct, lang === "sw" ? "Digital" : "Digital"],
+                      [requiresDeliveryQuote, setRequiresDeliveryQuote, lang === "sw" ? "Quote maalum" : "Custom quote"],
+                    ].map(([checked, setter, label]: any) => (
+                      <label key={label} className="min-h-11 flex items-center gap-2 rounded-2xl bg-white px-3 text-[10px] font-black uppercase tracking-wider text-slate-600 ring-1 ring-slate-200">
+                        <input type="checkbox" checked={checked} onChange={(e) => setter(e.target.checked)} className="h-4 w-4 accent-blue-600" />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-black uppercase text-slate-400 tracking-wider mb-1">
+                      {lang === "sw" ? "Maelezo ya logistics" : "Logistics notes"}
+                    </label>
+                    <textarea
+                      value={deliveryHandlingNotes}
+                      onChange={(e) => setDeliveryHandlingNotes(e.target.value)}
+                      rows={2}
+                      className="w-full bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-bold outline-none focus:border-blue-600"
+                      placeholder={lang === "sw" ? "Mf. Inahitaji dereva na makadirio ya mafuta..." : "e.g. Requires driver and fuel estimate..."}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-black uppercase text-slate-400 tracking-wider mb-2">
+                      {lang === "sw" ? "Maeneo ambayo bidhaa hii haiwezi kufikishwa" : "Blocked delivery zones for this product"}
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {deliveryZones.map((zone) => (
+                        <label key={zone.id} className="min-h-11 flex items-center gap-2 rounded-2xl bg-white px-3 text-[10px] font-black uppercase tracking-wider text-slate-600 ring-1 ring-slate-200">
+                          <input
+                            type="checkbox"
+                            checked={blockedDeliveryZoneIds.includes(zone.id)}
+                            onChange={(e) => {
+                              setBlockedDeliveryZoneIds((prev) =>
+                                e.target.checked
+                                  ? Array.from(new Set([...prev, zone.id]))
+                                  : prev.filter((id) => id !== zone.id),
+                              );
+                            }}
+                            className="h-4 w-4 accent-rose-600"
+                          />
+                          {zone.labelSw || zone.name}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl mt-1 col-span-1 sm:col-span-2">
@@ -11411,6 +11565,9 @@ export function SettingsAdmin() {
   const [savedProfile, setSavedProfile] = useState(false);
   const [savedLoyalty, setSavedLoyalty] = useState(false);
   const [nichesSaved, setNichesSaved] = useState(false);
+  const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>([]);
+  const [deliveryRules, setDeliveryRules] = useState<DeliveryRule[]>([]);
+  const [deliverySaved, setDeliverySaved] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiTotalPending, setAiTotalPending] = useState(0);
@@ -11982,7 +12139,7 @@ export function SettingsAdmin() {
   const [isTraSaved, setIsTraSaved] = useState(false);
 
   const [activeSubTab, setActiveSubTab] = useState<
-    "profile" | "loyalty" | "tra" | "security" | "niches"
+    "profile" | "delivery" | "loyalty" | "tra" | "security" | "niches"
   >("profile");
 
   useEffect(() => {
@@ -12003,11 +12160,21 @@ export function SettingsAdmin() {
         console.warn("Failed loading products:", err);
         return [];
       }),
+      db.getDeliveryZones().catch((err) => {
+        console.warn("Failed loading delivery zones:", err);
+        return [];
+      }),
+      db.getDeliveryRules().catch((err) => {
+        console.warn("Failed loading delivery rules:", err);
+        return [];
+      }),
     ])
-      .then(([res, niches, traConfig, prods]) => {
+      .then(([res, niches, traConfig, prods, zones, rules]) => {
         setSettings(res || {});
         setSysNiches(niches || []);
         setProducts(prods || []);
+        setDeliveryZones(zones || []);
+        setDeliveryRules(rules || []);
         if (traConfig) {
           setTraTin(traConfig.tin || "");
           setTraCertKey(traConfig.certKey || "");
@@ -12098,6 +12265,49 @@ export function SettingsAdmin() {
     setTimeout(() => setSavedLoyalty(false), 3000);
   };
 
+  const handleSaveDeliveryZones = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanZones = deliveryZones
+      .map((zone, index) => ({
+        ...zone,
+        name: (zone.name || zone.labelSw || zone.labelEn || "").trim(),
+        labelSw: (zone.labelSw || zone.name || "").trim(),
+        labelEn: (zone.labelEn || zone.name || "").trim(),
+        price: Math.max(0, Number(zone.price || 0)),
+        minDays: Math.max(0, Number(zone.minDays || 0)),
+        maxDays: Math.max(Math.max(0, Number(zone.minDays || 0)), Number(zone.maxDays || zone.minDays || 0)),
+        sortOrder: Number(zone.sortOrder ?? index + 1),
+        isActive: zone.isActive !== false,
+      }))
+      .filter((zone) => zone.name);
+
+    await db.saveDeliveryZones(cleanZones);
+    const cleanRules = deliveryRules
+      .map((rule, index) => ({
+        ...rule,
+        zoneId: String(rule.zoneId || "").trim(),
+        deliveryClass: String(rule.deliveryClass || "standard").trim().toLowerCase(),
+        minWeightKg: Math.max(0, Number(rule.minWeightKg || 0)),
+        maxWeightKg: rule.maxWeightKg === null || rule.maxWeightKg === undefined ? null : Math.max(0, Number(rule.maxWeightKg || 0)),
+        baseFee: Math.max(0, Number(rule.baseFee || 0)),
+        perKgFee: Math.max(0, Number(rule.perKgFee || 0)),
+        fragileFee: Math.max(0, Number(rule.fragileFee || 0)),
+        oversizedFee: Math.max(0, Number(rule.oversizedFee || 0)),
+        coldChainFee: Math.max(0, Number(rule.coldChainFee || 0)),
+        minDays: Math.max(0, Number(rule.minDays || 0)),
+        maxDays: Math.max(Math.max(0, Number(rule.minDays || 0)), Number(rule.maxDays || rule.minDays || 0)),
+        isAvailable: rule.isAvailable !== false,
+        reasonIfUnavailable: rule.reasonIfUnavailable || "",
+        sortOrder: Number(rule.sortOrder ?? index + 1),
+      }))
+      .filter((rule) => rule.zoneId && rule.deliveryClass);
+    await db.saveDeliveryRules(cleanRules);
+    setDeliveryZones(await db.getDeliveryZones());
+    setDeliveryRules(await db.getDeliveryRules());
+    setDeliverySaved(true);
+    setTimeout(() => setDeliverySaved(false), 3000);
+  };
+
   if (loading)
     return (
       <div className="flex items-center justify-center p-12 text-slate-500 font-medium text-xs">
@@ -12116,6 +12326,14 @@ export function SettingsAdmin() {
         ? "Mawasiliano na njia za malipo"
         : "Profile, contacts & payments",
       icon: Store,
+    },
+    {
+      id: "delivery",
+      label: isSw ? "Usafirishaji" : "Delivery Zones",
+      desc: isSw
+        ? "Mikoa, bei na muda wa kufikisha"
+        : "Regions, fees, and delivery ETA",
+      icon: Truck,
     },
     {
       id: "loyalty",
@@ -12862,6 +13080,386 @@ export function SettingsAdmin() {
                   className="bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase px-7 py-3 rounded-2xl shadow-md transition cursor-pointer"
                 >
                   {isSw ? "Hifadhi Wasifu" : "Save Profile details"}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {activeSubTab === "delivery" && (
+            <form
+              onSubmit={handleSaveDeliveryZones}
+              className="bg-white rounded-[2.25rem] border border-slate-200/80 p-6 sm:p-8 shadow-xs space-y-6 animate-in fade-in duration-200 text-left"
+            >
+              <div className="border-b border-slate-100 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                    {isSw ? "MAENEO YA USAFIRISHAJI" : "DELIVERY OPERATING ZONES"}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                    {isSw
+                      ? "Weka jina la eneo, gharama na siku za makadirio. Hizi ndizo zitatumika kwenye product cards na checkout."
+                      : "Define customer-facing delivery regions, fees, and ETA windows used by product cards and checkout."}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDeliveryZones((prev) => [
+                      ...prev,
+                      {
+                        id: `new-${Date.now()}`,
+                        name: "",
+                        labelSw: "",
+                        labelEn: "",
+                        price: 0,
+                        minDays: 1,
+                        maxDays: 2,
+                        isActive: true,
+                        sortOrder: prev.length + 1,
+                      },
+                    ])
+                  }
+                  className="min-h-11 rounded-2xl bg-slate-900 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-sm transition hover:bg-slate-800"
+                >
+                  + {isSw ? "Ongeza Eneo" : "Add Zone"}
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {deliveryZones.length === 0 && (
+                  <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-xs font-semibold text-slate-500">
+                    {isSw ? "Hakuna delivery zones bado." : "No delivery zones configured yet."}
+                  </div>
+                )}
+
+                {deliveryZones.map((zone, idx) => (
+                  <div key={zone.id || idx} className="rounded-3xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5">
+                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-xs ring-1 ring-slate-200">
+                          <Truck size={16} />
+                        </span>
+                        <div>
+                          <p className="text-xs font-black text-slate-900">
+                            {zone.name || (isSw ? `Eneo ${idx + 1}` : `Zone ${idx + 1}`)}
+                          </p>
+                          <p className="text-[10px] font-semibold text-slate-400">
+                            {isSw ? "Bei na muda huonekana kwa wateja" : "Fee and ETA are visible to customers"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-2xl bg-white px-3 text-[10px] font-black uppercase tracking-wider text-slate-600 ring-1 ring-slate-200">
+                          <input
+                            type="checkbox"
+                            checked={zone.isActive !== false}
+                            onChange={(e) => {
+                              const copy = [...deliveryZones];
+                              copy[idx] = { ...copy[idx], isActive: e.target.checked };
+                              setDeliveryZones(copy);
+                            }}
+                            className="h-4 w-4 accent-emerald-600"
+                          />
+                          {isSw ? "Active" : "Active"}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setDeliveryZones((prev) => prev.filter((_, i) => i !== idx))}
+                          className="min-h-11 rounded-2xl bg-rose-50 px-3 text-xs font-black text-rose-600 ring-1 ring-rose-100 transition hover:bg-rose-100"
+                        >
+                          {isSw ? "Futa" : "Remove"}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+                      <div className="lg:col-span-2">
+                        <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-slate-400">
+                          {isSw ? "Jina la ndani" : "Internal name"}
+                        </label>
+                        <input
+                          value={zone.name || ""}
+                          onChange={(e) => {
+                            const copy = [...deliveryZones];
+                            copy[idx] = { ...copy[idx], name: e.target.value };
+                            setDeliveryZones(copy);
+                          }}
+                          className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-xs font-bold outline-none focus:border-blue-600"
+                          placeholder="Dar es Salaam"
+                          required
+                        />
+                      </div>
+                      <div className="lg:col-span-2">
+                        <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-slate-400">
+                          {isSw ? "Label Kiswahili" : "Swahili label"}
+                        </label>
+                        <input
+                          value={zone.labelSw || ""}
+                          onChange={(e) => {
+                            const copy = [...deliveryZones];
+                            copy[idx] = { ...copy[idx], labelSw: e.target.value };
+                            setDeliveryZones(copy);
+                          }}
+                          className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-xs font-bold outline-none focus:border-blue-600"
+                          placeholder="Mikoa mingine"
+                        />
+                      </div>
+                      <div className="lg:col-span-2">
+                        <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-slate-400">
+                          {isSw ? "Label Kiingereza" : "English label"}
+                        </label>
+                        <input
+                          value={zone.labelEn || ""}
+                          onChange={(e) => {
+                            const copy = [...deliveryZones];
+                            copy[idx] = { ...copy[idx], labelEn: e.target.value };
+                            setDeliveryZones(copy);
+                          }}
+                          className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-xs font-bold outline-none focus:border-blue-600"
+                          placeholder="Other regions"
+                        />
+                      </div>
+                      <div className="lg:col-span-2">
+                        <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-slate-400">
+                          {isSw ? "Gharama (TSh)" : "Fee (TZS)"}
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={zone.price || 0}
+                          onChange={(e) => {
+                            const copy = [...deliveryZones];
+                            copy[idx] = { ...copy[idx], price: Number(e.target.value || 0) };
+                            setDeliveryZones(copy);
+                          }}
+                          className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-xs font-bold outline-none focus:border-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-slate-400">
+                          {isSw ? "Siku chini" : "Min days"}
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={zone.minDays || 0}
+                          onChange={(e) => {
+                            const copy = [...deliveryZones];
+                            const minDays = Number(e.target.value || 0);
+                            copy[idx] = { ...copy[idx], minDays, maxDays: Math.max(minDays, Number(copy[idx].maxDays || minDays)) };
+                            setDeliveryZones(copy);
+                          }}
+                          className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-xs font-bold outline-none focus:border-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-slate-400">
+                          {isSw ? "Siku juu" : "Max days"}
+                        </label>
+                        <input
+                          type="number"
+                          min={zone.minDays || 0}
+                          value={zone.maxDays || zone.minDays || 0}
+                          onChange={(e) => {
+                            const copy = [...deliveryZones];
+                            copy[idx] = { ...copy[idx], maxDays: Number(e.target.value || 0) };
+                            setDeliveryZones(copy);
+                          }}
+                          className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-xs font-bold outline-none focus:border-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-slate-400">
+                          {isSw ? "Mpangilio" : "Sort"}
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={zone.sortOrder ?? idx + 1}
+                          onChange={(e) => {
+                            const copy = [...deliveryZones];
+                            copy[idx] = { ...copy[idx], sortOrder: Number(e.target.value || 0) };
+                            setDeliveryZones(copy);
+                          }}
+                          className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-xs font-bold outline-none focus:border-blue-600"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-[2rem] border border-blue-100 bg-blue-50/60 p-4 sm:p-5">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
+                      {isSw ? "Kanuni za Bei ya Usafirishaji" : "Delivery Pricing Rules"}
+                    </h4>
+                    <p className="mt-1 text-[11px] font-semibold text-slate-500">
+                      {isSw
+                        ? "Bei halisi kulingana na eneo, aina ya bidhaa na uzito. Kanuni isiyopatikana inaweza kuzuia bidhaa kufikishwa eneo husika."
+                        : "Real quote rules by zone, product class, and weight. Unavailable rules can block delivery for a zone."}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDeliveryRules((prev) => [
+                        ...prev,
+                        {
+                          id: `new-rule-${Date.now()}`,
+                          zoneId: deliveryZones[0]?.id || "",
+                          deliveryClass: "standard",
+                          minWeightKg: 0,
+                          maxWeightKg: 5,
+                          baseFee: 0,
+                          perKgFee: 0,
+                          fragileFee: 0,
+                          oversizedFee: 0,
+                          coldChainFee: 0,
+                          minDays: 1,
+                          maxDays: 2,
+                          isAvailable: true,
+                          sortOrder: prev.length + 1,
+                        },
+                      ])
+                    }
+                    className="min-h-11 rounded-2xl bg-blue-600 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-sm transition hover:bg-blue-700"
+                  >
+                    + {isSw ? "Ongeza Rule" : "Add Rule"}
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {deliveryRules.length === 0 && (
+                    <div className="rounded-3xl border border-dashed border-blue-200 bg-white p-5 text-center text-xs font-semibold text-slate-500">
+                      {isSw ? "Hakuna pricing rules bado. Zone price itatumika kama fallback." : "No pricing rules yet. Zone fees will be used as fallback."}
+                    </div>
+                  )}
+                  {deliveryRules.map((rule, idx) => (
+                    <div key={rule.id || idx} className="rounded-3xl border border-blue-100 bg-white p-4">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+                        <div className="lg:col-span-2">
+                          <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-slate-400">{isSw ? "Eneo" : "Zone"}</label>
+                          <select
+                            value={rule.zoneId || ""}
+                            onChange={(e) => {
+                              const copy = [...deliveryRules];
+                              copy[idx] = { ...copy[idx], zoneId: e.target.value };
+                              setDeliveryRules(copy);
+                            }}
+                            className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-xs font-bold outline-none focus:border-blue-600"
+                          >
+                            <option value="">{isSw ? "Chagua zone" : "Select zone"}</option>
+                            {deliveryZones.map((zone) => (
+                              <option key={zone.id} value={zone.id}>{zone.labelSw || zone.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-slate-400">{isSw ? "Aina" : "Class"}</label>
+                          <select
+                            value={rule.deliveryClass || "standard"}
+                            onChange={(e) => {
+                              const copy = [...deliveryRules];
+                              copy[idx] = { ...copy[idx], deliveryClass: e.target.value };
+                              setDeliveryRules(copy);
+                            }}
+                            className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-xs font-bold outline-none focus:border-blue-600"
+                          >
+                            <option value="standard">{isSw ? "Kawaida" : "Standard"}</option>
+                            <option value="bulky">{isSw ? "Kubwa" : "Bulky"}</option>
+                            <option value="heavy">{isSw ? "Nzito" : "Heavy"}</option>
+                            <option value="special">{isSw ? "Maalum" : "Special"}</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-slate-400">{isSw ? "Kg Chini" : "Min Kg"}</label>
+                          <input type="number" min="0" step="0.1" value={rule.minWeightKg || 0} onChange={(e) => {
+                            const copy = [...deliveryRules];
+                            copy[idx] = { ...copy[idx], minWeightKg: Number(e.target.value || 0) };
+                            setDeliveryRules(copy);
+                          }} className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-xs font-bold outline-none focus:border-blue-600" />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-slate-400">{isSw ? "Kg Juu" : "Max Kg"}</label>
+                          <input type="number" min="0" step="0.1" value={rule.maxWeightKg ?? ""} onChange={(e) => {
+                            const copy = [...deliveryRules];
+                            copy[idx] = { ...copy[idx], maxWeightKg: e.target.value === "" ? null : Number(e.target.value || 0) };
+                            setDeliveryRules(copy);
+                          }} className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-xs font-bold outline-none focus:border-blue-600" placeholder="No cap" />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-slate-400">{isSw ? "Ada ya Msingi" : "Base Fee"}</label>
+                          <input type="number" min="0" value={rule.baseFee || 0} onChange={(e) => {
+                            const copy = [...deliveryRules];
+                            copy[idx] = { ...copy[idx], baseFee: Number(e.target.value || 0) };
+                            setDeliveryRules(copy);
+                          }} className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-xs font-bold outline-none focus:border-blue-600" />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-slate-400">{isSw ? "Kwa Kg" : "Per Kg"}</label>
+                          <input type="number" min="0" value={rule.perKgFee || 0} onChange={(e) => {
+                            const copy = [...deliveryRules];
+                            copy[idx] = { ...copy[idx], perKgFee: Number(e.target.value || 0) };
+                            setDeliveryRules(copy);
+                          }} className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-xs font-bold outline-none focus:border-blue-600" />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-slate-400">{isSw ? "Siku Chini" : "ETA Min"}</label>
+                          <input type="number" min="0" value={rule.minDays || 0} onChange={(e) => {
+                            const copy = [...deliveryRules];
+                            copy[idx] = { ...copy[idx], minDays: Number(e.target.value || 0) };
+                            setDeliveryRules(copy);
+                          }} className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-xs font-bold outline-none focus:border-blue-600" />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-slate-400">{isSw ? "Siku Juu" : "ETA Max"}</label>
+                          <input type="number" min="0" value={rule.maxDays || 0} onChange={(e) => {
+                            const copy = [...deliveryRules];
+                            copy[idx] = { ...copy[idx], maxDays: Number(e.target.value || 0) };
+                            setDeliveryRules(copy);
+                          }} className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-xs font-bold outline-none focus:border-blue-600" />
+                        </div>
+                        <div className="lg:col-span-2">
+                          <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-slate-400">{isSw ? "Sababu ikiwa haipatikani" : "Unavailable reason"}</label>
+                          <input value={rule.reasonIfUnavailable || ""} onChange={(e) => {
+                            const copy = [...deliveryRules];
+                            copy[idx] = { ...copy[idx], reasonIfUnavailable: e.target.value };
+                            setDeliveryRules(copy);
+                          }} className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-xs font-bold outline-none focus:border-blue-600" placeholder={isSw ? "Mf. Huduma haipo mkoa huu" : "e.g. Service unavailable"} />
+                        </div>
+                        <div className="flex items-end gap-2 lg:col-span-2">
+                          <label className="flex min-h-11 flex-1 cursor-pointer items-center gap-2 rounded-2xl bg-slate-50 px-3 text-[10px] font-black uppercase tracking-wider text-slate-600 ring-1 ring-slate-200">
+                            <input type="checkbox" checked={rule.isAvailable !== false} onChange={(e) => {
+                              const copy = [...deliveryRules];
+                              copy[idx] = { ...copy[idx], isAvailable: e.target.checked };
+                              setDeliveryRules(copy);
+                            }} className="h-4 w-4 accent-emerald-600" />
+                            {isSw ? "Inapatikana" : "Available"}
+                          </label>
+                          <button type="button" onClick={() => setDeliveryRules((prev) => prev.filter((_, i) => i !== idx))} className="min-h-11 rounded-2xl bg-rose-50 px-3 text-xs font-black text-rose-600 ring-1 ring-rose-100 transition hover:bg-rose-100">
+                            {isSw ? "Futa" : "Remove"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 pt-5 flex justify-end items-center gap-4">
+                {deliverySaved && (
+                  <span className="text-emerald-600 text-xs font-bold flex items-center gap-1">
+                    <CheckCircle2 size={16} className="text-emerald-500" />
+                    <span>{isSw ? "Delivery zones zimehifadhiwa" : "Delivery zones saved"}</span>
+                  </span>
+                )}
+                <button
+                  type="submit"
+                  className="min-h-11 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase px-7 py-3 rounded-2xl shadow-md transition cursor-pointer"
+                >
+                  {isSw ? "Hifadhi Usafirishaji" : "Save Delivery Zones"}
                 </button>
               </div>
             </form>

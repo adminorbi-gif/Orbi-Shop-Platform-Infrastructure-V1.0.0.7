@@ -4,6 +4,80 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 const router = Router();
 
+const defaultDeliveryZones = [
+  { id: "dar-es-salaam", name: "Dar es Salaam", labelSw: "Dar es Salaam", labelEn: "Dar es Salaam", price: 2500, minDays: 1, maxDays: 2, isActive: true, sortOrder: 1 },
+  { id: "nearby-regions", name: "Mikoa ya karibu", labelSw: "Mikoa ya karibu", labelEn: "Nearby regions", price: 4500, minDays: 2, maxDays: 3, isActive: true, sortOrder: 2 },
+  { id: "other-regions", name: "Mikoa mingine", labelSw: "Mikoa mingine", labelEn: "Other regions", price: 6500, minDays: 3, maxDays: 5, isActive: true, sortOrder: 3 },
+];
+
+const mapDeliveryZone = (row: any) => ({
+  id: row.id,
+  name: row.name,
+  labelSw: row.label_sw || row.labelSw || row.name,
+  labelEn: row.label_en || row.labelEn || row.name,
+  price: Number(row.price || 0),
+  minDays: Number(row.min_days ?? row.minDays ?? 1),
+  maxDays: Number(row.max_days ?? row.maxDays ?? row.min_days ?? row.minDays ?? 1),
+  isActive: row.is_active ?? row.isActive ?? true,
+  sortOrder: Number(row.sort_order ?? row.sortOrder ?? 0),
+  sellerId: row.seller_id || row.sellerId || null,
+});
+
+const isUuid = (value: any) =>
+  typeof value === "string" &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
+const toDeliveryZoneRow = (zone: any, index: number) => ({
+  id: isUuid(zone.id) ? zone.id : undefined,
+  name: String(zone.name || zone.labelSw || zone.labelEn || `Delivery Zone ${index + 1}`).trim(),
+  label_sw: String(zone.labelSw || zone.name || "").trim(),
+  label_en: String(zone.labelEn || zone.name || "").trim(),
+  price: Math.max(0, Number(zone.price || 0)),
+  min_days: Math.max(0, Number(zone.minDays || 0)),
+  max_days: Math.max(Math.max(0, Number(zone.minDays || 0)), Number(zone.maxDays || zone.minDays || 0)),
+  is_active: zone.isActive !== false,
+  sort_order: Number(zone.sortOrder ?? index + 1),
+  seller_id: zone.sellerId || null,
+  updated_at: new Date().toISOString(),
+});
+
+const mapDeliveryRule = (row: any) => ({
+  id: row.id,
+  zoneId: row.zone_id || row.zoneId,
+  deliveryClass: row.delivery_class || row.deliveryClass || "standard",
+  minWeightKg: Number(row.min_weight_kg ?? row.minWeightKg ?? 0),
+  maxWeightKg: row.max_weight_kg ?? row.maxWeightKg ?? null,
+  baseFee: Number(row.base_fee ?? row.baseFee ?? 0),
+  perKgFee: Number(row.per_kg_fee ?? row.perKgFee ?? 0),
+  fragileFee: Number(row.fragile_fee ?? row.fragileFee ?? 0),
+  oversizedFee: Number(row.oversized_fee ?? row.oversizedFee ?? 0),
+  coldChainFee: Number(row.cold_chain_fee ?? row.coldChainFee ?? 0),
+  minDays: Number(row.min_days ?? row.minDays ?? 1),
+  maxDays: Number(row.max_days ?? row.maxDays ?? row.min_days ?? row.minDays ?? 1),
+  isAvailable: row.is_available ?? row.isAvailable ?? true,
+  reasonIfUnavailable: row.reason_if_unavailable || row.reasonIfUnavailable || "",
+  sortOrder: Number(row.sort_order ?? row.sortOrder ?? 0),
+});
+
+const toDeliveryRuleRow = (rule: any, index: number) => ({
+  id: isUuid(rule.id) ? rule.id : undefined,
+  zone_id: String(rule.zoneId || rule.zone_id || "").trim(),
+  delivery_class: String(rule.deliveryClass || rule.delivery_class || "standard").trim().toLowerCase(),
+  min_weight_kg: Math.max(0, Number(rule.minWeightKg ?? rule.min_weight_kg ?? 0)),
+  max_weight_kg: rule.maxWeightKg === "" || rule.maxWeightKg === undefined ? null : Math.max(0, Number(rule.maxWeightKg ?? rule.max_weight_kg ?? 0)),
+  base_fee: Math.max(0, Number(rule.baseFee ?? rule.base_fee ?? 0)),
+  per_kg_fee: Math.max(0, Number(rule.perKgFee ?? rule.per_kg_fee ?? 0)),
+  fragile_fee: Math.max(0, Number(rule.fragileFee ?? rule.fragile_fee ?? 0)),
+  oversized_fee: Math.max(0, Number(rule.oversizedFee ?? rule.oversized_fee ?? 0)),
+  cold_chain_fee: Math.max(0, Number(rule.coldChainFee ?? rule.cold_chain_fee ?? 0)),
+  min_days: Math.max(0, Number(rule.minDays ?? rule.min_days ?? 1)),
+  max_days: Math.max(Math.max(0, Number(rule.minDays ?? rule.min_days ?? 1)), Number(rule.maxDays ?? rule.max_days ?? rule.minDays ?? 1)),
+  is_available: rule.isAvailable !== false,
+  reason_if_unavailable: String(rule.reasonIfUnavailable || rule.reason_if_unavailable || "").trim(),
+  sort_order: Number(rule.sortOrder ?? rule.sort_order ?? index + 1),
+  updated_at: new Date().toISOString(),
+});
+
 // 1. INVOICE SETTINGS
 router.get("/invoice", async (req, res) => {
   try {
@@ -129,6 +203,102 @@ router.post("/invoice", async (req, res) => {
     res.json({ success: true });
   } catch (error: any) {
     console.error("POST /api/v1/settings/invoice error:", error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get("/delivery-zones", async (req, res) => {
+  try {
+    const { data, error } = await getSupabase(req)
+      .from("delivery_zones")
+      .select("*")
+      .order("sort_order", { ascending: true });
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return res.json({ success: true, data: defaultDeliveryZones });
+    }
+
+    res.json({ success: true, data: data.map(mapDeliveryZone) });
+  } catch (error: any) {
+    console.warn("GET /api/v1/settings/delivery-zones fallback:", error.message);
+    res.json({ success: true, data: defaultDeliveryZones });
+  }
+});
+
+router.post("/delivery-zones", async (req, res) => {
+  try {
+    const zones = Array.isArray(req.body) ? req.body : req.body?.zones;
+    if (!Array.isArray(zones)) {
+      return res.status(400).json({ success: false, error: "DELIVERY_ZONES_ARRAY_REQUIRED" });
+    }
+
+    const rows = zones
+      .map(toDeliveryZoneRow)
+      .filter((row: any) => row.name);
+
+    const { data: existing } = await getSupabase(req).from("delivery_zones").select("id");
+    const retained = rows.map((row: any) => row.id).filter(Boolean);
+    const toDelete = (existing || []).filter((row: any) => !retained.includes(row.id));
+
+    for (const row of toDelete) {
+      await getSupabase(req).from("delivery_zones").delete().eq("id", row.id);
+    }
+
+    for (const row of rows) {
+      const { error } = await getSupabase(req).from("delivery_zones").upsert(row);
+      if (error) throw error;
+    }
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("POST /api/v1/settings/delivery-zones error:", error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get("/delivery-rules", async (req, res) => {
+  try {
+    const { data, error } = await getSupabase(req)
+      .from("delivery_rules")
+      .select("*")
+      .order("sort_order", { ascending: true });
+    if (error) throw error;
+    res.json({ success: true, data: (data || []).map(mapDeliveryRule) });
+  } catch (error: any) {
+    console.warn("GET /api/v1/settings/delivery-rules fallback:", error.message);
+    res.json({ success: true, data: [] });
+  }
+});
+
+router.post("/delivery-rules", async (req, res) => {
+  try {
+    const rules = Array.isArray(req.body) ? req.body : req.body?.rules;
+    if (!Array.isArray(rules)) {
+      return res.status(400).json({ success: false, error: "DELIVERY_RULES_ARRAY_REQUIRED" });
+    }
+
+    const rows = rules
+      .map(toDeliveryRuleRow)
+      .filter((row: any) => row.zone_id && row.delivery_class);
+
+    const { data: existing } = await getSupabase(req).from("delivery_rules").select("id");
+    const retained = rows.map((row: any) => row.id).filter(Boolean);
+    const toDelete = (existing || []).filter((row: any) => !retained.includes(row.id));
+
+    for (const row of toDelete) {
+      await getSupabase(req).from("delivery_rules").delete().eq("id", row.id);
+    }
+
+    for (const row of rows) {
+      const { error } = await getSupabase(req).from("delivery_rules").upsert(row);
+      if (error) throw error;
+    }
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("POST /api/v1/settings/delivery-rules error:", error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });

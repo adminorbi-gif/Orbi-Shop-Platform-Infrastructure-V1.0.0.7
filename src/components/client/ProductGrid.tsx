@@ -1,6 +1,9 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Package, ArrowUpDown, Zap, ShoppingCart, Truck } from "lucide-react";
 import { PriceDisplay } from "../PriceDisplay";
+import { db } from "../../lib/db";
+import { DEFAULT_DELIVERY_ZONES, formatDeliveryDays, getDeliveryZoneName, normalizeDeliveryZones } from "../../lib/deliveryZones";
+import type { DeliveryZone } from "../../types";
 
 interface ProductGridProps {
   products: any[];
@@ -23,6 +26,23 @@ export function ProductGrid({
   handleProductSelect,
   t
 }: ProductGridProps) {
+  const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>(DEFAULT_DELIVERY_ZONES);
+  const primaryDeliveryZone = useMemo(() => normalizeDeliveryZones(deliveryZones)[0], [deliveryZones]);
+
+  useEffect(() => {
+    let active = true;
+    db.getDeliveryZones()
+      .then((zones) => {
+        if (active) setDeliveryZones(normalizeDeliveryZones(zones));
+      })
+      .catch(() => {
+        if (active) setDeliveryZones(DEFAULT_DELIVERY_ZONES);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   if (products.length === 0) {
     return (
       <div className="py-20 text-center space-y-4 animate-in fade-in zoom-in-95">
@@ -134,7 +154,11 @@ export function ProductGrid({
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center rounded-full bg-slate-50 px-2 py-1 text-[9.5px] font-bold leading-tight text-slate-400 ring-1 ring-slate-100">
                     <Truck size={10} className="shrink-0 text-blue-500" />
-                    <span className="min-w-0 break-words">{p.stock > 0 ? (lang === "sw" ? "Delivery ipo" : "Delivery available") : (lang === "sw" ? "Haipatikani" : "Unavailable")}</span>
+                    <span className="min-w-0 break-words">
+                      {p.stock > 0
+                        ? `${getDeliveryZoneName(primaryDeliveryZone, lang)} ${formatDeliveryDays(primaryDeliveryZone, lang)}`
+                        : (lang === "sw" ? "Haipatikani" : "Unavailable")}
+                    </span>
                   </div>
                   <span className="text-[10px] font-bold text-slate-400">
                     {p.stock > 0 ? (lang === "sw" ? `${p.stock} zipo` : `${p.stock} left`) : (lang === "sw" ? "Imeisha" : "Sold out")}

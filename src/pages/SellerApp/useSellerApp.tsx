@@ -2,6 +2,7 @@ import { uploadFileViaStorageApi } from "../../lib/upload";
 
 import React, { useState, useMemo } from "react";
 import { db } from "../../lib/db";
+import { inferDeliveryPolicy, summarizeDeliveryPolicy } from "../../lib/deliveryPolicy";
 import { SchemaValidator } from "../../utils/schemaValidation";
 import { PhotoQualityGuide } from "../../components/PhotoQualityGuide";
 import { supabase } from "../../lib/supabase";
@@ -306,6 +307,21 @@ const [tab, setTab] = useState<
   const [prodArrangeTier, setProdArrangeTier] = useState("all");
   const [prodVibe, setProdVibe] = useState("all");
   const [prodPresentationStyle, setProdPresentationStyle] = useState("all");
+  const smartDeliveryPolicy = useMemo(() => {
+    const policy = inferDeliveryPolicy({
+      name: prodName,
+      niche: prodNiche,
+      category: prodCategory,
+      family: prodFamily,
+      description: prodDescription,
+      price: Number(prodPrice || 0),
+      stock: Number(prodStock || 0),
+    });
+    return {
+      ...policy,
+      summary: summarizeDeliveryPolicy(policy, lang === "sw" ? "sw" : "en"),
+    };
+  }, [prodName, prodNiche, prodCategory, prodFamily, prodDescription, prodPrice, prodStock, lang]);
   const [savingProduct, setSavingProduct] = useState(false);
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
 
@@ -761,6 +777,7 @@ const [tab, setTab] = useState<
       arrangeTier: prodArrangeTier,
       vibe: prodVibe,
       presentationStyle: prodPresentationStyle,
+      ...smartDeliveryPolicy,
       sellerId: seller.id,
       wholesaleTiers: finalWholesaleTiers,
       tags: [],
@@ -1168,6 +1185,7 @@ const [tab, setTab] = useState<
     setProdVibe,
     prodPresentationStyle,
     setProdPresentationStyle,
+    smartDeliveryPolicy,
     savingProduct,
     setSavingProduct,
     isGeneratingDesc,

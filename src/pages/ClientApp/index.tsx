@@ -25,7 +25,14 @@ import {
   MarketplaceAd,
   Review,
   PromotionalBanner,
+  DeliveryZone,
 } from "../../types";
+import {
+  DEFAULT_DELIVERY_ZONES,
+  formatDeliveryDays,
+  getDeliveryZoneName,
+  normalizeDeliveryZones,
+} from "../../lib/deliveryZones";
 import { getProductPriceForQty } from "../../utils/pricing";
 import { navigateTo } from "../../utils/navigation";
 import {
@@ -230,6 +237,29 @@ import {
 } from "../../components/client/ClientSubcomponents";
 import { useDialog } from "../../components/CustomDialogContext";
 const ProductDetailPage = lazyWithRetry(() => import("../ProductDetailPage"));
+
+let deliveryZonesCache: DeliveryZone[] | null = null;
+let deliveryZonesPromise: Promise<DeliveryZone[]> | null = null;
+
+const getCachedDeliveryZones = async () => {
+  if (deliveryZonesCache) return deliveryZonesCache;
+  if (!deliveryZonesPromise) {
+    deliveryZonesPromise = db
+      .getDeliveryZones()
+      .then((zones) => {
+        deliveryZonesCache = normalizeDeliveryZones(zones);
+        return deliveryZonesCache;
+      })
+      .catch(() => {
+        deliveryZonesCache = DEFAULT_DELIVERY_ZONES;
+        return deliveryZonesCache;
+      })
+      .finally(() => {
+        deliveryZonesPromise = null;
+      });
+  }
+  return deliveryZonesPromise;
+};
 import { AppBarBackgroundSlider } from "../../components/AppBarBackgroundSlider";
 const TrackOrderModal = lazyWithRetry(() => import("../../components/TrackOrderModal"));
 const ReviewModal = lazyWithRetry(() => import("../../components/ReviewModal"));
@@ -3549,6 +3579,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   isLiked = false,
   onLikeToggle,
 }) => {
+  const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>(DEFAULT_DELIVERY_ZONES);
   const isOutOfStock = p.stock <= 0;
   const [imgIdx, setImgIdx] = useState(0);
   const [showFullImage, setShowFullImage] = useState(false);
@@ -3566,14 +3597,25 @@ const ProductCard: React.FC<ProductCardProps> = ({
     : (lang === "sw" ? "Haipatikani sasa" : "Currently unavailable");
   const deliverySlides = useMemo(() => {
     if (p.stock <= 0) return [deliveryPromise];
+    const zoneSlides = normalizeDeliveryZones(deliveryZones)
+      .slice(0, 3)
+      .map((zone) => `${getDeliveryZoneName(zone, lang)} ${formatDeliveryDays(zone, lang)}`);
     const source = sellerLocation && sellerLocation !== "Tanzania"
       ? (lang === "sw" ? `Kutoka ${sellerLocation}` : `Ships from ${sellerLocation}`)
       : (lang === "sw" ? "Dar 1-2 siku" : "Dar 1-2 days");
 
-    return lang === "sw"
-      ? [deliveryPromise, source, "Mikoani 2-5 siku", "Ufuatiliaji wa oda"]
-      : [deliveryPromise, source, "Regions 2-5 days", "Order tracking"];
-  }, [deliveryPromise, lang, p.stock, sellerLocation]);
+    return [deliveryPromise, source, ...zoneSlides].slice(0, 4);
+  }, [deliveryPromise, deliveryZones, lang, p.stock, sellerLocation]);
+
+  useEffect(() => {
+    let active = true;
+    getCachedDeliveryZones().then((zones) => {
+      if (active) setDeliveryZones(zones);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const avgRating = useMemo(() => {
     if (!reviews || reviews.length === 0) return 0;

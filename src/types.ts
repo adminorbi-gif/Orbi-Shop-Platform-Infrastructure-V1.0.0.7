@@ -21,6 +21,58 @@ export interface PaymentOption {
   details: string;
 }
 
+export interface DeliveryZone {
+  id: string;
+  name: string;
+  labelSw?: string;
+  labelEn?: string;
+  price: number;
+  minDays: number;
+  maxDays: number;
+  isActive: boolean;
+  sortOrder?: number;
+  sellerId?: string | null;
+}
+
+export interface DeliveryRule {
+  id?: string;
+  zoneId: string;
+  deliveryClass: string;
+  minWeightKg: number;
+  maxWeightKg?: number | null;
+  baseFee: number;
+  perKgFee: number;
+  fragileFee?: number;
+  oversizedFee?: number;
+  coldChainFee?: number;
+  minDays: number;
+  maxDays: number;
+  isAvailable: boolean;
+  reasonIfUnavailable?: string;
+  sortOrder?: number;
+}
+
+export interface DeliveryQuoteItem {
+  productId: string;
+  name: string;
+  quantity: number;
+  available: boolean;
+  fee: number;
+  eta: string;
+  reason?: string;
+  deliveryClass?: string;
+}
+
+export interface DeliveryQuote {
+  zoneId: string;
+  zoneName: string;
+  totalFee: number;
+  eta: string;
+  available: boolean;
+  items: DeliveryQuoteItem[];
+  unavailableItems: DeliveryQuoteItem[];
+}
+
 export interface InvoiceSettings {
   companyName: string;
   address: string;
@@ -118,6 +170,22 @@ export interface Product {
   vibe?: string;
   presentationStyle?: string;
   wholesaleTiers?: WholesaleTier[];
+  weightKg?: number;
+  lengthCm?: number;
+  widthCm?: number;
+  heightCm?: number;
+  deliveryClass?: string;
+  fragile?: boolean;
+  oversized?: boolean;
+  requiresColdChain?: boolean;
+  hazardous?: boolean;
+  digitalProduct?: boolean;
+  requiresDeliveryQuote?: boolean;
+  deliveryScope?: "local_only" | "regional" | "national" | "custom_quote";
+  deliveryPolicySource?: "auto" | "manual";
+  deliveryHandlingNotes?: string;
+  blockedDeliveryZoneIds?: string[];
+  sellerOriginZoneId?: string;
 }
 
 export interface Promotion {
@@ -162,6 +230,10 @@ export interface Order {
   riderName?: string;
   riderPhone?: string;
   riderVehicle?: string;
+  deliveryZoneId?: string;
+  deliveryZoneName?: string;
+  deliveryFee?: number;
+  deliveryEta?: string;
 }
 
 export interface OrderStatusLog {

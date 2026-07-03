@@ -23,7 +23,16 @@ import {
   MarketplaceAd,
   Review,
   PromotionalBanner,
+  DeliveryZone,
+  DeliveryQuote,
 } from "../../../types";
+import {
+  DEFAULT_DELIVERY_ZONES,
+  formatDeliveryDays,
+  formatDeliveryZoneSummary,
+  getDeliveryZoneName,
+  normalizeDeliveryZones,
+} from "../../../lib/deliveryZones";
 import { getProductPriceForQty } from "../../../utils/pricing";
 import { navigateTo } from "../../../utils/navigation";
 import {
@@ -1567,6 +1576,10 @@ export function CheckoutModal({
 }: any) {
   const { showAlert } = useDialog();
   const [invSettings, setInvSettings] = useState<any>(null);
+  const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>(DEFAULT_DELIVERY_ZONES);
+  const [selectedDeliveryZoneId, setSelectedDeliveryZoneId] = useState(DEFAULT_DELIVERY_ZONES[0].id);
+  const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuote | null>(null);
+  const [deliveryQuoteLoading, setDeliveryQuoteLoading] = useState(false);
   const options = invSettings?.paymentOptions || [];
 
   const defaultPhone = (user?.phone || "").includes("@") ? "" : (user?.phone || "");
@@ -1733,10 +1746,12 @@ export function CheckoutModal({
     );
   }, [pointsToRedeem, pointsRequiredPerTzsDiscount, cartThresholds]);
 
-  const deliveryCost = useMemo(() => {
-    const hub = DELIVERY_HUBS.find(h => h.address === address);
-    return hub ? hub.cost : 0;
-  }, [address]);
+  const normalizedDeliveryZones = useMemo(() => normalizeDeliveryZones(deliveryZones), [deliveryZones]);
+  const selectedDeliveryZone = useMemo(() => {
+    return normalizedDeliveryZones.find((zone) => zone.id === selectedDeliveryZoneId) || normalizedDeliveryZones[0];
+  }, [normalizedDeliveryZones, selectedDeliveryZoneId]);
+  const deliveryCost = Number(deliveryQuote?.totalFee ?? selectedDeliveryZone?.price ?? 0);
+  const deliveryEta = deliveryQuote?.eta || (selectedDeliveryZone ? formatDeliveryDays(selectedDeliveryZone, lang) : "");
 
   const finalTotal = Math.max(0, total - discountAmount - pointsDiscount) + deliveryCost;
   const normalizePaymentMethod = (value: any) => {
@@ -1786,8 +1801,14 @@ export function CheckoutModal({
   const gatewayIsProcessing = !gatewayIsHeld && !gatewayIsFailed && !gatewayNeedsAction;
 
   useEffect(() => {
-    db.getInvoiceSettings().then((res) => {
+    Promise.all([
+      db.getInvoiceSettings(),
+      db.getDeliveryZones().catch(() => DEFAULT_DELIVERY_ZONES),
+    ]).then(([res, zones]) => {
       setInvSettings(res);
+      const normalized = normalizeDeliveryZones(zones);
+      setDeliveryZones(normalized);
+      setSelectedDeliveryZoneId((current) => normalized.some((zone) => zone.id === current) ? current : normalized[0].id);
       if (res.paymentOptions && res.paymentOptions.length > 0) {
         setPaymentMethod(normalizePaymentMethod(res.paymentOptions[0].id || res.paymentOptions[0].name));
       } else {
@@ -1795,6 +1816,40 @@ export function CheckoutModal({
       }
     });
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    if (!selectedDeliveryZoneId || cart.length === 0) {
+      setDeliveryQuote(null);
+      return () => {
+        active = false;
+      };
+    }
+
+    setDeliveryQuoteLoading(true);
+    db.getDeliveryQuote({
+      zoneId: selectedDeliveryZoneId,
+      lang,
+      cart: cart.map((item: any) => ({
+        productId: item.product?.id,
+        quantity: parseInt(item.quantity, 10) || 1,
+      })),
+    })
+      .then((quote) => {
+        if (active) setDeliveryQuote(quote);
+      })
+      .catch((error) => {
+        console.warn("Delivery quote failed, using zone fallback:", error);
+        if (active) setDeliveryQuote(null);
+      })
+      .finally(() => {
+        if (active) setDeliveryQuoteLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedDeliveryZoneId, cart, lang]);
 
   const confirm = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1813,6 +1868,11 @@ export function CheckoutModal({
     setLoadingMsg(t(lang, "checkout.loading"));
 
     try {
+      if (deliveryQuote && !deliveryQuote.available) {
+        showAlert(lang === "sw" ? "Baadhi ya bidhaa hazifiki eneo ulilochagua." : "Some items cannot be delivered to the selected zone.", "error");
+        return;
+      }
+
       const checkoutCart = cart.map((item: any) => ({
         productId: item.product?.id,
         quantity: parseInt(item.quantity, 10) || 1,
@@ -1831,6 +1891,20 @@ export function CheckoutModal({
           operation: "paysafe",
           appliedCoupon,
           finalTotal,
+          deliveryZone: selectedDeliveryZone
+            ? {
+                id: selectedDeliveryZone.id,
+                name: deliveryQuote?.zoneName || getDeliveryZoneName(selectedDeliveryZone, lang),
+                price: deliveryCost,
+                minDays: selectedDeliveryZone.minDays,
+                maxDays: selectedDeliveryZone.maxDays,
+                eta: deliveryEta,
+              }
+            : null,
+          deliveryQuote,
+          deliveryZoneId: selectedDeliveryZone?.id,
+          deliveryFee: deliveryCost,
+          deliveryEta,
           name,
           phone,
           address,
@@ -2542,6 +2616,38 @@ export function CheckoutModal({
                     </span>
                   </div>
 
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-2">
+                    <label className="mb-1.5 block text-[9px] font-black uppercase tracking-widest text-slate-300">
+                      {lang === "sw" ? "Chagua eneo la delivery" : "Select delivery zone"}
+                    </label>
+                    <select
+                      value={selectedDeliveryZoneId}
+                      onChange={(e) => setSelectedDeliveryZoneId(e.target.value)}
+                      className="w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2.5 text-xs font-bold text-white outline-none focus:border-orange-400"
+                    >
+                      {normalizedDeliveryZones.map((zone) => (
+                        <option key={zone.id} value={zone.id}>
+                          {getDeliveryZoneName(zone, lang)} · {formatDeliveryDays(zone, lang)} · {formatCurrency(zone.price)}
+                        </option>
+                      ))}
+                    </select>
+                    {selectedDeliveryZone && (
+                      <p className="mt-1.5 text-[10px] font-semibold text-slate-300">
+                        {deliveryQuoteLoading
+                          ? (lang === "sw" ? "Inahesabu gharama ya usafirishaji..." : "Calculating delivery quote...")
+                          : `${deliveryQuote?.zoneName || getDeliveryZoneName(selectedDeliveryZone, lang)} · ${deliveryEta} · ${formatCurrency(deliveryCost)}`}
+                      </p>
+                    )}
+                    {deliveryQuote?.unavailableItems?.length ? (
+                      <div className="mt-2 rounded-xl border border-rose-400/30 bg-rose-500/10 p-3 text-[10px] font-bold text-rose-100">
+                        {lang === "sw"
+                          ? "Bidhaa hizi hazifiki eneo hili:"
+                          : "These items cannot be delivered to this zone:"}{" "}
+                        {deliveryQuote.unavailableItems.map((item) => item.name).join(", ")}
+                      </div>
+                    ) : null}
+                  </div>
+
                   {/* Tanzania stylized mini SVG Map */}
                   <div className="relative h-28 bg-slate-950 rounded-lg overflow-hidden border border-white/5 flex items-center justify-center">
                     <svg
@@ -2942,7 +3048,7 @@ export function CheckoutModal({
 
             <button
               onClick={confirm}
-              disabled={isPaying}
+              disabled={isPaying || deliveryQuoteLoading || Boolean(deliveryQuote?.unavailableItems?.length)}
               className="w-full bg-slate-950 hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-70 text-white py-4 rounded-2xl font-black mt-6 shadow-xl shadow-slate-900/20 transition-all flex items-center justify-center gap-2"
             >
               {isPaying ? <RefreshCw size={18} className="animate-spin" /> : <ShieldCheck size={18} />}

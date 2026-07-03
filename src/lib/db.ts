@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import { supabase } from './supabase';
-import { Product, Promotion, Order, Customer, Message, Niche, SellerProfile, SubscriptionPlan, MarketplaceAd, Review, PromotionalBanner, OrderStatusLog } from '../types';
+import { Product, Promotion, Order, Customer, Message, Niche, SellerProfile, SubscriptionPlan, MarketplaceAd, Review, PromotionalBanner, OrderStatusLog, DeliveryZone, DeliveryRule, DeliveryQuote } from '../types';
 
 let sessionRefreshPromise: Promise<string> | null = null;
 
@@ -383,6 +383,35 @@ export const db = {
       method: 'POST',
       body: JSON.stringify(settings)
     });
+  },
+
+  // Delivery zones and shipping prices
+  getDeliveryZones: async (): Promise<DeliveryZone[]> => {
+    const res = await apiFetch('/api/v1/settings/delivery-zones');
+    return res.data || [];
+  },
+  saveDeliveryZones: async (zones: DeliveryZone[]) => {
+    await apiFetch('/api/v1/settings/delivery-zones', {
+      method: 'POST',
+      body: JSON.stringify({ zones })
+    });
+  },
+  getDeliveryRules: async (): Promise<DeliveryRule[]> => {
+    const res = await apiFetch('/api/v1/settings/delivery-rules');
+    return res.data || [];
+  },
+  saveDeliveryRules: async (rules: DeliveryRule[]) => {
+    await apiFetch('/api/v1/settings/delivery-rules', {
+      method: 'POST',
+      body: JSON.stringify({ rules })
+    });
+  },
+  getDeliveryQuote: async (payload: { cart: any[]; zoneId: string; lang?: string }): Promise<DeliveryQuote> => {
+    const res = await apiFetch('/api/v1/delivery/quote', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    return res.data;
   },
 
   // Niches

@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => {
       dedupe: ["react", "react-dom"],
     },
     build: {
+      chunkSizeWarningLimit: 800,
       rollupOptions: {
         input: {
           main: 'index.html',
@@ -21,6 +22,14 @@ export default defineConfig(({ mode }) => {
         },
         output: {
           manualChunks(id) {
+            const normalizedId = id.replace(/\\/g, "/");
+            if (normalizedId.includes("/src/pages/AdminApp/")) return "admin-suite";
+            if (normalizedId.includes("/src/components/admin/")) return "admin-suite";
+            if (normalizedId.includes("/src/pages/SellerApp/")) return "seller-app";
+            if (normalizedId.includes("/src/pages/ClientApp/components/")) return "client-components";
+            if (normalizedId.includes("/src/pages/ClientApp/profile/")) return "client-profile";
+            if (normalizedId.includes("/src/pages/ProductDetailPage")) return "product-detail";
+            if (normalizedId.includes("/src/components/seller/")) return "seller-widgets";
             if (!id.includes('node_modules')) return undefined;
             if (id.includes('react') || id.includes('scheduler')) return 'vendor-react';
             if (id.includes('lucide-react')) return 'vendor-icons';
