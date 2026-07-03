@@ -1006,11 +1006,10 @@ export default function SellerApp({
                   </div>
                 )}
 
-                  {/* Graphic charts - Desktop */}
-                {isMdScreen && (
+                  {/* Graphic charts */}
                   <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
                     <div className="bg-white p-4 rounded-[1.45rem] border border-slate-200/70 shadow-sm space-y-3 xl:col-span-2">
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                         <div>
                           <h3 className="text-sm font-black text-slate-950">
                             {lang === "sw" ? "Mapato ya Duka" : "Store Revenue"}
@@ -1045,7 +1044,7 @@ export default function SellerApp({
                                     : "Today by 24 hours"}
                           </p>
                         </div>
-                        <div className="flex shrink-0 items-center rounded-xl bg-slate-100 p-0.5">
+                        <div className="flex w-full sm:w-auto shrink-0 flex-wrap items-center rounded-xl bg-slate-100 p-0.5">
                           {[
                             { id: "daily", label: lang === "sw" ? "Siku" : "Day" },
                             { id: "weekly", label: lang === "sw" ? "Wiki" : "Week" },
@@ -1060,7 +1059,7 @@ export default function SellerApp({
                                   item.id as "daily" | "weekly" | "monthly" | "yearly",
                                 )
                               }
-                              className={`rounded-lg px-2.5 py-1 text-[9px] font-black transition ${
+                              className={`flex-1 sm:flex-none rounded-lg px-2.5 py-1 text-[9px] font-black transition ${
                                 dashboardPeriod === item.id
                                   ? "bg-white text-slate-950 shadow-sm"
                                   : "text-slate-500 hover:text-slate-900"
@@ -1187,30 +1186,6 @@ export default function SellerApp({
                       </div>
                     </div>
                   </div>
-                )}
-
-                {/* Graphic charts - Mobile Button */}
-                <div className="md:hidden">
-                  <button
-                    type="button"
-                    onClick={() => setChartModalOpen(true)}
-                    className="w-full bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between text-left"
-                  >
-                    <div>
-                      <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                        {lang === "sw"
-                          ? "Mtindo wa Mapato"
-                          : "Income Performance Stream"}
-                      </h3>
-                      <p className="text-slate-500 text-xs font-medium mt-1">
-                        {lang === "sw"
-                          ? "Bonyeza kuona chati ya mapato"
-                          : "Tap to view earnings chart"}
-                      </p>
-                    </div>
-                    <TrendingUp className="text-emerald-500" />
-                  </button>
-                </div>
               </div>
             )}
 

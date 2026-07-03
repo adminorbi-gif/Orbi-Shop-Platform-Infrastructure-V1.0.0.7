@@ -3104,8 +3104,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   </a>
                 </div>
 
-                {isLgScreen && (
-                  <div className="hidden lg:grid grid-cols-4 gap-3 mt-1">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 mt-1">
                     <div className="bg-white p-4 rounded-[1.35rem] border border-slate-200/80 shadow-sm xl:col-span-3">
                       <div className="mb-3 flex items-start justify-between gap-3">
                         <div>
@@ -3142,7 +3141,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                     : "Today by 24 hours"}
                           </p>
                         </div>
-                        <div className="flex shrink-0 items-center rounded-2xl bg-slate-100 p-1">
+                        <div className="flex w-full sm:w-auto shrink-0 flex-wrap items-center rounded-2xl bg-slate-100 p-1">
                           {[
                             { id: "daily", label: lang === "sw" ? "Siku" : "Day" },
                             { id: "weekly", label: lang === "sw" ? "Wiki" : "Week" },
@@ -3157,7 +3156,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                   item.id as "daily" | "weekly" | "monthly" | "yearly",
                                 )
                               }
-                              className={`rounded-xl px-2.5 py-1 text-[9px] font-black transition ${
+                              className={`flex-1 sm:flex-none rounded-xl px-2.5 py-1 text-[9px] font-black transition ${
                                 dashboardPeriod === item.id
                                   ? "bg-white text-slate-950 shadow-sm"
                                   : "text-slate-500 hover:text-slate-900"
@@ -3488,30 +3487,6 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         </ResponsiveContainer>
                       </div>
                     </div>
-                  </div>
-                )}
-
-                {/* Graphic charts - Mobile Button */}
-                <div className="lg:hidden mt-2">
-                  <button
-                    type="button"
-                    onClick={() => setDashboardChartsOpen(true)}
-                    className="w-full bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between text-left"
-                  >
-                    <div>
-                      <h3 className="text-lg font-bold text-slate-800">
-                        {lang === "sw"
-                          ? "Takwimu Kamili (Chati)"
-                          : "Full Analytics (Charts)"}
-                      </h3>
-                      <p className="text-slate-500 text-xs font-medium mt-1">
-                        {lang === "sw"
-                          ? "Bonyeza kuona mwendo wa biashara"
-                          : "Tap to view business trends"}
-                      </p>
-                    </div>
-                    <Activity className="text-emerald-500" size={24} />
-                  </button>
                 </div>
 
                 {/* Top Selling Products */}

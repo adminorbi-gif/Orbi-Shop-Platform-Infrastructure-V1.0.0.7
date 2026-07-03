@@ -2379,6 +2379,7 @@ export function ProductsAdmin({
   const [deliveryScope, setDeliveryScope] = useState<"local_only" | "regional" | "national" | "custom_quote">("national");
   const [deliveryHandlingNotes, setDeliveryHandlingNotes] = useState("");
   const [blockedDeliveryZoneIds, setBlockedDeliveryZoneIds] = useState<string[]>([]);
+  const [productDeliveryZones, setProductDeliveryZones] = useState<DeliveryZone[]>([]);
   const [features, setFeatures] = useState<
     { name: string; description: string }[]
   >([]);
@@ -2405,6 +2406,21 @@ export function ProductsAdmin({
         console.warn("Failed to load niches in products management:", err);
         setGlobalNiches([]);
       });
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    db.getDeliveryZones()
+      .then((zones) => {
+        if (active) setProductDeliveryZones(Array.isArray(zones) ? zones : []);
+      })
+      .catch((err) => {
+        console.warn("Failed to load delivery zones in product management:", err);
+        if (active) setProductDeliveryZones([]);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   // Drag and Drop ordering state
@@ -4612,7 +4628,14 @@ export function ProductsAdmin({
                       {lang === "sw" ? "Maeneo ambayo bidhaa hii haiwezi kufikishwa" : "Blocked delivery zones for this product"}
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      {deliveryZones.map((zone) => (
+                      {productDeliveryZones.length === 0 && (
+                        <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-3 py-3 text-[10px] font-bold text-slate-500 sm:col-span-3">
+                          {lang === "sw"
+                            ? "Hakuna delivery zones zilizopakiwa. Bidhaa itatumia rules za default hadi admin aweke zones."
+                            : "No delivery zones loaded. Product will use default rules until zones are configured."}
+                        </div>
+                      )}
+                      {productDeliveryZones.map((zone) => (
                         <label key={zone.id} className="min-h-11 flex items-center gap-2 rounded-2xl bg-white px-3 text-[10px] font-black uppercase tracking-wider text-slate-600 ring-1 ring-slate-200">
                           <input
                             type="checkbox"
