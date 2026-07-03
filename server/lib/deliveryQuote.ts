@@ -203,7 +203,7 @@ export const quoteProductDelivery = (product: any, quantity: number, zone: any, 
   const normalizedRules = rules.length > 0 ? rules.map(mapDeliveryRule) : buildDefaultRules([normalizedZone]);
   const billableWeight = getBillableWeightKg(product) * qty;
   const zoneRules = normalizedRules.filter((rule) => String(rule.zoneId) === String(normalizedZone.id));
-  const matchingRule =
+  const matchingRule: any =
     zoneRules.find((rule) =>
       rule.deliveryClass === deliveryClass &&
       billableWeight >= Number(rule.minWeightKg || 0) &&

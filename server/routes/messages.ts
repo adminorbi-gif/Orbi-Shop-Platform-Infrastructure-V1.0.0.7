@@ -1,12 +1,26 @@
 import { Router } from "express";
-import { supabase, getSupabase } from "../lib/supabase.js";
+import { getAdminSupabase, getSupabase } from "../lib/supabase.js";
 
 const router = Router();
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const getMessagesDb = (req: any) => {
+  try {
+    return getAdminSupabase();
+  } catch {
+    return getSupabase(req);
+  }
+};
+
+const safeErrorMessage = (error: any) => {
+  const message = error?.message || String(error || "Unknown message service error");
+  return message.length > 240 ? `${message.slice(0, 240)}...` : message;
+};
 
 // GET /api/v1/messages - Retrieve message board items
 router.get("/", async (req, res) => {
   try {
-    const { data, error } = await getSupabase(req).from('messages').select('*').order('created_at', { ascending: false }).limit(1000);
+    const { data, error } = await getMessagesDb(req).from('messages').select('*').order('created_at', { ascending: false }).limit(1000);
     if (error) throw error;
 
     const mapped = (data || []).map(m => ({
@@ -22,8 +36,8 @@ router.get("/", async (req, res) => {
 
     res.json({ success: true, data: mapped });
   } catch (error: any) {
-    console.error("GET /api/v1/messages error:", error.message);
-    res.status(500).json({ success: false, error: error.message });
+    console.error("GET /api/v1/messages error:", safeErrorMessage(error));
+    res.status(503).json({ success: false, error: "Message service is temporarily unavailable." });
   }
 });
 
@@ -35,11 +49,13 @@ router.post("/mark-read", async (req, res) => {
       return res.json({ success: true });
     }
     
-    const validUUIDs = ids.filter(id => id && id.length > 20);
-    const validLegacy = ids.filter(id => id && id.length <= 20);
+    const db = getMessagesDb(req);
+    const normalizedIds = ids.map((id: unknown) => String(id || "").trim()).filter(Boolean);
+    const validUUIDs = normalizedIds.filter((id: string) => uuidRegex.test(id));
+    const validLegacy = normalizedIds.filter((id: string) => !uuidRegex.test(id));
     
     if (validUUIDs.length > 0) {
-      const { error } = await getSupabase(req)
+      const { error } = await db
         .from('messages')
         .update({ is_read: true })
         .in('id', validUUIDs);
@@ -47,7 +63,7 @@ router.post("/mark-read", async (req, res) => {
     }
     
     if (validLegacy.length > 0) {
-      const { error: legacyError } = await getSupabase(req)
+      const { error: legacyError } = await db
         .from('messages')
         .update({ is_read: true })
         .in('legacy_id', validLegacy);
@@ -56,8 +72,8 @@ router.post("/mark-read", async (req, res) => {
 
     res.json({ success: true });
   } catch (error: any) {
-    console.error("POST /api/v1/messages/mark-read error:", error.message);
-    res.status(500).json({ success: false, error: error.message });
+    console.error("POST /api/v1/messages/mark-read error:", safeErrorMessage(error));
+    res.status(503).json({ success: false, error: "Message read status could not be updated right now." });
   }
 });
 
@@ -65,7 +81,7 @@ router.post("/mark-read", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const msg = req.body;
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const db = getMessagesDb(req);
     let targetCustomerId = (msg.customerId && uuidRegex.test(msg.customerId)) ? msg.customerId : null;
     if (targetCustomerId === "00000000-0000-0000-0000-000000000000") {
       targetCustomerId = null;
@@ -87,18 +103,18 @@ router.post("/", async (req, res) => {
 
     if (msg.id) {
       if (uuidRegex.test(msg.id)) {
-        const { data } = await getSupabase(req).from('messages').select('id').eq('id', msg.id).maybeSingle();
+        const { data } = await db.from('messages').select('id').eq('id', msg.id).maybeSingle();
         if (data) existingMsg = data;
       } else {
-        const { data } = await getSupabase(req).from('messages').select('id').eq('legacy_id', msg.id).maybeSingle();
+        const { data } = await db.from('messages').select('id').eq('legacy_id', msg.id).maybeSingle();
         if (data) existingMsg = data;
       }
     }
 
     if (existingMsg) {
-      result = await getSupabase(req).from('messages').update(payload).eq('id', existingMsg.id);
+      result = await db.from('messages').update(payload).eq('id', existingMsg.id);
     } else {
-      result = await getSupabase(req).from('messages').insert([payload]);
+      result = await db.from('messages').insert([payload]);
     }
 
     if (result.error) throw result.error;
@@ -157,21 +173,44 @@ router.post("/", async (req, res) => {
 
     res.json({ success: true });
   } catch (error: any) {
-    console.error("POST /api/v1/messages error:", error.message);
-    res.status(500).json({ success: false, error: error.message });
+    console.error("POST /api/v1/messages error:", safeErrorMessage(error));
+    res.status(503).json({ success: false, error: "Message could not be saved right now." });
   }
 });
 
 // DELETE /api/v1/messages/:id - Erase chat log ticket from database
 router.delete("/:id", async (req, res) => {
   try {
-    const { id } = req.params;
-    const { error } = await getSupabase(req).from('messages').delete().eq('id', id);
-    if (error) throw error;
-    res.json({ success: true });
+    const id = decodeURIComponent(String(req.params.id || "")).trim();
+    if (!id) {
+      return res.status(400).json({ success: false, error: "Missing message id." });
+    }
+
+    const db = getMessagesDb(req);
+    let deletedCount = 0;
+
+    const deleteByColumn = async (column: "id" | "legacy_id") => {
+      const { count, error } = await db
+        .from('messages')
+        .delete({ count: 'exact' })
+        .eq(column, id);
+      if (error) throw error;
+      deletedCount += count || 0;
+    };
+
+    if (uuidRegex.test(id)) {
+      await deleteByColumn("id");
+      if (deletedCount === 0) {
+        await deleteByColumn("legacy_id");
+      }
+    } else {
+      await deleteByColumn("legacy_id");
+    }
+
+    res.json({ success: true, deletedCount });
   } catch (error: any) {
-    console.error("DELETE /api/v1/messages/:id error:", error.message);
-    res.status(500).json({ success: false, error: error.message });
+    console.error("DELETE /api/v1/messages/:id error:", safeErrorMessage(error));
+    res.status(503).json({ success: false, error: "Message delete service is temporarily unavailable." });
   }
 });
 

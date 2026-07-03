@@ -8868,19 +8868,22 @@ export function MessagesAdmin({
     });
 
     try {
-      for (const dbId of entireDeletes) {
-        await db.deleteMessage(dbId);
-      }
+      const deleteResults = await Promise.allSettled(
+        Array.from(entireDeletes).map((dbId) => db.deleteMessage(dbId)),
+      );
 
-      for (const dbId of replyClears) {
+      const replyResults = await Promise.allSettled(
+        Array.from(replyClears).map((dbId) => {
         const originalMsg = messages.find((m) => m.id === dbId);
         if (originalMsg) {
-          await db.saveMessage({
+          return db.saveMessage({
             ...originalMsg,
             adminReply: "",
           });
         }
-      }
+          return Promise.resolve(null);
+        }),
+      );
 
       setMessages((prev: Message[]) => {
         return prev
@@ -8893,11 +8896,19 @@ export function MessagesAdmin({
           });
       });
 
+      const failedCount = [...deleteResults, ...replyResults].filter(
+        (result) => result.status === "rejected",
+      ).length;
+
       showAlert(
-        lang === "sw"
-          ? "Ujumbe umefutwa kikamilifu!"
-          : "Messages deleted successfully!",
-        "success",
+        failedCount > 0
+          ? lang === "sw"
+            ? "Ujumbe umeondolewa kwenye skrini, lakini baadhi ya mabadiliko hayakusawazishwa kikamilifu. Jaribu refresh kuthibitisha."
+            : "Messages were removed from the screen, but some changes did not fully sync. Refresh to confirm."
+          : lang === "sw"
+            ? "Ujumbe umefutwa kikamilifu!"
+            : "Messages deleted successfully!",
+        failedCount > 0 ? "warning" : "success",
       );
     } catch (err: any) {
       console.error(err);

@@ -3661,7 +3661,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   }) as React.CSSProperties, [motionSeed]);
 
   const deliverySlides = useMemo(() => {
-    if (p.stock <= 0) return [lang === "sw" ? "Haipatikani sasa" : "Currently unavailable"];
+    const currentLang: Lang = lang === "en" ? "en" : "sw";
+    if (p.stock <= 0) return [currentLang === "sw" ? "Haipatikani sasa" : "Currently unavailable"];
 
     const zones = normalizeDeliveryZones(deliveryZones);
     const rules = normalizeDeliveryRules(deliveryRules);
@@ -3671,7 +3672,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     };
     const quotes = zones.map((zone) => ({
       zone,
-      quote: quoteProductDelivery(productForQuote, 1, zone, rules, lang),
+      quote: quoteProductDelivery(productForQuote, 1, zone, rules, currentLang),
     }));
     const availableQuotes = quotes.filter(({ quote }) => quote.available);
     const firstUnavailable = quotes.find(({ quote }) => !quote.available);
@@ -3680,27 +3681,27 @@ const ProductCard: React.FC<ProductCardProps> = ({
       const reason = firstUnavailable?.quote.reason;
       return [
         p.requiresDeliveryQuote
-          ? (lang === "sw" ? "Makadirio maalum ya delivery" : "Custom delivery quote")
-          : reason || (lang === "sw" ? "Delivery haijapatikana" : "Delivery unavailable"),
+          ? (currentLang === "sw" ? "Makadirio maalum ya delivery" : "Custom delivery quote")
+          : reason || (currentLang === "sw" ? "Delivery haijapatikana" : "Delivery unavailable"),
       ];
     }
 
     const primary = availableQuotes[0];
     const primaryEta = parseEtaDays(primary.quote.eta);
-    const primaryDate = primaryEta ? formatDeliveryDateRange(primaryEta.min, primaryEta.max, lang) : primary.quote.eta;
-    const primaryZone = getDeliveryZoneName(primary.zone, lang);
+    const primaryDate = primaryEta ? formatDeliveryDateRange(primaryEta.min, primaryEta.max, currentLang) : primary.quote.eta;
+    const primaryZone = getDeliveryZoneName(primary.zone, currentLang);
     const slides = [
       `${primaryZone}: ${primaryDate}`,
-      `${lang === "sw" ? "Delivery" : "Delivery"} ${formatCurrency(primary.quote.fee)}`,
+      `${currentLang === "sw" ? "Delivery" : "Delivery"} ${formatCurrency(primary.quote.fee)}`,
     ];
 
     if (sellerLocation && sellerLocation !== "Tanzania") {
-      slides.push(lang === "sw" ? `Kutoka ${sellerLocation}` : `Ships from ${sellerLocation}`);
+      slides.push(currentLang === "sw" ? `Kutoka ${sellerLocation}` : `Ships from ${sellerLocation}`);
     }
 
     availableQuotes.slice(1, 3).forEach(({ zone, quote }) => {
       const eta = parseEtaDays(quote.eta);
-      slides.push(`${getDeliveryZoneName(zone, lang)}: ${eta ? formatDeliveryDateRange(eta.min, eta.max, lang) : quote.eta}`);
+      slides.push(`${getDeliveryZoneName(zone, currentLang)}: ${eta ? formatDeliveryDateRange(eta.min, eta.max, currentLang) : quote.eta}`);
     });
 
     return slides.slice(0, 4);

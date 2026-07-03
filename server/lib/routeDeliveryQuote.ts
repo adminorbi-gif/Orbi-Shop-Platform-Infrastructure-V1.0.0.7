@@ -285,7 +285,7 @@ export const quoteCartRouteDelivery = async (
   const totalFee = items.reduce((sum, item) => sum + (item.available ? Number(item.fee || 0) : 0), 0);
   const slowest = items
     .filter((item) => item.available)
-    .sort((a, b) => Number(b.route?.durationMinutes || 0) - Number(a.route?.durationMinutes || 0))[0];
+    .sort((a: any, b: any) => Number(b.route?.durationMinutes || 0) - Number(a.route?.durationMinutes || 0))[0] as any;
 
   return {
     ...fallback,

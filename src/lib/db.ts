@@ -4,6 +4,23 @@ import { Product, Promotion, Order, Customer, Message, Niche, SellerProfile, Sub
 
 let sessionRefreshPromise: Promise<string> | null = null;
 
+const normalizeApiError = (raw: string, status: number) => {
+  const text = String(raw || "").trim();
+  if (!text) return `Server returned error status ${status}`;
+
+  try {
+    const jsonErr = JSON.parse(text);
+    const message = jsonErr.error || jsonErr.message || jsonErr.detail;
+    if (message) return String(message).slice(0, 300);
+  } catch (e) {}
+
+  if (/<!doctype html|<html|cloudflare|bad gateway/i.test(text)) {
+    return `Server returned HTTP ${status}. Please try again in a moment.`;
+  }
+
+  return text.length > 300 ? `${text.slice(0, 300)}...` : text;
+};
+
 // Helper for calling modular backend API endpoints with standard response wrappers
 export const apiFetch = async (url: string, options: RequestInit = {}) => {
   let token = "";
@@ -87,18 +104,12 @@ export const apiFetch = async (url: string, options: RequestInit = {}) => {
       }
 
       const textErr = await res.text();
-      let errorMessage = textErr || `Server returned error status ${res.status}`;
-      try {
-        const jsonErr = JSON.parse(textErr);
-        if (jsonErr.error) errorMessage = jsonErr.error;
-        else if (jsonErr.message) errorMessage = jsonErr.message;
-      } catch (e) {}
-      throw new Error(errorMessage);
+      throw new Error(normalizeApiError(textErr, res.status));
     }
     
     const contentType = res.headers.get("content-type") || "";
     if (!contentType.includes("application/json")) {
-      throw new Error(`Expected JSON response, but received: ${contentType.substring(0, 50)}`);
+      throw new Error(`Server returned a non-JSON response (${contentType.substring(0, 50) || "unknown content type"}). Please try again.`);
     }
 
     const json = await res.json();
