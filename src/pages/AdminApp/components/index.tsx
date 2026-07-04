@@ -11676,6 +11676,8 @@ export function SettingsAdmin() {
   const [nicheCategoriesList, setNicheCategoriesList] = useState<Category[]>([]);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newFamilyNames, setNewFamilyNames] = useState("");
+  const [newCategoryImage, setNewCategoryImage] = useState("");
+  const [uploadingCategoryImage, setUploadingCategoryImage] = useState(false);
   const [editingCategoryIdx, setEditingCategoryIdx] = useState<number | null>(null);
   const [newNicheMode, setNewNicheMode] = useState<"add" | "edit">("add");
   const [newNicheOriginalName, setNewNicheOriginalName] = useState("");
@@ -12162,7 +12164,7 @@ export function SettingsAdmin() {
       } else {
         proposedNichesMap.set(
           n.name.toLowerCase(),
-          new Set((n.categories || []).map((c) => c.toLowerCase())),
+          new Set((n.categories || []).map((c) => (c.name || "").toLowerCase())),
         );
       }
     });
@@ -14563,70 +14565,222 @@ export function SettingsAdmin() {
                         {isSw ? "MAKUNDI NA FAMILIA" : "CATEGORIES & FAMILIES"}
                       </span>
 
-                      <div className="flex gap-2">
-                        <div className="flex-1 space-y-1.5">
+                      <div className="space-y-3 bg-slate-50/50 p-3 rounded-xl border border-slate-150">
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block text-left">
+                            {isSw ? "Jina la Kundi (Mf. Simu)" : "Category Name (e.g. Phones)"}
+                          </label>
                           <input
                             type="text"
                             value={newCategoryName}
                             onChange={(e) => setNewCategoryName(e.target.value)}
-                            placeholder={isSw ? "Jina la Kundi (Mf. Simu)" : "Category Name (e.g. Phones)"}
-                            className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-semibold outline-none focus:border-slate-900 transition"
+                            placeholder={isSw ? "Jina la Kundi" : "Category Name"}
+                            className="w-full bg-white border border-slate-200 p-2.5 rounded-xl text-xs font-semibold outline-none focus:border-slate-900 transition"
                           />
                         </div>
-                        <div className="flex-1 space-y-1.5">
+
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block text-left">
+                            {isSw ? "Familia za Bidhaa (Zitenganishe kwa koma)" : "Sub-Families (Comma separated)"}
+                          </label>
                           <input
                             type="text"
                             value={newFamilyNames}
                             onChange={(e) => setNewFamilyNames(e.target.value)}
-                            placeholder={isSw ? "Familia (Koma: iOS, Android)" : "Families (Comma: iOS, Android)"}
-                            className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-semibold outline-none focus:border-slate-900 transition"
+                            placeholder={isSw ? "iOS, Android, n.k." : "iOS, Android, etc."}
+                            className="w-full bg-white border border-slate-200 p-2.5 rounded-xl text-xs font-semibold outline-none focus:border-slate-900 transition"
                           />
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!newCategoryName.trim()) return;
-                            const families = newFamilyNames.split(",").map(f => f.trim()).filter(Boolean);
-                            if (editingCategoryIdx !== null) {
-                              const updated = [...nicheCategoriesList];
-                              updated[editingCategoryIdx] = { name: newCategoryName.trim(), families };
-                              setNicheCategoriesList(updated);
-                              setEditingCategoryIdx(null);
-                            } else {
-                              setNicheCategoriesList([...nicheCategoriesList, { name: newCategoryName.trim(), families }]);
-                            }
-                            setNewCategoryName("");
-                            setNewFamilyNames("");
-                          }}
-                          className="bg-slate-900 text-white p-2.5 rounded-xl hover:bg-slate-800 transition shadow-sm"
-                        >
-                          {editingCategoryIdx !== null ? <Check size={16} /> : <Plus size={16} />}
-                        </button>
+
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block text-left">
+                            {isSw ? "Picha ya Kundi" : "Category Image"}
+                          </label>
+                          <div className="flex items-center gap-3">
+                            {newCategoryImage ? (
+                              <div className="relative group shrink-0">
+                                <img
+                                  src={newCategoryImage}
+                                  alt="Category preview"
+                                  className="w-12 h-12 rounded-lg object-cover border border-slate-200"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setNewCategoryImage("")}
+                                  className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white rounded-full p-0.5 hover:bg-rose-600 shadow-sm transition"
+                                >
+                                  <X size={10} />
+                                </button>
+                              </div>
+                            ) : (
+                              <label className={`w-12 h-12 rounded-lg border border-dashed border-slate-300 flex flex-col items-center justify-center bg-white cursor-pointer hover:border-slate-400 hover:bg-slate-50 transition shrink-0 ${uploadingCategoryImage ? "opacity-55" : ""}`}>
+                                {uploadingCategoryImage ? (
+                                  <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                  <ImageIcon size={16} className="text-slate-400" />
+                                )}
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  disabled={uploadingCategoryImage}
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    setUploadingCategoryImage(true);
+                                    try {
+                                      const url = await uploadFileViaStorageApi(file, "niches");
+                                      setNewCategoryImage(url);
+                                    } catch (err: any) {
+                                      showAlert(err.message || "Failed to upload", "error");
+                                    } finally {
+                                      setUploadingCategoryImage(false);
+                                    }
+                                  }}
+                                />
+                              </label>
+                            )}
+
+                            <div className="flex-1 text-left min-w-0">
+                              <p className="text-[10px] text-slate-500 font-medium leading-normal">
+                                {newCategoryImage 
+                                  ? (isSw ? "✓ Picha imepakiwa kikamilifu" : "✓ Image uploaded successfully")
+                                  : (isSw ? "Pakia picha ya kategoria au weka URL" : "Upload category photo or paste URL")
+                                }
+                              </p>
+                              <input
+                                type="text"
+                                value={newCategoryImage}
+                                onChange={(e) => setNewCategoryImage(e.target.value)}
+                                placeholder={isSw ? "Weka URL ya picha..." : "Or paste image URL..."}
+                                className="w-full bg-white border border-slate-200 px-2 py-1 rounded-lg text-[10px] font-semibold outline-none focus:border-slate-900 transition mt-1"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="pt-1.5 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!newCategoryName.trim()) return;
+                              const families = newFamilyNames.split(",").map(f => f.trim()).filter(Boolean);
+                              if (editingCategoryIdx !== null) {
+                                const updated = [...nicheCategoriesList];
+                                updated[editingCategoryIdx] = { name: newCategoryName.trim(), families, image: newCategoryImage };
+                                setNicheCategoriesList(updated);
+                                setEditingCategoryIdx(null);
+                              } else {
+                                setNicheCategoriesList([...nicheCategoriesList, { name: newCategoryName.trim(), families, image: newCategoryImage }]);
+                              }
+                              setNewCategoryName("");
+                              setNewFamilyNames("");
+                              setNewCategoryImage("");
+                            }}
+                            className="flex-1 bg-slate-900 text-white py-2 px-3 rounded-xl hover:bg-slate-800 transition shadow-sm text-xs font-bold flex items-center justify-center gap-1.5"
+                          >
+                            {editingCategoryIdx !== null ? (
+                              <>
+                                <Check size={14} />
+                                {isSw ? "Hifadhi Kundi" : "Update Category"}
+                              </>
+                            ) : (
+                              <>
+                                <Plus size={14} />
+                                {isSw ? "Ongeza Kundi" : "Add Category"}
+                              </>
+                            )}
+                          </button>
+                          {editingCategoryIdx !== null && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setNewCategoryName("");
+                                setNewFamilyNames("");
+                                setNewCategoryImage("");
+                                setEditingCategoryIdx(null);
+                              }}
+                              className="bg-slate-100 text-slate-600 px-3 py-2 rounded-xl hover:bg-slate-200 transition text-xs font-bold"
+                            >
+                              {isSw ? "Ghairi" : "Cancel"}
+                            </button>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="space-y-2 max-h-[150px] overflow-y-auto pr-1">
+                      {nicheCategoriesList.length === 0 && (
+                        <div className="py-6 text-center border-2 border-dashed border-slate-100 rounded-xl">
+                          <ImageIcon className="mx-auto text-slate-300 mb-1" size={18} />
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                            {isSw ? "Hakuna kundi lililoongezwa" : "No categories defined"}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
                         {nicheCategoriesList.map((cat, idx) => (
-                          <div key={idx} className="flex items-center justify-between bg-slate-50 border border-slate-200 p-2.5 rounded-xl">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-black text-slate-800 truncate">{cat.name}</p>
-                              <p className="text-[10px] text-slate-500 truncate">{cat.families.join(", ")}</p>
+                          <div key={idx} className={`flex items-center justify-between p-2.5 rounded-xl border transition ${editingCategoryIdx === idx ? "bg-indigo-50/50 border-indigo-200 shadow-sm" : "bg-white border-slate-150 hover:bg-slate-50"}`}>
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              {cat.image ? (
+                                <img
+                                  src={cat.image}
+                                  alt={cat.name}
+                                  className="w-10 h-10 rounded-lg object-cover bg-slate-50 border border-slate-100 shrink-0"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
+                                  <span className="text-[8px] font-black text-slate-400">NO PIC</span>
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1 text-left">
+                                <p className="text-xs font-bold text-slate-800 truncate leading-tight">{cat.name}</p>
+                                {cat.families && cat.families.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {cat.families.slice(0, 3).map((f, fi) => (
+                                      <span key={fi} className="text-[8px] bg-slate-100 text-slate-600 px-1 py-0.2 rounded font-medium truncate max-w-[80px]">
+                                        {f}
+                                      </span>
+                                    ))}
+                                    {cat.families.length > 3 && (
+                                      <span className="text-[8px] bg-slate-100 text-slate-500 px-1 py-0.2 rounded font-medium">
+                                        +{cat.families.length - 3}
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <p className="text-[9px] text-slate-400 italic font-medium mt-0.5">
+                                    {isSw ? "Haina familia" : "No sub-families"}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex gap-1 ml-2">
+                            <div className="flex gap-0.5 ml-2 shrink-0">
                               <button
                                 type="button"
                                 onClick={() => {
                                   setEditingCategoryIdx(idx);
                                   setNewCategoryName(cat.name);
                                   setNewFamilyNames(cat.families.join(", "));
+                                  setNewCategoryImage(cat.image || "");
                                 }}
-                                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition"
+                                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
+                                title={isSw ? "Hariri" : "Edit"}
                               >
                                 <Edit size={12} />
                               </button>
                               <button
                                 type="button"
-                                onClick={() => setNicheCategoriesList(nicheCategoriesList.filter((_, i) => i !== idx))}
+                                onClick={() => {
+                                  setNicheCategoriesList(nicheCategoriesList.filter((_, i) => i !== idx));
+                                  if (editingCategoryIdx === idx) {
+                                    setNewCategoryName("");
+                                    setNewFamilyNames("");
+                                    setNewCategoryImage("");
+                                    setEditingCategoryIdx(null);
+                                  }
+                                }}
                                 className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition"
+                                title={isSw ? "Futa" : "Delete"}
                               >
                                 <X size={12} />
                               </button>
@@ -14821,6 +14975,10 @@ export function SettingsAdmin() {
                           setNewNicheName("");
                           setNicheCategoriesList([]);
                           setNewNicheOriginalName("");
+                          setNewCategoryName("");
+                          setNewFamilyNames("");
+                          setNewCategoryImage("");
+                          setEditingCategoryIdx(null);
                         }}
                         className="w-full mt-2 bg-slate-100 hover:bg-slate-200 text-slate-600 p-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2"
                       >
@@ -14936,6 +15094,10 @@ export function SettingsAdmin() {
                               setNewNicheName(niche.name);
                               setNewNicheIcon(niche.icon);
                               setNicheCategoriesList(niche.categories || []);
+                              setNewCategoryName("");
+                              setNewFamilyNames("");
+                              setNewCategoryImage("");
+                              setEditingCategoryIdx(null);
                               // Scroll to top so the user sees the form
                               window.scrollTo({ top: 0, behavior: "smooth" });
                             }}
