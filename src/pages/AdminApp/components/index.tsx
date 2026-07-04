@@ -14668,7 +14668,7 @@ export function SettingsAdmin() {
                           <div key={idx} className="flex items-center justify-between bg-slate-50 border border-slate-200 p-2.5 rounded-xl">
                             <div className="min-w-0 flex-1">
                               <p className="text-xs font-black text-slate-800 truncate">{cat.name}</p>
-                              <p className="text-[10px] text-slate-500 truncate">{cat.families.join(", ")}</p>
+                              <p className="text-[10px] text-slate-500 truncate">{(cat.families || []).join(", ")}</p>
                             </div>
                             <div className="flex gap-1 ml-2">
                               <button
@@ -14676,7 +14676,7 @@ export function SettingsAdmin() {
                                 onClick={() => {
                                   setEditingCategoryIdx(idx);
                                   setNewCategoryName(cat.name);
-                                  setNewFamilyNames(cat.families.join(", "));
+                                  setNewFamilyNames((cat.families || []).join(", "));
                                 }}
                                 className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition"
                               >
