@@ -500,9 +500,35 @@ export default function SellerApp({
                   <h2 className="text-sm font-black truncate text-slate-950 uppercase tracking-wider">
                     Orbi Shop
                   </h2>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">
-                    Seller Portal
-                  </p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                      Seller Portal
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        seller.isPro && seller.proUntil && seller.proUntil > Date.now()
+                          ? undefined
+                          : setTab("booster")
+                      }
+                      className={`rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-widest border transition ${
+                        seller.isPro && seller.proUntil && seller.proUntil > Date.now()
+                          ? "bg-amber-500 text-white border-amber-500 shadow-sm"
+                          : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 cursor-pointer"
+                      }`}
+                      title={
+                        seller.isPro && seller.proUntil && seller.proUntil > Date.now()
+                          ? "PRO Seller"
+                          : lang === "sw"
+                            ? "Boresha mpango wa duka"
+                            : "Upgrade store plan"
+                      }
+                    >
+                      {seller.isPro && seller.proUntil && seller.proUntil > Date.now()
+                        ? "PRO"
+                        : "Upgrade"}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -533,9 +559,35 @@ export default function SellerApp({
                 <h2 className="text-xs font-black truncate uppercase tracking-tight text-slate-950 leading-none">
                   Orbi Shop
                 </h2>
-                <span className="text-[8px] text-amber-600 font-black uppercase tracking-widest mt-0.5 block leading-none">
-                  Seller Portal
-                </span>
+                <div className="mt-0.5 flex items-center gap-1.5">
+                  <span className="text-[8px] text-amber-600 font-black uppercase tracking-widest block leading-none">
+                    Seller Portal
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      seller.isPro && seller.proUntil && seller.proUntil > Date.now()
+                        ? undefined
+                        : setTab("booster")
+                    }
+                    className={`rounded-full px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider border leading-none ${
+                      seller.isPro && seller.proUntil && seller.proUntil > Date.now()
+                        ? "bg-amber-500 text-white border-amber-500"
+                        : "bg-amber-50 text-amber-700 border-amber-200"
+                    }`}
+                    title={
+                      seller.isPro && seller.proUntil && seller.proUntil > Date.now()
+                        ? "PRO Seller"
+                        : lang === "sw"
+                          ? "Boresha mpango wa duka"
+                          : "Upgrade store plan"
+                    }
+                  >
+                    {seller.isPro && seller.proUntil && seller.proUntil > Date.now()
+                      ? "PRO"
+                      : "Upgrade"}
+                  </button>
+                </div>
               </div>
             </div>
 
