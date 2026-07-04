@@ -82,6 +82,7 @@
 
         var schemaEl = document.getElementById('dynamic-seo-schema');
         if (schemaEl) {
+          if (schemaEl.textContent && schemaEl.textContent.trim().length > 0) return;
           schemaEl.type = 'application/ld+json';
           
           // Check if we are viewing a specific product

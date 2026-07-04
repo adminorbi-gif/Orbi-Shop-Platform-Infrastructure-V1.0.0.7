@@ -45,6 +45,134 @@ import subscriptionsRouter from "./server/routes/subscriptions.js";
 import talkRouter from "./server/routes/talk.js";
 import traRouter from "./server/routes/tra.js";
 
+const ORBI_SHOP_LOGO = "https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png";
+
+function escapeHtml(value: unknown) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function stripHtml(value: unknown) {
+  return String(value ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function truncate(value: string, max = 155) {
+  return value.length > max ? `${value.slice(0, max - 1).trim()}...` : value;
+}
+
+function categoryBreadcrumbs(pathname: string, baseUrl: string) {
+  const parts = pathname.split("/").filter(Boolean);
+  const crumbs = [
+    { name: "Orbi Shop", item: `${baseUrl}/` },
+  ];
+
+  if (parts[0] === "shop") {
+    let current = "/shop";
+    parts.slice(1).forEach((part) => {
+      current += `/${part}`;
+      const cleanName = part
+        .replace(/--[a-zA-Z0-9-]+$/, "")
+        .replace(/-/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+      crumbs.push({ name: cleanName || "Product", item: `${baseUrl}${current}` });
+    });
+  }
+
+  return crumbs;
+}
+
+function injectStructuredSeo(html: string, options: { appUrl: string; pathname: string; product?: any }) {
+  const pathname = options.pathname.length > 1 ? options.pathname.replace(/\/+$/, "") : "/";
+  const canonicalUrl = `${options.appUrl}${pathname}`;
+  const product = options.product;
+  const productName = product?.name ? String(product.name) : "";
+  const productDescription = truncate(stripHtml(product?.description) || `Nunua ${productName || "bidhaa"} kwenye Orbi Shop Tanzania.`);
+  const productImage = Array.isArray(product?.images) && product.images[0] ? product.images[0] : ORBI_SHOP_LOGO;
+  const price = Number(product?.price || 0);
+  const availability = Number(product?.stock || 0) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock";
+
+  const schemas: any[] = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      name: "Orbi Shop",
+      url: `${options.appUrl}/`,
+      logo: ORBI_SHOP_LOGO,
+      sameAs: ["https://shop.orbifinancial.com"],
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: "Orbi Shop",
+      url: `${options.appUrl}/`,
+      potentialAction: {
+        "@type": "SearchAction",
+        target: `${options.appUrl}/?q={search_term_string}`,
+        "query-input": "required name=search_term_string",
+      },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: categoryBreadcrumbs(pathname, options.appUrl).map((crumb, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        name: crumb.name,
+        item: crumb.item,
+      })),
+    },
+  ];
+
+  if (product) {
+    schemas.push({
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "@id": canonicalUrl,
+      name: productName,
+      description: productDescription,
+      image: [productImage],
+      sku: String(product.id || ""),
+      category: product.category || undefined,
+      brand: {
+        "@type": "Brand",
+        name: "Orbi Shop",
+      },
+      offers: {
+        "@type": "Offer",
+        url: canonicalUrl,
+        priceCurrency: "TZS",
+        price: Number.isFinite(price) ? price.toFixed(2) : "0.00",
+        availability,
+        itemCondition: "https://schema.org/NewCondition",
+      },
+    });
+  }
+
+  const title = product ? `Bei ya ${productName} | Orbi Shop` : "Orbi Shop";
+  const description = product
+    ? `Nunua ${productName} kwa bei ya TSh ${Number.isFinite(price) ? price.toLocaleString("en-US") : "0"}. ${productDescription}`
+    : "Shop with Orbi - trusted e-commerce marketplace in Tanzania.";
+
+  return html
+    .replace(/<title>.*?<\/title>/, `<title>${escapeHtml(title)}</title>`)
+    .replace(/<link rel="canonical" href=".*?" \/>/, `<link rel="canonical" href="${escapeHtml(canonicalUrl)}" />`)
+    .replace(/<meta name="description".*?>/, `<meta name="description" content="${escapeHtml(description)}" />`)
+    .replace(/<meta property="og:url".*?>/, `<meta property="og:url" content="${escapeHtml(canonicalUrl)}" />`)
+    .replace(/<meta property="og:title".*?>/, `<meta property="og:title" content="${escapeHtml(title)}" />`)
+    .replace(/<meta property="og:description".*?>/, `<meta property="og:description" content="${escapeHtml(description)}" />`)
+    .replace(/<meta property="og:image".*?>/, `<meta property="og:image" content="${escapeHtml(productImage)}" />`)
+    .replace(/<meta name="twitter:title".*?>/, `<meta name="twitter:title" content="${escapeHtml(title)}" />`)
+    .replace(/<meta name="twitter:description".*?>/, `<meta name="twitter:description" content="${escapeHtml(description)}" />`)
+    .replace(/<meta name="twitter:image".*?>/, `<meta name="twitter:image" content="${escapeHtml(productImage)}" />`)
+    .replace(
+      /<script id="dynamic-seo-schema"><\/script>/,
+      `<script id="dynamic-seo-schema" type="application/ld+json">${JSON.stringify(schemas)}</script>`,
+    );
+}
+
 async function startServer() {
   const app = express();
   app.set("trust proxy", 1);
@@ -202,6 +330,7 @@ async function startServer() {
     // Custom middleware to inject SEO tags in development
     app.use(async (req, res, next) => {
       const url = req.originalUrl;
+      const pathname = req.path || "/";
       const productMatch = url.match(/\/shop\/.*--([a-zA-Z0-9-]+)(?:\?.*)?$/);
       
       if (productMatch) {
@@ -211,21 +340,16 @@ async function startServer() {
           const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
           if (!supabaseUrl || !supabaseKey) throw new Error("Missing Supabase server-side environment variables.");
           
-          const { data: product } = await supabase.from("products").select("name, nameSw, description, price, images").eq("id", productId).single();
+          const { data: product } = await supabase
+            .from("products")
+            .select("id, name, description, price, images, stock, category")
+            .eq("id", productId)
+            .single();
           
           if (product) {
             let html = await fs.promises.readFile(path.join(process.cwd(), "index.html"), "utf-8");
             html = await vite.transformIndexHtml(url, html);
-            
-            const title = `Bei ya ${product.nameSw || product.name} | Orbi Shop`;
-            const desc = `Nunua ${product.nameSw || product.name} kwa bei ya TSh ${product.price}. ${product.description ? product.description.substring(0, 150) : ''}...`;
-            const image = product.images && product.images[0] ? product.images[0] : "https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png";
-            
-            html = html.replace(/<title>.*?<\/title>/, `<title>${title}</title>`);
-            html = html.replace(/<meta name="description".*?>/, `<meta name="description" content="${desc}" />`);
-            html = html.replace(/<meta property="og:title".*?>/, `<meta property="og:title" content="${title}" />`);
-            html = html.replace(/<meta property="og:description".*?>/, `<meta property="og:description" content="${desc}" />`);
-            html = html.replace(/<meta property="og:image".*?>/, `<meta property="og:image" content="${image}" />`);
+            html = injectStructuredSeo(html, { appUrl, pathname, product });
             
             return res.status(200).set({ "Content-Type": "text/html" }).end(html);
           }
@@ -272,8 +396,10 @@ async function startServer() {
     
     app.get("*", async (req, res) => {
       const url = req.originalUrl;
+      const pathname = req.path || "/";
       const productMatch = url.match(/\/shop\/.*--([a-zA-Z0-9-]+)(?:\?.*)?$/);
       let html = await fs.promises.readFile(path.join(distPath, "index.html"), "utf-8");
+      let structuredProduct: any = null;
       
       if (productMatch) {
         try {
@@ -282,23 +408,18 @@ async function startServer() {
           const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
           if (!supabaseUrl || !supabaseKey) throw new Error("Missing Supabase server-side environment variables.");
           
-          const { data: product } = await supabase.from("products").select("name, nameSw, description, price, images").eq("id", productId).single();
-          
-          if (product) {
-            const title = `Bei ya ${product.nameSw || product.name} | Orbi Shop`;
-            const desc = `Nunua ${product.nameSw || product.name} kwa bei ya TSh ${product.price}. ${product.description ? product.description.substring(0, 150) : ''}...`;
-            const image = product.images && product.images[0] ? product.images[0] : "https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png";
-            
-            html = html.replace(/<title>.*?<\/title>/, `<title>${title}</title>`);
-            html = html.replace(/<meta name="description".*?>/, `<meta name="description" content="${desc}" />`);
-            html = html.replace(/<meta property="og:title".*?>/, `<meta property="og:title" content="${title}" />`);
-            html = html.replace(/<meta property="og:description".*?>/, `<meta property="og:description" content="${desc}" />`);
-            html = html.replace(/<meta property="og:image".*?>/, `<meta property="og:image" content="${image}" />`);
-          }
+          const { data: product } = await supabase
+            .from("products")
+            .select("id, name, description, price, images, stock, category")
+            .eq("id", productId)
+            .single();
+          structuredProduct = product || null;
         } catch (e) {
           console.error("Error injecting SEO tags in production:", e);
         }
       }
+
+      html = injectStructuredSeo(html, { appUrl, pathname, product: structuredProduct });
       
       res.status(200).set({ "Content-Type": "text/html" }).send(html);
     });
