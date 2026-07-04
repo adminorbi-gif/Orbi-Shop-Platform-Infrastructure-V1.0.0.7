@@ -1981,8 +1981,19 @@ export default function ClientApp() {
                                 ></div>
                               ))
                             : categories.map((c: any) => {
-                                const currentNicheObj = niches?.find((n: any) => n.name === selectedNiche);
-                                const catObj = currentNicheObj?.categories?.find((cat: any) => cat.name === c);
+                                let catObj = null;
+                                if (selectedNiche === "Zote") {
+                                  for (const n of niches || []) {
+                                    const found = n.categories?.find((cat: any) => cat.name === c);
+                                    if (found) {
+                                      catObj = found;
+                                      break;
+                                    }
+                                  }
+                                } else {
+                                  const currentNicheObj = niches?.find((n: any) => n.name === selectedNiche);
+                                  catObj = currentNicheObj?.categories?.find((cat: any) => cat.name === c);
+                                }
                                 const catImage = catObj?.image;
 
                                 return (

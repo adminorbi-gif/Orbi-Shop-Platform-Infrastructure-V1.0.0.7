@@ -3227,49 +3227,65 @@ export default function SellerApp({
                     </select>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                      {lang === "sw" ? "Kundi la Bidhaa (Category)" : "Category"}
-                    </label>
-                    <select
-                      value={prodCategory}
-                      onChange={(e) => {
-                        setProdCategory(e.target.value);
-                        setProdFamily("");
-                      }}
-                      className="w-full bg-white border border-slate-200/80 hover:border-slate-300 px-4 py-3 rounded-xl text-xs font-bold outline-none focus:border-emerald-600 focus:bg-white transition text-slate-700"
-                    >
-                      <option value="">{lang === "sw" ? "-- Chagua Kundi --" : "-- Select Category --"}</option>
-                      {nichesList
-                        .find((n) => n.name === prodNiche)
-                        ?.categories?.map((cat) => (
-                          <option key={cat.name} value={cat.name}>
-                            {cat.name}
-                          </option>
+                  {selectedNiche && selectedNiche.categories && selectedNiche.categories.length > 0 && (
+                    <div className="space-y-2 sm:col-span-3">
+                      <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                        {lang === "sw" ? "Kundi la Bidhaa (Category)" : "Category"}
+                      </label>
+                      <div className="flex overflow-x-auto gap-3 pb-2 snap-x">
+                        {selectedNiche.categories.map((cat: any) => (
+                          <button
+                            key={cat.name}
+                            type="button"
+                            onClick={() => {
+                              setProdCategory(cat.name);
+                              setProdFamily("");
+                            }}
+                            className={`flex flex-col items-center gap-2 p-2 w-24 rounded-xl border transition shrink-0 snap-start ${
+                              prodCategory === cat.name
+                                ? "border-emerald-500 bg-emerald-50 shadow-sm"
+                                : "border-slate-200 bg-white hover:border-slate-300"
+                            }`}
+                          >
+                            {cat.image ? (
+                              <img src={cat.image} alt={cat.name} className="w-12 h-12 rounded-lg object-cover bg-slate-100" />
+                            ) : (
+                              <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center">
+                                <span className="text-[9px] font-bold text-slate-400">PIC</span>
+                              </div>
+                            )}
+                            <span className="text-[10px] leading-tight text-center font-bold text-slate-700 break-words w-full line-clamp-2">
+                              {cat.name}
+                            </span>
+                          </button>
                         ))}
-                    </select>
-                  </div>
+                      </div>
+                    </div>
+                  )}
 
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                      {lang === "sw" ? "Familia ya Bidhaa (Family)" : "Subcategory / Family"}
-                    </label>
-                    <select
-                      value={prodFamily}
-                      onChange={(e) => setProdFamily(e.target.value)}
-                      className="w-full bg-white border border-slate-200/80 hover:border-slate-300 px-4 py-3 rounded-xl text-xs font-bold outline-none focus:border-emerald-600 focus:bg-white transition text-slate-700"
-                    >
-                      <option value="">{lang === "sw" ? "-- Chagua Familia --" : "-- Select Family --"}</option>
-                      {nichesList
-                        .find((n) => n.name === prodNiche)
-                        ?.categories?.find((c) => c.name === prodCategory)
-                        ?.families?.map((fam) => (
-                          <option key={fam} value={fam}>
+                  {selectedCategory && selectedCategory.families && selectedCategory.families.length > 0 && (
+                    <div className="space-y-2 sm:col-span-3 border-t border-slate-100 pt-4">
+                      <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                        {lang === "sw" ? "Familia ya Bidhaa (Family)" : "Subcategory / Family"}
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedCategory.families.map((fam: string) => (
+                          <button
+                            key={fam}
+                            type="button"
+                            onClick={() => setProdFamily(fam)}
+                            className={`px-3 py-1.5 rounded-lg border transition text-xs font-bold ${
+                              prodFamily === fam
+                                ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm"
+                                : "border-slate-200 bg-white hover:border-slate-300 text-slate-600 hover:bg-slate-50"
+                            }`}
+                          >
                             {fam}
-                          </option>
+                          </button>
                         ))}
-                    </select>
-                  </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="sm:col-span-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] font-bold text-slate-500">
                     {selectedNiche ? (
