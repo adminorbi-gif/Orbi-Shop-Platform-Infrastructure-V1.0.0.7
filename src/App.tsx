@@ -1,32 +1,11 @@
-import React, { useState, useEffect, Suspense } from 'react';
-import { Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { supabase } from './lib/supabase';
+import { useEffect, Suspense } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { ToastProvider } from './components/Toast';
 import { lazyWithRetry } from './utils/lazyWithRetry';
 import { OrbiBootSplash, PwaExperience } from './components/PwaExperience';
 
 const ClientApp = lazyWithRetry(() => import('./pages/ClientApp'));
 const AdminApp = lazyWithRetry(() => import('./pages/AdminApp'));
-
-function ProtectedRoute({ children, fallbackPath }: { children: React.ReactNode, fallbackPath: string }) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsAuthenticated(!!session);
-    });
-  }, []);
-
-  if (isAuthenticated === null) {
-    return <OrbiBootSplash />;
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to={fallbackPath} replace />;
-  }
-
-  return <>{children}</>;
-}
 
 export default function App() {
   const location = useLocation();
@@ -48,22 +27,16 @@ export default function App() {
             <Route path="/checkout" element={<ClientApp />} />
             <Route path="/track/:orderId" element={<ClientApp />} />
             
-            {/* Seller Routes (Currently sharing AdminApp components but separated by route conceptually) */}
-            <Route path="/seller/login" element={<AdminApp />} />
-            <Route path="/seller/signup" element={<AdminApp />} />
-            <Route 
-              path="/seller/dashboard" 
-              element={
-                <ProtectedRoute fallbackPath="/seller/login">
-                  <AdminApp />
-                </ProtectedRoute>
-              } 
-            />
+            {/* Seller Routes: separated from admin URLs for clean merchant indexing and sharing */}
+            <Route path="/sellers" element={<AdminApp />} />
+            <Route path="/sellers/login" element={<AdminApp />} />
+            <Route path="/sellers/signup" element={<AdminApp />} />
+            <Route path="/sellers/dashboard" element={<AdminApp />} />
             
             {/* Admin Routes */}
             <Route path="/admin/*" element={<AdminApp />} />
             
-            {/* Fallback for older query-param style links (optional, could redirect) */}
+            {/* Fallback for older query-param style links */}
             <Route path="*" element={<ClientApp />} />
           </Routes>
         </Suspense>

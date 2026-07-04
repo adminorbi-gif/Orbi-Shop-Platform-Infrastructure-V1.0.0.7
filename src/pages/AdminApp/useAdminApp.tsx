@@ -266,6 +266,21 @@ import {
 import { useDialog } from "../../components/CustomDialogContext";
 import { CameraBarcodeScanner } from "../../components/CameraBarcodeScanner";
 
+const isSellerSignupPath = () =>
+  window.location.pathname === "/sellers/signup" ||
+  window.location.search.includes("seller-signup=true") ||
+  window.location.search.includes("seller-apply=true") ||
+  window.location.hash.includes("#seller-signup") ||
+  window.location.hash.includes("#seller-apply");
+
+const isSellerOrAdminLoginPath = () =>
+  window.location.pathname === "/sellers/login" ||
+  window.location.pathname === "/sellers" ||
+  window.location.pathname === "/sellers/dashboard" ||
+  window.location.search.includes("seller-login=true") ||
+  window.location.search.includes("admin=true") ||
+  window.location.pathname.startsWith("/admin");
+
 export function useAdminApp() {
 const { showAlert } = useDialog();
   const [isLogged, setIsLogged] = useState(false);
@@ -276,15 +291,15 @@ const { showAlert } = useDialog();
   const [loading, setLoading] = useState(true);
   const [lang, setLang] = useState<Lang>("sw");
   const [showApplyModal, setShowApplyModal] = useState(() => {
-    return window.location.pathname === "/seller/signup" || window.location.search.includes("seller-signup=true") || window.location.search.includes("seller-apply=true") || window.location.hash.includes("#seller-signup") || window.location.hash.includes("#seller-apply");
+    return isSellerSignupPath();
   });
 
   useEffect(() => {
     const handleUrlChangeOnAdmin = () => {
-      const activeSignup = window.location.pathname === "/seller/signup" || window.location.search.includes("seller-signup=true") || window.location.search.includes("seller-apply=true") || window.location.hash.includes("#seller-signup") || window.location.hash.includes("#seller-apply");
+      const activeSignup = isSellerSignupPath();
       if (activeSignup) {
         setShowApplyModal(true);
-      } else if (window.location.pathname === "/seller/login" || window.location.search.includes("seller-login=true") || window.location.search.includes("admin=true") || window.location.pathname.startsWith("/admin")) {
+      } else if (isSellerOrAdminLoginPath()) {
         setShowApplyModal(false);
       }
     };

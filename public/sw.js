@@ -23,7 +23,7 @@ self.addEventListener("fetch", (event) => {
 
   if (request.method !== "GET" || url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
-  if (url.pathname.startsWith("/admin")) return;
+  if (url.pathname.startsWith("/admin") || url.pathname.startsWith("/sellers")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(

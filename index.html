@@ -56,15 +56,31 @@
     <script>
       (function() {
         var base = window.location.origin;
-        var canonical = document.querySelector('link[rel="canonical"]');
-        if (canonical) canonical.setAttribute('href', base + window.location.pathname + window.location.search);
-        var ogUrl = document.querySelector('meta[property="og:url"]');
-        if (ogUrl) ogUrl.setAttribute('content', base + window.location.pathname + window.location.search);
-        
-        // Prevent indexing of strictly private admin pages
         var searchParams = new URLSearchParams(window.location.search);
+        var path = window.location.pathname || '/';
+        var normalizedPath = path.length > 1 ? path.replace(/\/+$/, '') : path;
+        var productId = searchParams.get('productId') || searchParams.get('product');
+        var canonicalPath = normalizedPath;
+
+        // Query-driven product links should point to the stable product route.
+        if ((normalizedPath === '/' || normalizedPath === '') && productId) {
+          canonicalPath = '/product/' + encodeURIComponent(productId);
+        }
+
+        var canonicalHref = base + canonicalPath;
+        var canonical = document.querySelector('link[rel="canonical"]');
+        if (canonical) canonical.setAttribute('href', canonicalHref);
+        var ogUrl = document.querySelector('meta[property="og:url"]');
+        if (ogUrl) ogUrl.setAttribute('content', canonicalHref);
+
+        // Keep private operational pages out of search results.
         var isSensitive = searchParams.has('admin') ||
-                          window.location.pathname.startsWith('/i');
+                          normalizedPath === '/admin.html' ||
+                          normalizedPath.startsWith('/admin') ||
+                          normalizedPath === '/sellers' ||
+                          normalizedPath === '/sellers/login' ||
+                          normalizedPath === '/sellers/dashboard' ||
+                          normalizedPath.startsWith('/i');
         if (isSensitive) {
           var robots = document.querySelector('meta[name="robots"]');
           if (robots) robots.setAttribute('content', 'noindex, nofollow');
@@ -75,7 +91,6 @@
           schemaEl.type = 'application/ld+json';
           
           // Check if we are viewing a specific product
-          var productId = searchParams.get('productId') || searchParams.get('product');
           var productName = searchParams.get('name') || "Orbi Shop Product";
           var productNameSw = searchParams.get('nameSw');
           var productPrice = searchParams.get('price');
@@ -156,19 +171,19 @@
                   "@type": "ListItem",
                   "position": 3,
                   "name": "Staff and Merchant Registration",
-                  "url": base + "/seller/signup"
+                  "url": base + "/sellers/signup"
                 },
                 {
                   "@type": "ListItem",
                   "position": 4,
                   "name": "Seller & Merchant Dashboard Login",
-                  "url": base + "/seller/login"
+                  "url": base + "/sellers/login"
                 },
                 {
                   "@type": "ListItem",
                   "position": 5,
                   "name": "Seller Product Portal Manager",
-                  "url": base + "/seller/dashboard"
+                  "url": base + "/sellers/dashboard"
                 },
                 {
                   "@type": "ListItem",

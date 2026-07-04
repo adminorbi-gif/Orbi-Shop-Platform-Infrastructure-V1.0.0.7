@@ -68,7 +68,7 @@
       "name": "Seller Signup",
       "short_name": "Seller",
       "description": "Apply as an Orbi Shop seller.",
-      "url": "/seller/signup?source=pwa-shortcut-seller",
+      "url": "/sellers/signup?source=pwa-shortcut-seller",
       "icons": [
         {
           "src": "/icons/orbi-shop-icon-192.png",

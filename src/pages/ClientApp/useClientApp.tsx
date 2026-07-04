@@ -687,12 +687,12 @@ const { showAlert, showConfirm } = useDialog();
   const [showCart, setShowCart] = useState(false);
   const [showAuth, setShowAuth] = useState<"login" | "register" | null>(null);
   const [showApplySellerModal, setShowApplySellerModal] = useState(() => {
-    return window.location.pathname === "/seller/signup" || window.location.search.includes("seller-signup=true") || window.location.search.includes("seller-apply=true") || window.location.hash.includes("#seller-signup") || window.location.hash.includes("#seller-apply");
+    return window.location.pathname === "/sellers/signup" || window.location.search.includes("seller-signup=true") || window.location.search.includes("seller-apply=true") || window.location.hash.includes("#seller-signup") || window.location.hash.includes("#seller-apply");
   });
 
   useEffect(() => {
     const handleUrlChangeOnClient = () => {
-      const activeSignup = window.location.pathname === "/seller/signup" || window.location.search.includes("seller-signup=true") || window.location.search.includes("seller-apply=true") || window.location.hash.includes("#seller-signup") || window.location.hash.includes("#seller-apply");
+      const activeSignup = window.location.pathname === "/sellers/signup" || window.location.search.includes("seller-signup=true") || window.location.search.includes("seller-apply=true") || window.location.hash.includes("#seller-signup") || window.location.hash.includes("#seller-apply");
       if (activeSignup) {
         setShowApplySellerModal(true);
       }
