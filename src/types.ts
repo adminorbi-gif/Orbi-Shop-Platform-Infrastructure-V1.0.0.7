@@ -71,6 +71,13 @@ export interface DeliverySettings {
   insuranceMinFeeTzs: number;
   insuranceMaxCoverageTzs: number;
   fallbackEnabled: boolean;
+  routeQuoteRequired: boolean;
+  doorstepMaxDistanceKm: number;
+  ruralPickupThresholdKm: number;
+  busCargoMaxWeightKg: number;
+  busCargoMaxVolumetricKg: number;
+  cargoMaxWeightKg: number;
+  cargoMaxVolumetricKg: number;
 }
 
 export interface DeliveryQuoteItem {
@@ -82,7 +89,7 @@ export interface DeliveryQuoteItem {
   eta: string;
   reason?: string;
   deliveryClass?: string;
-  quoteMode?: "route_exact" | "route_estimate" | "zone_fallback";
+  quoteMode?: "route_exact" | "route_estimate" | "zone_fallback" | "route_required";
   routeProvider?: "google_routes" | "distance_estimate" | "zone_rules";
   route?: {
     distanceKm: number;
@@ -100,8 +107,41 @@ export interface DeliveryQuote {
   available: boolean;
   items: DeliveryQuoteItem[];
   unavailableItems: DeliveryQuoteItem[];
-  quoteMode?: "route_exact" | "route_estimate" | "zone_fallback";
+  quoteMode?: "route_exact" | "route_estimate" | "zone_fallback" | "route_required";
   routeProvider?: "google_routes" | "distance_estimate" | "zone_rules";
+  reason?: string;
+  shippingPlan?: {
+    available: boolean;
+    recommended?: {
+      id: string;
+      label: string;
+      pickupRequired: boolean;
+    } | null;
+    shippingOptions?: Array<{
+      id: string;
+      label: string;
+      pickupRequired: boolean;
+      maxDistanceKm: number;
+      maxWeightKg: number;
+      maxVolumetricKg: number;
+    }>;
+    pickupHub?: {
+      id: string;
+      name: string;
+      city: string;
+      lat: number;
+      lng: number;
+      distanceKm: number;
+      googleMapsUri: string;
+    } | null;
+    ruralOrLongDistance?: boolean;
+    message?: string;
+  };
+  selectedShippingType?: {
+    id: string;
+    label: string;
+    pickupRequired: boolean;
+  } | null;
   packageSummary?: {
     totalItems: number;
     totalActualWeightKg: number;

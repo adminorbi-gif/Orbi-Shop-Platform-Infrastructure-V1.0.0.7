@@ -1708,8 +1708,9 @@ export function CheckoutModal({
   const selectedDeliveryZone = useMemo(() => {
     return normalizedDeliveryZones.find((zone) => zone.id === selectedDeliveryZoneId) || normalizedDeliveryZones[0];
   }, [normalizedDeliveryZones, selectedDeliveryZoneId]);
-  const deliveryCost = Number(deliveryQuote?.totalFee ?? selectedDeliveryZone?.price ?? 0);
-  const deliveryEta = deliveryQuote?.eta || (selectedDeliveryZone ? formatDeliveryDays(selectedDeliveryZone, lang) : "");
+  const hasLiveDeliveryQuote = Boolean(deliveryQuote && deliveryQuote.available);
+  const deliveryCost = hasLiveDeliveryQuote ? Number(deliveryQuote?.totalFee || 0) : 0;
+  const deliveryEta = hasLiveDeliveryQuote ? deliveryQuote?.eta || "" : "";
 
   const finalTotal = Math.max(0, total - discountAmount - pointsDiscount) + deliveryCost;
   const normalizePaymentMethod = (value: any) => {
@@ -1837,6 +1838,15 @@ export function CheckoutModal({
     try {
       if (deliveryQuote && !deliveryQuote.available) {
         showAlert(lang === "sw" ? "Baadhi ya bidhaa hazifiki eneo ulilochagua." : "Some items cannot be delivered to the selected zone.", "error");
+        return;
+      }
+      if (!hasLiveDeliveryQuote) {
+        showAlert(
+          lang === "sw"
+            ? "Chagua eneo halisi kupitia Google Maps ili mfumo ukokotoe delivery route na gharama sahihi."
+            : "Select an exact Google Maps location so the system can calculate the delivery route and fee.",
+          "error",
+        );
         return;
       }
 
@@ -2612,9 +2622,22 @@ export function CheckoutModal({
                       <p className="mt-1.5 text-[10px] font-semibold text-slate-300">
                         {deliveryQuoteLoading
                           ? (lang === "sw" ? "Inahesabu gharama ya usafirishaji..." : "Calculating delivery quote...")
-                          : `${deliveryQuote?.zoneName || getDeliveryZoneName(selectedDeliveryZone, lang)} · ${deliveryEta} · ${formatCurrency(deliveryCost)}`}
+                          : hasLiveDeliveryQuote
+                            ? `${deliveryQuote?.selectedShippingType?.label || deliveryQuote?.zoneName || getDeliveryZoneName(selectedDeliveryZone, lang)} · ${deliveryEta} · ${formatCurrency(deliveryCost)}`
+                            : (lang === "sw" ? "Chagua eneo kutoka Google Maps ili kupata bei ya route." : "Select a Google Maps location to get a live route price.")}
                       </p>
                     )}
+                    {deliveryQuote?.shippingPlan?.message ? (
+                      <div className="mt-2 rounded-xl border border-blue-400/30 bg-blue-500/10 p-3 text-[10px] font-bold text-blue-100">
+                        {deliveryQuote.shippingPlan.message}
+                        {deliveryQuote.shippingPlan.pickupHub ? (
+                          <span className="block mt-1 text-slate-100">
+                            {lang === "sw" ? "Pickup inayopendekezwa:" : "Recommended pickup:"}{" "}
+                            {deliveryQuote.shippingPlan.pickupHub.name}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
                     {deliveryQuote?.unavailableItems?.length ? (
                       <div className="mt-2 rounded-xl border border-rose-400/30 bg-rose-500/10 p-3 text-[10px] font-bold text-rose-100">
                         {lang === "sw"

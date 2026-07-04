@@ -19,9 +19,25 @@ CREATE TABLE IF NOT EXISTS public.delivery_settings (
   insurance_rate_percent NUMERIC(8,4) NOT NULL DEFAULT 1.25,
   insurance_min_fee_tzs NUMERIC(12,2) NOT NULL DEFAULT 500,
   insurance_max_coverage_tzs NUMERIC(14,2) NOT NULL DEFAULT 1000000,
-  fallback_enabled BOOLEAN NOT NULL DEFAULT true,
+  fallback_enabled BOOLEAN NOT NULL DEFAULT false,
+  route_quote_required BOOLEAN NOT NULL DEFAULT true,
+  doorstep_max_distance_km NUMERIC(10,2) NOT NULL DEFAULT 65,
+  rural_pickup_threshold_km NUMERIC(10,2) NOT NULL DEFAULT 85,
+  bus_cargo_max_weight_kg NUMERIC(10,3) NOT NULL DEFAULT 40,
+  bus_cargo_max_volumetric_kg NUMERIC(10,3) NOT NULL DEFAULT 55,
+  cargo_max_weight_kg NUMERIC(10,3) NOT NULL DEFAULT 250,
+  cargo_max_volumetric_kg NUMERIC(10,3) NOT NULL DEFAULT 320,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.delivery_settings ADD COLUMN IF NOT EXISTS route_quote_required BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE public.delivery_settings ADD COLUMN IF NOT EXISTS doorstep_max_distance_km NUMERIC(10,2) NOT NULL DEFAULT 65;
+ALTER TABLE public.delivery_settings ADD COLUMN IF NOT EXISTS rural_pickup_threshold_km NUMERIC(10,2) NOT NULL DEFAULT 85;
+ALTER TABLE public.delivery_settings ADD COLUMN IF NOT EXISTS bus_cargo_max_weight_kg NUMERIC(10,3) NOT NULL DEFAULT 40;
+ALTER TABLE public.delivery_settings ADD COLUMN IF NOT EXISTS bus_cargo_max_volumetric_kg NUMERIC(10,3) NOT NULL DEFAULT 55;
+ALTER TABLE public.delivery_settings ADD COLUMN IF NOT EXISTS cargo_max_weight_kg NUMERIC(10,3) NOT NULL DEFAULT 250;
+ALTER TABLE public.delivery_settings ADD COLUMN IF NOT EXISTS cargo_max_volumetric_kg NUMERIC(10,3) NOT NULL DEFAULT 320;
+ALTER TABLE public.delivery_settings ALTER COLUMN fallback_enabled SET DEFAULT false;
 
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_insurance_fee NUMERIC(12,2) DEFAULT 0;
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS delivery_insurance_coverage NUMERIC(14,2) DEFAULT 0;
@@ -59,7 +75,14 @@ INSERT INTO public.delivery_settings (
   insurance_rate_percent,
   insurance_min_fee_tzs,
   insurance_max_coverage_tzs,
-  fallback_enabled
+  fallback_enabled,
+  route_quote_required,
+  doorstep_max_distance_km,
+  rural_pickup_threshold_km,
+  bus_cargo_max_weight_kg,
+  bus_cargo_max_volumetric_kg,
+  cargo_max_weight_kg,
+  cargo_max_volumetric_kg
 )
 VALUES (
   1,
@@ -80,6 +103,19 @@ VALUES (
   1.25,
   500,
   1000000,
-  true
+  false,
+  true,
+  65,
+  85,
+  40,
+  55,
+  250,
+  320
 )
 ON CONFLICT (id) DO NOTHING;
+
+UPDATE public.delivery_settings
+SET fallback_enabled = false,
+    route_quote_required = true
+WHERE id = 1
+  AND fallback_enabled = true;

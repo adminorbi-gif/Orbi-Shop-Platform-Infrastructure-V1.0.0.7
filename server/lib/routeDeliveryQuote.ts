@@ -1,5 +1,6 @@
 import { applyCartDeliveryAdjustments, quoteCartDelivery, quoteProductDelivery, getProductDeliveryClass } from "./deliveryQuote.js";
 import { DEFAULT_DELIVERY_SETTINGS, DeliverySettings, mapDeliverySettings } from "./deliverySettings.js";
+import { resolveShippingPlan } from "./shippingIntelligence.js";
 
 type Coordinate = {
   lat: number;
@@ -245,6 +246,20 @@ export const quoteCartRouteDelivery = async (
   const settings = mapDeliverySettings(settingsInput || DEFAULT_DELIVERY_SETTINGS);
   const destination = toCoordinate(context.destination);
   const fallback = quoteCartDelivery(cart, zone, rules, lang, settings, options);
+  if (!destination && settings.routeQuoteRequired) {
+    return {
+      ...fallback,
+      available: false,
+      totalFee: 0,
+      eta: "",
+      reason: lang === "sw"
+        ? "Chagua eneo halisi kupitia Google Maps ili mfumo ukokotoe route na gharama sahihi."
+        : "Select an exact Google Maps location so the system can calculate the live route and delivery fee.",
+      quoteMode: "route_required",
+      routeProvider: "google_routes",
+    };
+  }
+
   if (!destination || !fallback.available) {
     return {
       ...fallback,
@@ -287,11 +302,17 @@ export const quoteCartRouteDelivery = async (
 
   const unavailableItems = items.filter((item) => !item.available);
   const totalFee = items.reduce((sum, item) => sum + (item.available ? Number(item.fee || 0) : 0), 0);
+  const routeItems = items.filter((item: any) => item.route);
+  const routeSummary = {
+    maxDistanceKm: Math.max(...routeItems.map((item: any) => Number(item.route?.distanceKm || 0)), 0),
+    maxDurationMinutes: Math.max(...routeItems.map((item: any) => Number(item.route?.durationMinutes || 0)), 0),
+    provider: routeItems.find((item: any) => item.routeProvider === "google_routes") ? "google_routes" : (routeItems[0] as any)?.routeProvider || "zone_rules",
+  };
   const slowest = items
     .filter((item) => item.available)
     .sort((a: any, b: any) => Number(b.route?.durationMinutes || 0) - Number(a.route?.durationMinutes || 0))[0] as any;
 
-  return applyCartDeliveryAdjustments({
+  const adjustedQuote = applyCartDeliveryAdjustments({
     ...fallback,
     totalFee,
     eta: slowest?.eta || fallback.eta,
@@ -304,7 +325,25 @@ export const quoteCartRouteDelivery = async (
         ? "route_estimate"
         : "zone_fallback",
     routeProvider: items.find((item) => item.routeProvider && item.routeProvider !== "zone_rules")?.routeProvider || "zone_rules",
+    routeSummary,
   }, cart, settings, options);
+
+  const shippingPlan = resolveShippingPlan({
+    destination,
+    routeSummary,
+    packageSummary: adjustedQuote.packageSummary,
+    settings,
+    lang,
+  });
+
+  return {
+    ...adjustedQuote,
+    available: adjustedQuote.available && shippingPlan.available,
+    reason: shippingPlan.available ? adjustedQuote.reason : shippingPlan.reason,
+    shippingPlan,
+    selectedShippingType: shippingPlan.recommended || null,
+    pickupHub: shippingPlan.pickupHub || null,
+  };
 };
 
 export const getRouteDeliveryHealth = () => {

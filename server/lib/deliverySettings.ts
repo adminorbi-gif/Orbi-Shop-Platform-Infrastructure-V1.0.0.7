@@ -17,6 +17,13 @@ export type DeliverySettings = {
   insuranceMinFeeTzs: number;
   insuranceMaxCoverageTzs: number;
   fallbackEnabled: boolean;
+  routeQuoteRequired: boolean;
+  doorstepMaxDistanceKm: number;
+  ruralPickupThresholdKm: number;
+  busCargoMaxWeightKg: number;
+  busCargoMaxVolumetricKg: number;
+  cargoMaxWeightKg: number;
+  cargoMaxVolumetricKg: number;
 };
 
 export const DEFAULT_DELIVERY_SETTINGS: DeliverySettings = {
@@ -37,7 +44,14 @@ export const DEFAULT_DELIVERY_SETTINGS: DeliverySettings = {
   insuranceRatePercent: 1.25,
   insuranceMinFeeTzs: 500,
   insuranceMaxCoverageTzs: 1000000,
-  fallbackEnabled: true,
+  fallbackEnabled: false,
+  routeQuoteRequired: true,
+  doorstepMaxDistanceKm: 65,
+  ruralPickupThresholdKm: 85,
+  busCargoMaxWeightKg: 40,
+  busCargoMaxVolumetricKg: 55,
+  cargoMaxWeightKg: 250,
+  cargoMaxVolumetricKg: 320,
 };
 
 const positiveNumber = (value: any, fallback: number) => {
@@ -64,6 +78,13 @@ export const mapDeliverySettings = (row: any = {}): DeliverySettings => ({
   insuranceMinFeeTzs: positiveNumber(row.insurance_min_fee_tzs ?? row.insuranceMinFeeTzs, DEFAULT_DELIVERY_SETTINGS.insuranceMinFeeTzs),
   insuranceMaxCoverageTzs: positiveNumber(row.insurance_max_coverage_tzs ?? row.insuranceMaxCoverageTzs, DEFAULT_DELIVERY_SETTINGS.insuranceMaxCoverageTzs),
   fallbackEnabled: row.fallback_enabled ?? row.fallbackEnabled ?? DEFAULT_DELIVERY_SETTINGS.fallbackEnabled,
+  routeQuoteRequired: row.route_quote_required ?? row.routeQuoteRequired ?? DEFAULT_DELIVERY_SETTINGS.routeQuoteRequired,
+  doorstepMaxDistanceKm: positiveNumber(row.doorstep_max_distance_km ?? row.doorstepMaxDistanceKm, DEFAULT_DELIVERY_SETTINGS.doorstepMaxDistanceKm),
+  ruralPickupThresholdKm: positiveNumber(row.rural_pickup_threshold_km ?? row.ruralPickupThresholdKm, DEFAULT_DELIVERY_SETTINGS.ruralPickupThresholdKm),
+  busCargoMaxWeightKg: positiveNumber(row.bus_cargo_max_weight_kg ?? row.busCargoMaxWeightKg, DEFAULT_DELIVERY_SETTINGS.busCargoMaxWeightKg),
+  busCargoMaxVolumetricKg: positiveNumber(row.bus_cargo_max_volumetric_kg ?? row.busCargoMaxVolumetricKg, DEFAULT_DELIVERY_SETTINGS.busCargoMaxVolumetricKg),
+  cargoMaxWeightKg: positiveNumber(row.cargo_max_weight_kg ?? row.cargoMaxWeightKg, DEFAULT_DELIVERY_SETTINGS.cargoMaxWeightKg),
+  cargoMaxVolumetricKg: positiveNumber(row.cargo_max_volumetric_kg ?? row.cargoMaxVolumetricKg, DEFAULT_DELIVERY_SETTINGS.cargoMaxVolumetricKg),
 });
 
 export const toDeliverySettingsRow = (settings: Partial<DeliverySettings>) => {
@@ -88,6 +109,13 @@ export const toDeliverySettingsRow = (settings: Partial<DeliverySettings>) => {
     insurance_min_fee_tzs: merged.insuranceMinFeeTzs,
     insurance_max_coverage_tzs: merged.insuranceMaxCoverageTzs,
     fallback_enabled: merged.fallbackEnabled,
+    route_quote_required: merged.routeQuoteRequired,
+    doorstep_max_distance_km: merged.doorstepMaxDistanceKm,
+    rural_pickup_threshold_km: merged.ruralPickupThresholdKm,
+    bus_cargo_max_weight_kg: merged.busCargoMaxWeightKg,
+    bus_cargo_max_volumetric_kg: merged.busCargoMaxVolumetricKg,
+    cargo_max_weight_kg: merged.cargoMaxWeightKg,
+    cargo_max_volumetric_kg: merged.cargoMaxVolumetricKg,
     updated_at: new Date().toISOString(),
   };
 };

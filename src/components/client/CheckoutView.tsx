@@ -86,7 +86,8 @@ export function CheckoutView({
   }, 0);
 
   const discount = appliedCoupon ? (subtotal * appliedCoupon.discountPercentage / 100) : 0;
-  const deliveryFee = Number(deliveryQuote?.totalFee ?? selectedDeliveryZone?.price ?? 0);
+  const hasLiveDeliveryQuote = Boolean(deliveryQuote && deliveryQuote.available);
+  const deliveryFee = hasLiveDeliveryQuote ? Number(deliveryQuote?.totalFee || 0) : 0;
   const total = subtotal - discount + deliveryFee;
 
   useEffect(() => {
@@ -156,6 +157,13 @@ export function CheckoutView({
       if (deliveryQuote && !deliveryQuote.available) {
         throw new Error(lang === "sw" ? "Baadhi ya bidhaa hazifiki eneo ulilochagua." : "Some items cannot be delivered to the selected zone.");
       }
+      if (!hasLiveDeliveryQuote) {
+        throw new Error(
+          lang === "sw"
+            ? "Chagua eneo halisi kupitia Google Maps ili mfumo ukokotoe delivery route na gharama sahihi."
+            : "Select an exact Google Maps location so the system can calculate the delivery route and fee.",
+        );
+      }
       await handlePlaceOrder({
         ...details,
         cart,
@@ -167,12 +175,12 @@ export function CheckoutView({
           price: deliveryFee,
           minDays: selectedDeliveryZone.minDays,
           maxDays: selectedDeliveryZone.maxDays,
-          eta: deliveryQuote?.eta || formatDeliveryDays(selectedDeliveryZone, lang),
+          eta: deliveryQuote?.eta || "",
         },
         deliveryFee,
         deliveryQuote,
         applyInsurance: false,
-        deliveryEta: deliveryQuote?.eta || formatDeliveryDays(selectedDeliveryZone, lang),
+        deliveryEta: deliveryQuote?.eta || "",
         operation: details.paymentMethod === "escrow" ? "paysafe" : "cash_on_delivery",
         paymentCategory: details.paymentMethod === "escrow" ? "orbi" : undefined,
         paymentRail: details.paymentMethod === "escrow" ? "orbi_wallet" : undefined
@@ -279,8 +287,15 @@ export function CheckoutView({
                     <p className="mt-2 text-[10px] font-bold text-slate-500">
                       {deliveryQuoteLoading
                         ? (lang === "sw" ? "Inahesabu usafirishaji..." : "Calculating delivery...")
-                        : `${deliveryQuote?.zoneName || getDeliveryZoneName(selectedDeliveryZone, lang)} · ${deliveryQuote?.eta || formatDeliveryDays(selectedDeliveryZone, lang)} · ${formatCurrency(deliveryFee)}`}
+                        : hasLiveDeliveryQuote
+                          ? `${deliveryQuote?.selectedShippingType?.label || deliveryQuote?.zoneName || getDeliveryZoneName(selectedDeliveryZone, lang)} · ${deliveryQuote?.eta || ""} · ${formatCurrency(deliveryFee)}`
+                          : (lang === "sw" ? "Delivery ya sasa inahitaji eneo halisi la Google Maps." : "Current delivery pricing requires an exact Google Maps location.")}
                     </p>
+                    {deliveryQuote?.shippingPlan?.message ? (
+                      <div className="mt-2 rounded-xl border border-blue-100 bg-blue-50 p-3 text-[11px] font-bold text-blue-800">
+                        {deliveryQuote.shippingPlan.message}
+                      </div>
+                    ) : null}
                     {deliveryQuote?.unavailableItems?.length ? (
                       <div className="mt-2 rounded-xl border border-rose-100 bg-rose-50 p-3 text-[11px] font-bold text-rose-700">
                         {lang === "sw" ? "Hazifiki eneo hili:" : "Unavailable for this zone:"}{" "}
