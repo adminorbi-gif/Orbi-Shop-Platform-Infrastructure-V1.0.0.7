@@ -64,6 +64,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
 } from "recharts";
 
 interface SellerAppProps {
@@ -90,6 +91,10 @@ export default function SellerApp({
   const [dashboardPeriod, setDashboardPeriod] = useState<
     "daily" | "weekly" | "monthly" | "yearly"
   >("yearly");
+  const nextLocaleLabel = lang === "sw" ? "English" : "Kiswahili";
+  const nextLocaleFlag = lang === "sw" ? "🇬🇧" : "🇹🇿";
+  const orderAxisFormatter = (value: number | string) =>
+    `${Number(value).toLocaleString()} ${lang === "sw" ? "oda" : "orders"}`;
   const [productFormSection, setProductFormSection] = useState<
     "basics" | "pricing" | "media" | "specs" | "publish"
   >("basics");
@@ -441,23 +446,19 @@ export default function SellerApp({
           <div className="hidden md:flex p-6 md:p-8 border-b border-slate-200/80 flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-900 flex items-center justify-center text-white font-bold overflow-hidden shadow-sm shrink-0">
-                  {seller.avatar ? (
-                    <img
-                      src={seller.avatar}
-                      alt={seller.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <Building size={20} />
-                  )}
+                <div className="w-[3.25rem] h-[3.25rem] rounded-[1.15rem] bg-white border border-slate-200 flex items-center justify-center overflow-hidden shadow-sm shrink-0 p-1.5">
+                  <img
+                    src="/icons/orbi-shop-icon-192.png"
+                    alt="Orbi Shop"
+                    className="w-full h-full object-contain"
+                  />
                 </div>
                 <div className="min-w-0">
                   <h2 className="text-sm font-black truncate text-slate-950 uppercase tracking-wider">
-                    {seller.name}
+                    Orbi Shop
                   </h2>
                   <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">
-                    Orbi Merchant
+                    Seller Console
                   </p>
                 </div>
               </div>
@@ -465,9 +466,16 @@ export default function SellerApp({
               {/* Language switcher flag */}
               <button
                 onClick={() => setLang(lang === "sw" ? "en" : "sw")}
-                className="hover:scale-105 active:scale-95 transition bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1 text-xs font-semibold flex items-center gap-1.5 cursor-pointer text-slate-700 shadow-sm"
+                className="hover:scale-105 active:scale-95 transition bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 cursor-pointer text-slate-700 shadow-sm"
+                title={`${lang === "sw" ? "Badilisha kwenda" : "Switch to"} ${nextLocaleLabel}`}
+                aria-label={`${lang === "sw" ? "Badilisha kwenda" : "Switch to"} ${nextLocaleLabel}`}
               >
-                {lang === "sw" ? "EN" : "SW"}
+                <span className="text-base leading-none" aria-hidden="true">
+                  {nextLocaleFlag}
+                </span>
+                <span className="text-[10px] font-black uppercase leading-none">
+                  {nextLocaleLabel}
+                </span>
               </button>
             </div>
 
@@ -499,27 +507,19 @@ export default function SellerApp({
           {/* MOBILE SLIM HEADER */}
           <div className="flex md:hidden px-4 py-2.5 border-b border-slate-200/80 items-center justify-between bg-white/95 w-full shadow-sm text-slate-900 select-none backdrop-blur-xl">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-slate-950 border border-slate-900 flex items-center justify-center text-white font-bold overflow-hidden shrink-0">
-                {seller.avatar ? (
-                  <img
-                    src={seller.avatar}
-                    alt={seller.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <Building size={14} />
-                )}
+              <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 p-1 shadow-sm">
+                <img
+                  src="/icons/orbi-shop-icon-192.png"
+                  alt="Orbi Shop"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div className="min-w-0">
                 <h2 className="text-xs font-black truncate uppercase tracking-tight text-slate-950 leading-none">
-                  {seller.name}
+                  Orbi Shop
                 </h2>
                 <span className="text-[8px] text-amber-600 font-black uppercase tracking-widest mt-0.5 block leading-none">
-                  {seller.isPro &&
-                  seller.proUntil &&
-                  seller.proUntil > Date.now()
-                    ? "GOLD"
-                    : "BASIC"}
+                  Seller Console
                 </span>
               </div>
             </div>
@@ -527,9 +527,14 @@ export default function SellerApp({
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => setLang(lang === "sw" ? "en" : "sw")}
-                className="hover:scale-105 active:scale-95 transition bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-700"
+                className="hover:scale-105 active:scale-95 transition bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-700 flex items-center gap-1"
+                title={`${lang === "sw" ? "Badilisha kwenda" : "Switch to"} ${nextLocaleLabel}`}
+                aria-label={`${lang === "sw" ? "Badilisha kwenda" : "Switch to"} ${nextLocaleLabel}`}
               >
-                {lang === "sw" ? "EN" : "SW"}
+                <span className="text-sm leading-none" aria-hidden="true">
+                  {nextLocaleFlag}
+                </span>
+                <span className="sr-only">{nextLocaleLabel}</span>
               </button>
 
               <button
@@ -721,18 +726,52 @@ export default function SellerApp({
 
           {/* Footer controls (Desktop only) */}
           <div className="hidden md:flex p-5 border-t border-slate-200/80 flex flex-col gap-3 bg-slate-50/60">
+            <div className="rounded-[1.35rem] border border-slate-200 bg-white p-3 shadow-sm">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setTab("settings")}
+                  className="w-11 h-11 rounded-2xl bg-slate-950 border border-slate-900 flex items-center justify-center text-white font-bold overflow-hidden shadow-sm shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition"
+                  title={lang === "sw" ? "Fungua mipangilio ya duka" : "Open store settings"}
+                  aria-label={lang === "sw" ? "Fungua mipangilio ya duka" : "Open store settings"}
+                >
+                  {seller.avatar ? (
+                    <img
+                      src={seller.avatar}
+                      alt={seller.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Building size={18} />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTab("settings")}
+                  className="min-w-0 flex-1 text-left cursor-pointer"
+                >
+                  <p className="text-xs font-black text-slate-950 truncate">
+                    {seller.name}
+                  </p>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-0.5">
+                    {lang === "sw" ? "Duka na akaunti" : "Store account"}
+                  </p>
+                </button>
+                <button
+                  onClick={onLogout}
+                  className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 hover:bg-rose-100 active:scale-95 transition flex items-center justify-center cursor-pointer shrink-0"
+                  title={lang === "sw" ? "Ondoka" : "Log out"}
+                  aria-label={lang === "sw" ? "Ondoka" : "Log out"}
+                >
+                  <LogOut size={16} />
+                </button>
+              </div>
+            </div>
             <button
               onClick={() => (window.location.href = "/")}
               className="w-full bg-white border border-slate-200 text-slate-700 py-3 rounded-2xl text-xs font-black uppercase tracking-wider hover:bg-slate-50 active:scale-95 transition cursor-pointer text-center shadow-sm"
             >
               {lang === "sw" ? "Tembelea Soko Kuu" : "Main Shopping Soko"}
-            </button>
-            <button
-              onClick={onLogout}
-              className="w-full bg-rose-50 border border-rose-100 text-rose-600 hover:bg-rose-100 py-3 rounded-2xl text-xs font-black uppercase tracking-wider active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <LogOut size={14} />
-              <span>{lang === "sw" ? "Ondoka" : "Log out"}</span>
             </button>
           </div>
         </aside>
@@ -910,10 +949,13 @@ export default function SellerApp({
                     <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
                       {lang === "sw" ? "Oda kwa kipindi ulichochagua" : "Orders by selected period"}
                     </span>
+                    <span className="text-[9px] font-bold text-slate-400">
+                      {lang === "sw" ? "X: kipindi · Y: idadi ya oda" : "X: period · Y: order count"}
+                    </span>
                   </div>
                   <div className="h-52 w-full min-w-[50px] min-h-[208px] font-mono">
                     <ResponsiveContainer width="100%" height={208} minWidth={50} minHeight={50}>
-                      <LineChart data={sellerRevenueTrend} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                      <LineChart data={sellerRevenueTrend} margin={{ top: 8, right: 12, left: 14, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e5e7eb" />
                         <XAxis
                           dataKey="name"
@@ -927,8 +969,9 @@ export default function SellerApp({
                           axisLine={false}
                           tickLine={false}
                           tick={{ fontSize: 10, fill: "#64748b", fontWeight: 700 }}
-                          width={34}
+                          width={66}
                           allowDecimals={false}
+                          tickFormatter={orderAxisFormatter}
                         />
                         <Tooltip
                           cursor={{ stroke: "#2563eb", strokeDasharray: "4 4" }}
@@ -944,9 +987,22 @@ export default function SellerApp({
                             lang === "sw" ? "Oda" : "Orders",
                           ]}
                         />
+                        <Legend
+                          verticalAlign="top"
+                          align="right"
+                          iconType="circle"
+                          wrapperStyle={{
+                            fontSize: 11,
+                            fontWeight: 800,
+                            paddingBottom: 8,
+                            color: "#334155",
+                          }}
+                          formatter={() => (lang === "sw" ? "Oda" : "Orders")}
+                        />
                         <Line
                           type="monotone"
                           dataKey="orders"
+                          name={lang === "sw" ? "Oda" : "Orders"}
                           stroke="#2563eb"
                           strokeWidth={3}
                           dot={{ r: 3, fill: "#2563eb", strokeWidth: 0 }}
@@ -1094,6 +1150,9 @@ export default function SellerApp({
                                     ? "Masaa 24 ya leo"
                                     : "Today by 24 hours"}
                           </p>
+                          <p className="text-slate-400 text-[9px] font-bold mt-1">
+                            {lang === "sw" ? "X: kipindi · Y: TZS mapato" : "X: period · Y: TZS revenue"}
+                          </p>
                         </div>
                         <div className="flex w-full sm:w-auto shrink-0 flex-wrap items-center rounded-xl bg-slate-100 p-0.5">
                           {[
@@ -1190,9 +1249,22 @@ export default function SellerApp({
                                 lang === "sw" ? "Kipato" : "Income",
                               ]}
                             />
+                            <Legend
+                              verticalAlign="top"
+                              align="right"
+                              iconType="circle"
+                              wrapperStyle={{
+                                fontSize: 11,
+                                fontWeight: 800,
+                                paddingBottom: 8,
+                                color: "#334155",
+                              }}
+                              formatter={() => (lang === "sw" ? "Mapato" : "Revenue")}
+                            />
                             <Area
                               type="monotone"
                               dataKey="sales"
+                              name={lang === "sw" ? "Mapato" : "Revenue"}
                               stroke="#2563eb"
                               strokeWidth={3}
                               fillOpacity={1}
@@ -1215,13 +1287,16 @@ export default function SellerApp({
                         <p className="text-slate-500 text-[11px] font-medium mt-1">
                           {lang === "sw" ? "Idadi ya oda kwa kipindi ulichochagua" : "Orders by the selected period"}
                         </p>
+                        <p className="text-slate-400 text-[9px] font-bold mt-1">
+                          {lang === "sw" ? "X: kipindi · Y: idadi ya oda" : "X: period · Y: order count"}
+                        </p>
                       </div>
                       <div className="h-48 w-full font-mono mt-1">
                         <ResponsiveContainer width="100%" height={192} minWidth={50} minHeight={50}>
-                          <LineChart data={sellerRevenueTrend} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                          <LineChart data={sellerRevenueTrend} margin={{ top: 8, right: 12, left: 14, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e5e7eb" />
                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#64748b", fontWeight: 700 }} tickMargin={8} interval={0} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#64748b", fontWeight: 700 }} width={34} allowDecimals={false} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#64748b", fontWeight: 700 }} width={66} allowDecimals={false} tickFormatter={orderAxisFormatter} />
                             <Tooltip
                               cursor={{ stroke: "#f97316", strokeDasharray: "4 4" }}
                               contentStyle={{
@@ -1231,7 +1306,19 @@ export default function SellerApp({
                               }}
                               formatter={(value) => [Number(value).toLocaleString(), lang === "sw" ? "Oda" : "Orders"]}
                             />
-                            <Line type="monotone" dataKey="orders" stroke="#f97316" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 3, stroke: "#fff", fill: "#f97316" }} />
+                            <Legend
+                              verticalAlign="top"
+                              align="right"
+                              iconType="circle"
+                              wrapperStyle={{
+                                fontSize: 11,
+                                fontWeight: 800,
+                                paddingBottom: 8,
+                                color: "#334155",
+                              }}
+                              formatter={() => (lang === "sw" ? "Oda" : "Orders")}
+                            />
+                            <Line type="monotone" dataKey="orders" name={lang === "sw" ? "Oda" : "Orders"} stroke="#f97316" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 3, stroke: "#fff", fill: "#f97316" }} />
                           </LineChart>
                         </ResponsiveContainer>
                       </div>

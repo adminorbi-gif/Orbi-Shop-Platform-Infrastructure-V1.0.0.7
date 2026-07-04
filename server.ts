@@ -237,7 +237,38 @@ async function startServer() {
     });
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath, { index: false }));
+    app.use(
+      express.static(distPath, {
+        index: false,
+        setHeaders: (res, filePath) => {
+          if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+            res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+            return;
+          }
+          if (filePath.endsWith(".html")) {
+            res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+            return;
+          }
+          if (filePath.endsWith("sw.js") || filePath.endsWith("manifest.webmanifest")) {
+            res.setHeader("Cache-Control", "no-cache");
+          }
+        },
+      }),
+    );
+
+    app.get(/^\/assets\/.+/, (req, res) => {
+      res
+        .status(404)
+        .type("text/plain")
+        .send("Static asset not found. Refresh the app to load the latest version.");
+    });
+
+    app.get(/\.(?:css|js|mjs|map|png|jpg|jpeg|webp|svg|ico|json|txt|webmanifest)$/i, (req, res) => {
+      res
+        .status(404)
+        .type("text/plain")
+        .send("File not found.");
+    });
     
     app.get("*", async (req, res) => {
       const url = req.originalUrl;

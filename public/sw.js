@@ -1,4 +1,4 @@
-const CACHE_NAME = "orbi-shop-shell-v1";
+const CACHE_NAME = "orbi-shop-shell-v2";
 const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
@@ -40,16 +40,21 @@ self.addEventListener("fetch", (event) => {
 
   if (url.pathname.startsWith("/assets/") || url.pathname.endsWith(".css") || url.pathname.endsWith(".js")) {
     event.respondWith(
-      caches.match(request).then((cached) => {
-        if (cached) return cached;
-        return fetch(request).then((response) => {
-          if (response.ok) {
+      fetch(request)
+        .then((response) => {
+          const contentType = response.headers.get("content-type") || "";
+          const isExpectedAsset =
+            (url.pathname.endsWith(".css") && contentType.includes("text/css")) ||
+            (url.pathname.endsWith(".js") && contentType.includes("javascript")) ||
+            (!url.pathname.endsWith(".css") && !url.pathname.endsWith(".js") && response.ok);
+
+          if (response.ok && isExpectedAsset) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }
           return response;
-        });
-      })
+        })
+        .catch(() => caches.match(request))
     );
   }
 });

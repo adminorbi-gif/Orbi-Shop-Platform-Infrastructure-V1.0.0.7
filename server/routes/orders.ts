@@ -144,7 +144,7 @@ router.get("/", requireAuth, async (req, res) => {
   return sendResilientJson(res, "orders:list", async () => {
     let selectRes = await withTimeout(
       getSupabase(req).from('orders').select(`*, items:order_items(*)`).or('is_archived.eq.false,is_archived.is.null').order('created_at', { ascending: false }).limit(1000),
-      7000,
+      12000,
       "orders query",
     );
     if (selectRes.error) throw selectRes.error;
@@ -196,7 +196,7 @@ router.get("/", requireAuth, async (req, res) => {
     });
 
     return mapped;
-  }, { ttlMs: 15000, timeoutMs: 8000, label: "orders list", fallback: [] });
+  }, { ttlMs: 45000, timeoutMs: 15000, label: "orders list", retries: 1, fallback: [] });
 });
 
 // POST /api/v1/orders - Update order metadata (status, payment reference)

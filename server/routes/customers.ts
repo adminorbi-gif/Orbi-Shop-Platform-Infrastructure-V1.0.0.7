@@ -9,7 +9,7 @@ router.get("/", async (req, res) => {
   return sendResilientJson(res, "customers:list", async () => {
     let selectRes = await withTimeout(
       getSupabase(req).from('customers').select('*').order('registered_at', { ascending: false }).limit(1000),
-      7000,
+      12000,
       "customers query",
     );
     if (selectRes.error) throw selectRes.error;
@@ -33,7 +33,7 @@ router.get("/", async (req, res) => {
     }));
 
     return mapped;
-  }, { ttlMs: 30000, timeoutMs: 8000, label: "customers list" });
+  }, { ttlMs: 60000, timeoutMs: 15000, label: "customers list", retries: 1, fallback: [] });
 });
 
 // POST /api/v1/customers/:id/reset-password - Secure password overrides

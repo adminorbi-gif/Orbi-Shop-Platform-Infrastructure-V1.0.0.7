@@ -209,7 +209,7 @@ router.get("/", async (req, res) => {
   return sendResilientJson(res, "products:list", async () => {
     let selectRes = await withTimeout(
       getSupabase(req).from('products').select('*').order('created_at', { ascending: false }).limit(1000),
-      7000,
+      12000,
       "products query",
     );
     if (selectRes.error) throw selectRes.error;
@@ -271,7 +271,7 @@ router.get("/", async (req, res) => {
     });
 
     return mapped;
-  }, { ttlMs: 30000, timeoutMs: 8000, label: "products list", fallback: [] });
+  }, { ttlMs: 60000, timeoutMs: 15000, label: "products list", retries: 1, fallback: [] });
 });
 
 // POST /api/v1/products - Create/Update product

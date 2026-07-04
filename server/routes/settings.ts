@@ -876,7 +876,7 @@ router.get("/sellers", async (req, res) => {
     try {
       const { data: bData } = await withTimeout(
         getSupabase(req).from('promotions').select('description').eq('title', 'SYSTEM_SELLERS').maybeSingle(),
-        5000,
+        8000,
         "seller backup query",
       );
       if (bData && bData.description) {
@@ -894,7 +894,7 @@ router.get("/sellers", async (req, res) => {
     try {
       const { data, error } = await withTimeout(
         getSupabase(req).from('sellers').select('*').order('name', { ascending: true }),
-        7000,
+        12000,
         "sellers query",
       );
       if (!error && data && data.length > 0) {
@@ -941,7 +941,7 @@ router.get("/sellers", async (req, res) => {
 
     const { data } = await withTimeout(
       getSupabase(req).from('promotions').select('description').eq('title', 'SYSTEM_SELLERS').maybeSingle(),
-      5000,
+      8000,
       "seller fallback query",
     );
     let sellersList = [{ id: 'S1', name: 'Orbi Official', description: 'Official products directly provided by Orbi Shop.', avatar: 'https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png' }];
@@ -950,9 +950,10 @@ router.get("/sellers", async (req, res) => {
     }
     return sellersList;
   }, {
-    ttlMs: 30000,
-    timeoutMs: 9000,
+    ttlMs: 60000,
+    timeoutMs: 15000,
     label: "sellers settings",
+    retries: 1,
     fallback: [{ id: 'S1', name: 'Orbi Official', description: 'Official products directly provided by Orbi Shop.', avatar: 'https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png' }],
   });
 });
@@ -1178,7 +1179,7 @@ router.get("/payouts", async (req, res) => {
   return sendResilientJson(res, "settings:payouts", async () => {
     let selectRes = await withTimeout(
       getSupabase(req).from('payouts').select('*').order('requested_at', { ascending: false }),
-      7000,
+      12000,
       "payouts query",
     );
     if (selectRes.error) throw selectRes.error;
@@ -1193,7 +1194,7 @@ router.get("/payouts", async (req, res) => {
       paidAt: p.paid_at ? new Date(p.paid_at).getTime() : undefined
     }));
     return mapped;
-  }, { ttlMs: 30000, timeoutMs: 8000, label: "payouts settings", fallback: [] });
+  }, { ttlMs: 60000, timeoutMs: 15000, label: "payouts settings", retries: 1, fallback: [] });
 });
 
 router.post("/payouts", async (req, res) => {

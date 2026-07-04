@@ -48,7 +48,7 @@ export const sendResilientJson = async <T>(
   res: any,
   cacheKey: string,
   producer: () => Promise<T>,
-  options: { ttlMs?: number; timeoutMs?: number; label?: string; fallback?: T } = {},
+  options: { ttlMs?: number; timeoutMs?: number; label?: string; fallback?: T; retries?: number; retryDelayMs?: number } = {},
 ) => {
   const fresh = getCachedValue<T>(cacheKey);
   if (fresh) {
@@ -56,9 +56,28 @@ export const sendResilientJson = async <T>(
   }
 
   try {
-    const data = await withTimeout(producer(), options.timeoutMs || 8000, options.label || cacheKey);
-    setCachedValue(cacheKey, data, options.ttlMs || 30000);
-    return res.json({ success: true, data });
+    const maxAttempts = Math.max(1, (options.retries ?? 1) + 1);
+    const retryDelayMs = options.retryDelayMs ?? 300;
+    let lastError: any;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        const data = await withTimeout(
+          producer(),
+          options.timeoutMs || 12000,
+          `${options.label || cacheKey} attempt ${attempt}`,
+        );
+        setCachedValue(cacheKey, data, options.ttlMs || 30000);
+        return res.json({ success: true, data });
+      } catch (error: any) {
+        lastError = error;
+        if (attempt < maxAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+        }
+      }
+    }
+
+    throw lastError;
   } catch (error: any) {
     const stale = getStaleCachedValue<T>(cacheKey);
     if (stale) {

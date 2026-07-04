@@ -23,7 +23,7 @@ router.get("/", async (req, res) => {
   return sendResilientJson(res, "messages:list", async () => {
     const { data, error } = await withTimeout(
       getMessagesDb(req).from('messages').select('*').order('created_at', { ascending: false }).limit(1000),
-      7000,
+      12000,
       "messages query",
     );
     if (error) throw error;
@@ -40,7 +40,7 @@ router.get("/", async (req, res) => {
     }));
 
     return mapped;
-  }, { ttlMs: 15000, timeoutMs: 8000, label: "messages list" });
+  }, { ttlMs: 45000, timeoutMs: 15000, label: "messages list", retries: 1, fallback: [] });
 });
 
 // POST /api/v1/messages/mark-read - Mark multiple messages as read
