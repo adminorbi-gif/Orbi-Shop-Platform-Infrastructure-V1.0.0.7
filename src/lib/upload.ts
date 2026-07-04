@@ -1,6 +1,6 @@
 export const uploadFileViaStorageApi = async (
   rawFile: File,
-  folder: "products" | "promotions" | "messages",
+  folder: "products" | "promotions" | "messages" | "niches",
   onProgress?: (progress: number) => void,
 ): Promise<string> => {
   let file = rawFile;

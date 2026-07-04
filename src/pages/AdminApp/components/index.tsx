@@ -11661,7 +11661,11 @@ export function SettingsAdmin() {
   const [newNicheName, setNewNicheName] = useState("");
   const [nicheCategoriesList, setNicheCategoriesList] = useState<Category[]>([]);
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [newFamilyNames, setNewFamilyNames] = useState("");
+  const [newCategoryImage, setNewCategoryImage] = useState("");
+  const [isUploadingCatImage, setIsUploadingCatImage] = useState(false);
+  const [newFamiliesList, setNewFamiliesList] = useState<string[]>([]);
+  const [inlineFamilyInputs, setInlineFamilyInputs] = useState<Record<number, string>>({});
+  const [newFamilyInput, setNewFamilyInput] = useState("");
   const [editingCategoryIdx, setEditingCategoryIdx] = useState<number | null>(null);
   const [newNicheMode, setNewNicheMode] = useState<"add" | "edit">("add");
   const [newNicheOriginalName, setNewNicheOriginalName] = useState("");
@@ -12574,7 +12578,7 @@ export function SettingsAdmin() {
       {/* Main Container Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Navigation Sidebar/Pills */}
-        <div className="lg:col-span-4 xl:col-span-4 bg-white rounded-3xl border border-slate-200/80 p-3.5 space-y-1 shadow-xs">
+        <div className="lg:col-span-4 xl:col-span-3 bg-white rounded-3xl border border-slate-200/80 p-3.5 space-y-1 shadow-xs">
           <span className="block text-[10px] font-black uppercase text-slate-400 tracking-widest px-3 mb-2.5">
             {isSw ? "Kategoria za Seti" : "Settings Domains"}
           </span>
@@ -12619,7 +12623,7 @@ export function SettingsAdmin() {
         </div>
 
         {/* Dynamic Display Area */}
-        <div className="lg:col-span-8 xl:col-span-8 space-y-6">
+        <div className="lg:col-span-8 xl:col-span-9 space-y-6">
           {activeSubTab === "system" && (
             <div className="bg-white rounded-[2.25rem] border border-slate-200/80 p-6 sm:p-8 shadow-xs space-y-5 animate-in fade-in duration-200 text-left">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
@@ -14622,73 +14626,250 @@ export function SettingsAdmin() {
                         {isSw ? "MAKUNDI NA FAMILIA" : "CATEGORIES & FAMILIES"}
                       </span>
 
-                      <div className="flex gap-2">
-                        <div className="flex-1 space-y-1.5">
-                          <input
-                            type="text"
-                            value={newCategoryName}
-                            onChange={(e) => setNewCategoryName(e.target.value)}
-                            placeholder={isSw ? "Jina la Kundi (Mf. Simu)" : "Category Name (e.g. Phones)"}
-                            className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-semibold outline-none focus:border-slate-900 transition"
-                          />
+                      <div className="flex flex-col gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div className="w-full space-y-1.5">
+                            <input
+                              type="text"
+                              value={newCategoryName}
+                              onChange={(e) => setNewCategoryName(e.target.value)}
+                              placeholder={isSw ? "Jina la Kundi (Mf. Simu)" : "Category Name (e.g. Phones)"}
+                              className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-semibold outline-none focus:border-slate-900 transition"
+                            />
+                          </div>
+                          <div className="w-full space-y-1.5 flex items-center gap-2">
+                            <label className="flex-1 cursor-pointer bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-semibold hover:border-slate-300 transition flex items-center justify-between">
+                              <span className="truncate text-slate-500">
+                                {isUploadingCatImage 
+                                  ? (isSw ? "Inapakia..." : "Uploading...")
+                                  : newCategoryImage 
+                                    ? (isSw ? "Picha imepakiwa (Bofya kubadili)" : "Image uploaded (Click to change)")
+                                    : (isSw ? "Pakia Picha ya Kundi (Si lazima)" : "Upload Category Image (Optional)")}
+                              </span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                disabled={isUploadingCatImage}
+                                onChange={async (e) => {
+                                  if (!e.target.files?.[0]) return;
+                                  setIsUploadingCatImage(true);
+                                  try {
+                                    const url = await uploadFileViaStorageApi(
+                                      e.target.files[0],
+                                      "niches",
+                                      () => {}
+                                    );
+                                    setNewCategoryImage(url);
+                                  } catch (err: any) {
+                                    showAlert(
+                                      isSw ? "Imeshindwa kupakia picha: " + err.message : "Failed to upload image: " + err.message,
+                                      "error"
+                                    );
+                                  } finally {
+                                    setIsUploadingCatImage(false);
+                                  }
+                                }}
+                              />
+                            </label>
+                            {newCategoryImage && (
+                              <button
+                                type="button"
+                                onClick={() => setNewCategoryImage("")}
+                                className="p-2.5 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition shrink-0"
+                              >
+                                <X size={14} />
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex-1 space-y-1.5">
-                          <input
-                            type="text"
-                            value={newFamilyNames}
-                            onChange={(e) => setNewFamilyNames(e.target.value)}
-                            placeholder={isSw ? "Familia (Koma: iOS, Android)" : "Families (Comma: iOS, Android)"}
-                            className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-semibold outline-none focus:border-slate-900 transition"
-                          />
+                        <div className="space-y-2 border border-slate-100 p-2.5 rounded-xl bg-slate-50/50">
+                          <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                            {isSw ? "Familia za Kundi" : "Category Families"}
+                          </span>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={newFamilyInput}
+                              onChange={(e) => setNewFamilyInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  if (newFamilyInput.trim()) {
+                                    setNewFamiliesList([...newFamiliesList, newFamilyInput.trim()]);
+                                    setNewFamilyInput("");
+                                  }
+                                }
+                              }}
+                              placeholder={isSw ? "Ongeza Familia mpya kwenye kundi (Mf. iOS)" : "Add a new Family (e.g. iOS)"}
+                              className="w-full bg-white border border-slate-200 p-2 rounded-lg text-xs font-semibold outline-none focus:border-slate-900 transition"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (newFamilyInput.trim()) {
+                                  setNewFamiliesList([...newFamiliesList, newFamilyInput.trim()]);
+                                  setNewFamilyInput("");
+                                }
+                              }}
+                              className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 rounded-lg text-xs font-bold transition shadow-sm shrink-0 flex items-center justify-center"
+                            >
+                              <Plus size={14} />
+                            </button>
+                          </div>
+                          {newFamiliesList.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {newFamiliesList.map((f, idx) => (
+                                <div key={idx} className="flex items-center gap-1 bg-white border border-slate-200 px-2 py-1 rounded-md text-[10px] font-bold text-slate-700 shadow-xs">
+                                  <span>{f}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setNewFamiliesList(newFamiliesList.filter((_, i) => i !== idx))}
+                                    className="text-slate-400 hover:text-rose-500 transition"
+                                  >
+                                    <X size={12} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         <button
                           type="button"
                           onClick={() => {
                             if (!newCategoryName.trim()) return;
-                            const families = newFamilyNames.split(",").map(f => f.trim()).filter(Boolean);
+                            const families = newFamiliesList;
                             if (editingCategoryIdx !== null) {
                               const updated = [...nicheCategoriesList];
-                              updated[editingCategoryIdx] = { name: newCategoryName.trim(), families };
+                              updated[editingCategoryIdx] = { name: newCategoryName.trim(), families, image: newCategoryImage.trim() };
                               setNicheCategoriesList(updated);
                               setEditingCategoryIdx(null);
                             } else {
-                              setNicheCategoriesList([...nicheCategoriesList, { name: newCategoryName.trim(), families }]);
+                              setNicheCategoriesList([...nicheCategoriesList, { name: newCategoryName.trim(), families, image: newCategoryImage.trim() }]);
                             }
                             setNewCategoryName("");
-                            setNewFamilyNames("");
+                            setNewCategoryImage("");
+                            setNewFamiliesList([]);
+                            setNewFamilyInput("");
                           }}
-                          className="bg-slate-900 text-white p-2.5 rounded-xl hover:bg-slate-800 transition shadow-sm"
+                          className="w-full bg-slate-900 text-white p-3 rounded-xl hover:bg-slate-800 transition shadow-sm text-xs font-bold flex items-center justify-center gap-1.5"
                         >
-                          {editingCategoryIdx !== null ? <Check size={16} /> : <Plus size={16} />}
+                          {editingCategoryIdx !== null ? (
+                            <>
+                              <Check size={14} />
+                              {isSw ? "Hifadhi Kundi" : "Save Category"}
+                            </>
+                          ) : (
+                            <>
+                              <Plus size={14} />
+                              {isSw ? "Ongeza Kundi" : "Add Category"}
+                            </>
+                          )}
                         </button>
                       </div>
 
-                      <div className="space-y-2 max-h-[150px] overflow-y-auto pr-1">
+                      <div className="space-y-3 max-h-[250px] overflow-y-auto pr-1">
                         {nicheCategoriesList.map((cat, idx) => (
-                          <div key={idx} className="flex items-center justify-between bg-slate-50 border border-slate-200 p-2.5 rounded-xl">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-black text-slate-800 truncate">{cat.name}</p>
-                              <p className="text-[10px] text-slate-500 truncate">{(cat.families || []).join(", ")}</p>
+                          <div key={idx} className="flex flex-col bg-slate-50 border border-slate-200 p-2.5 rounded-xl gap-2.5">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                {cat.image ? (
+                                  <img src={cat.image} alt={cat.name} className="w-10 h-10 rounded-lg object-cover bg-slate-200 shrink-0" />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-lg bg-slate-200 shrink-0 flex items-center justify-center">
+                                    <span className="text-slate-400 text-[10px] font-bold">PIC</span>
+                                  </div>
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-black text-slate-800 truncate">{cat.name}</p>
+                                </div>
+                              </div>
+                              <div className="flex gap-1 ml-2 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingCategoryIdx(idx);
+                                    setNewCategoryName(cat.name);
+                                    setNewCategoryImage(cat.image || "");
+                                    setNewFamiliesList(cat.families || []);
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition"
+                                >
+                                  <Edit size={12} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setNicheCategoriesList(nicheCategoriesList.filter((_, i) => i !== idx))}
+                                  className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex gap-1 ml-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEditingCategoryIdx(idx);
-                                  setNewCategoryName(cat.name);
-                                  setNewFamilyNames((cat.families || []).join(", "));
-                                }}
-                                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition"
-                              >
-                                <Edit size={12} />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setNicheCategoriesList(nicheCategoriesList.filter((_, i) => i !== idx))}
-                                className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition"
-                              >
-                                <X size={12} />
-                              </button>
+                            
+                            <div className="pl-[3.25rem] pt-1.5 border-t border-slate-100">
+                              <span className="block text-[9px] font-black uppercase text-slate-400 tracking-wider mb-2">
+                                {isSw ? "Familia za Kundi" : "Category Families"}
+                              </span>
+                              {cat.families && cat.families.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 mb-2">
+                                  {cat.families.map((fam, fIdx) => (
+                                    <span key={fIdx} className="bg-white border border-slate-200 px-2 py-1 rounded-md text-[10px] font-bold text-slate-600 flex items-center gap-1 shadow-xs">
+                                      {fam}
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const updated = [...nicheCategoriesList];
+                                          updated[idx].families = updated[idx].families.filter((_, i) => i !== fIdx);
+                                          setNicheCategoriesList(updated);
+                                        }}
+                                        className="text-slate-400 hover:text-rose-500 ml-1 transition"
+                                      >
+                                        <X size={10} />
+                                      </button>
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={inlineFamilyInputs[idx] || ""}
+                                  onChange={e => setInlineFamilyInputs({...inlineFamilyInputs, [idx]: e.target.value})}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      const val = inlineFamilyInputs[idx]?.trim();
+                                      if (val) {
+                                        const updated = [...nicheCategoriesList];
+                                        if (!updated[idx].families) updated[idx].families = [];
+                                        updated[idx].families.push(val);
+                                        setNicheCategoriesList(updated);
+                                        setInlineFamilyInputs({...inlineFamilyInputs, [idx]: ""});
+                                      }
+                                    }
+                                  }}
+                                  placeholder={isSw ? "Ongeza familia... (Mf. Oven)" : "Add family... (e.g. Oven)"}
+                                  className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-medium outline-none focus:border-slate-900 transition"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const val = inlineFamilyInputs[idx]?.trim();
+                                    if (val) {
+                                      const updated = [...nicheCategoriesList];
+                                      if (!updated[idx].families) updated[idx].families = [];
+                                      updated[idx].families.push(val);
+                                      setNicheCategoriesList(updated);
+                                      setInlineFamilyInputs({...inlineFamilyInputs, [idx]: ""});
+                                    }
+                                  }}
+                                  disabled={!inlineFamilyInputs[idx]?.trim()}
+                                  className="bg-slate-200 hover:bg-slate-300 disabled:opacity-50 text-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center shrink-0"
+                                >
+                                  <Plus size={14} />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ))}

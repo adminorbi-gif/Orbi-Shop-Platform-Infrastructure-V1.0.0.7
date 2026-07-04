@@ -749,7 +749,6 @@ export default function ClientApp() {
         )}
         <meta property="og:type" content={selectedProduct ? "product" : "website"} />
       </Helmet>
-      {isLoading && <LoadingOverlay />}
       {showAboutPage && (
         <div className="fixed inset-0 z-[999999] bg-white overflow-y-auto">
           <Suspense fallback={<div className="flex items-center justify-center h-full p-8"><div className="w-8 h-8 border-4 border-slate-200 border-t-emerald-500 rounded-full animate-spin"></div></div>}>
@@ -1981,7 +1980,12 @@ export default function ClientApp() {
                                   className="h-9 w-20 bg-slate-100 animate-pulse rounded-full shrink-0"
                                 ></div>
                               ))
-                            : categories.map((c: any) => (
+                            : categories.map((c: any) => {
+                                const currentNicheObj = niches?.find((n: any) => n.name === selectedNiche);
+                                const catObj = currentNicheObj?.categories?.find((cat: any) => cat.name === c);
+                                const catImage = catObj?.image;
+
+                                return (
                                 <button
                                   key={c}
                                   onClick={() => handleCategorySelect(c)}
@@ -1998,15 +2002,25 @@ export default function ClientApp() {
                                       );
                                     }
                                   }}
-                                  className={`py-2 text-[13px] font-bold whitespace-nowrap transition-all border-b-[3px] outline-none cursor-pointer ${
+                                  className={`flex flex-col items-center gap-1.5 transition-all outline-none cursor-pointer shrink-0 ${
                                     selectedCategory === c
-                                      ? "border-slate-900 text-slate-900"
-                                      : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
+                                      ? "opacity-100"
+                                      : "opacity-60 hover:opacity-100"
                                   }`}
                                 >
-                                  {c}
+                                  <div className={`w-[46px] h-[46px] shrink-0 rounded-full bg-slate-100 border-[2.5px] overflow-hidden flex items-center justify-center ${selectedCategory === c ? "border-slate-900 shadow-md" : "border-transparent"}`}>
+                                    {catImage ? (
+                                      <img src={catImage} alt={c} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <span className="text-[10px] font-bold text-slate-400 uppercase">{c === "Zote" ? (lang === "sw" ? "ZOTE" : "ALL") : c.slice(0,3)}</span>
+                                    )}
+                                  </div>
+                                  <span className={`text-[10px] font-bold whitespace-nowrap ${selectedCategory === c ? "text-slate-900" : "text-slate-500"}`}>
+                                    {c}
+                                  </span>
                                 </button>
-                              ))}
+                                );
+                              })}
 
                           {/* Dedicated visual separator & Special Merchant Filters, keeping them distinct from standard product categories */}
                           {!viewSeller &&

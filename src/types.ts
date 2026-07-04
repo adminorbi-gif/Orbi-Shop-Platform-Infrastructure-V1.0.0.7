@@ -1,6 +1,7 @@
 export interface Category {
   name: string;
   families: string[];
+  image?: string;
 }
 
 export interface Niche {
