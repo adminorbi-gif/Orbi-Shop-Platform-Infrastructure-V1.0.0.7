@@ -484,7 +484,7 @@ router.post("/verify-payment-auto", async (req: Request, res: Response) => {
         orderId: order.legacy_id || order.id,
         gatewayReferenceId: cleanTxId,
         amount: order.total,
-        paymentMethod: order.paymentMethod || "Orbi PaySafe",
+        paymentMethod: order.payment_method || "Orbi PaySafe",
         status: "success",
         message: "Automated payment lookup: reference verified and held in escrow.",
       });
@@ -531,7 +531,7 @@ router.post("/verify-payment-auto", async (req: Request, res: Response) => {
         orderId: order.legacy_id || order.id,
         gatewayReferenceId: cleanTxId,
         amount: order.total,
-        paymentMethod: order.paymentMethod || "Orbi PaySafe",
+        paymentMethod: order.payment_method || "Orbi PaySafe",
         status: "failed",
         message: "Duplicate Transaction ID submitted for payment verification.",
       });
@@ -569,7 +569,7 @@ router.post("/verify-payment-auto", async (req: Request, res: Response) => {
         orderId: order.legacy_id || order.id,
         gatewayReferenceId: cleanTxId,
         amount: order.total,
-        paymentMethod: order.paymentMethod || "Orbi PaySafe",
+        paymentMethod: order.payment_method || "Orbi PaySafe",
         status: "failed",
         message: `Carrier gateway verification failed: reference is invalid or unpaid.`,
       });
@@ -598,7 +598,7 @@ router.post("/verify-payment-auto", async (req: Request, res: Response) => {
       orderId: order.legacy_id || order.id,
       gatewayReferenceId: cleanTxId,
       amount: order.total,
-      paymentMethod: order.paymentMethod || "Orbi PaySafe",
+      paymentMethod: order.payment_method || "Orbi PaySafe",
       status: "success",
       message: "Automated payment verification successful. Escrow funded.",
     });
@@ -1028,8 +1028,8 @@ router.get("/ledger-logs", requireAuth, requireRole("admin"), async (req: Reques
     // 1. Fetch all orders from Supabase to construct dynamic successful/pending logs
     const { data: orders, error } = await supabase
       .from("orders")
-      .select("id, legacy_id, payment_reference, paymentMethod, total, status, date, customerDetails")
-      .order("date", { ascending: false });
+      .select("id, legacy_id, payment_reference, payment_method, total, status, created_at, customer_name")
+      .order("created_at", { ascending: false });
 
     if (error) {
       throw error;
@@ -1078,11 +1078,11 @@ router.get("/ledger-logs", requireAuth, requireRole("admin"), async (req: Reques
             orderId: order.legacy_id || order.id,
             gatewayReferenceId: displayRef,
             amount: order.total || 0,
-            paymentMethod: order.paymentMethod || "Mobile Money",
+            paymentMethod: order.payment_method || "Mobile Money",
             status: logStatus,
-            timestamp: order.date || Date.now(),
+            timestamp: order.created_at || Date.now(),
             message,
-            customerName: order.customerDetails?.name || "Customer",
+            customerName: order.customer_name ? decrypt(order.customer_name) : "Customer",
           });
         }
       }

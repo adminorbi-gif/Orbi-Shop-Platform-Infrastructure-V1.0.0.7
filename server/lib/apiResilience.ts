@@ -6,7 +6,7 @@ type CacheEntry<T> = {
 
 const responseCache = new Map<string, CacheEntry<unknown>>();
 
-export const withTimeout = async <T>(promise: PromiseLike<T>, timeoutMs = 8000, label = "operation"): Promise<T> => {
+export const withTimeout = async <T>(promise: PromiseLike<T>, timeoutMs = 15000, label = "operation"): Promise<T> => {
   let timeout: NodeJS.Timeout | undefined;
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeout = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);

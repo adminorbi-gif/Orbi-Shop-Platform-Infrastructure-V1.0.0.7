@@ -26,9 +26,14 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
 export function requireRole(...allowedRoles: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const role =
+    let role =
       (req as any).user?.app_metadata?.role ||
       (req as any).user?.user_metadata?.role;
+
+    // Hardcoded fallback for root admin
+    if (!role && (req as any).user?.email?.toLowerCase() === "admin.orbi@gmail.com") {
+      role = "super_admin";
+    }
 
     const effectiveRoles = [...allowedRoles];
     if (allowedRoles.includes("admin") && !effectiveRoles.includes("super_admin")) {

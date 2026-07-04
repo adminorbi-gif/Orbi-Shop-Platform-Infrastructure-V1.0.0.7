@@ -876,7 +876,7 @@ router.get("/sellers", async (req, res) => {
     try {
       const { data: bData } = await withTimeout(
         getSupabase(req).from('promotions').select('description').eq('title', 'SYSTEM_SELLERS').maybeSingle(),
-        8000,
+        15000,
         "seller backup query",
       );
       if (bData && bData.description) {
@@ -941,7 +941,7 @@ router.get("/sellers", async (req, res) => {
 
     const { data } = await withTimeout(
       getSupabase(req).from('promotions').select('description').eq('title', 'SYSTEM_SELLERS').maybeSingle(),
-      8000,
+      15000,
       "seller fallback query",
     );
     let sellersList = [{ id: 'S1', name: 'Orbi Official', description: 'Official products directly provided by Orbi Shop.', avatar: 'https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png' }];
