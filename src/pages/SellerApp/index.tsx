@@ -488,7 +488,31 @@ export default function SellerApp({
         {/* Left Side Navigation (Orbi enterprise branded) */}
         <aside className="w-full md:w-72 bg-white/95 text-slate-700 flex-shrink-0 flex flex-col items-stretch border-r border-slate-200/80 shadow-[18px_0_50px_rgba(15,23,42,0.06)] backdrop-blur-xl">
           {/* DESKTOP/TABLET SIDEBAR HEADER */}
-          <div className="hidden md:flex p-6 md:p-8 border-b border-slate-200/80 flex flex-col gap-4">
+          <div className="hidden md:flex p-6 md:p-8 border-b border-slate-200/80 flex flex-col gap-4 relative">
+            <button
+              type="button"
+              onClick={() =>
+                seller.isPro && seller.proUntil && seller.proUntil > Date.now()
+                  ? undefined
+                  : setTab("booster")
+              }
+              className={`absolute right-4 top-4 rounded-full px-2.5 py-1 text-[8px] font-black uppercase tracking-widest border transition shadow-sm ${
+                seller.isPro && seller.proUntil && seller.proUntil > Date.now()
+                  ? "bg-amber-500 text-white border-amber-500"
+                  : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 cursor-pointer"
+              }`}
+              title={
+                seller.isPro && seller.proUntil && seller.proUntil > Date.now()
+                  ? "PRO Seller"
+                  : lang === "sw"
+                    ? "Boresha mpango wa duka"
+                    : "Upgrade store plan"
+              }
+            >
+              {seller.isPro && seller.proUntil && seller.proUntil > Date.now()
+                ? "PRO"
+                : "Upgrade"}
+            </button>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <img
@@ -500,35 +524,9 @@ export default function SellerApp({
                   <h2 className="text-sm font-black truncate text-slate-950 uppercase tracking-wider">
                     Orbi Shop
                   </h2>
-                  <div className="mt-1 flex items-center gap-2">
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                      Seller Portal
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        seller.isPro && seller.proUntil && seller.proUntil > Date.now()
-                          ? undefined
-                          : setTab("booster")
-                      }
-                      className={`rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-widest border transition ${
-                        seller.isPro && seller.proUntil && seller.proUntil > Date.now()
-                          ? "bg-amber-500 text-white border-amber-500 shadow-sm"
-                          : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 cursor-pointer"
-                      }`}
-                      title={
-                        seller.isPro && seller.proUntil && seller.proUntil > Date.now()
-                          ? "PRO Seller"
-                          : lang === "sw"
-                            ? "Boresha mpango wa duka"
-                            : "Upgrade store plan"
-                      }
-                    >
-                      {seller.isPro && seller.proUntil && seller.proUntil > Date.now()
-                        ? "PRO"
-                        : "Upgrade"}
-                    </button>
-                  </div>
+                  <p className="mt-1 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                    Seller Portal
+                  </p>
                 </div>
               </div>
 
@@ -548,7 +546,31 @@ export default function SellerApp({
           </div>
 
           {/* MOBILE SLIM HEADER */}
-          <div className="flex md:hidden px-4 py-2.5 border-b border-slate-200/80 items-center justify-between bg-white/95 w-full shadow-sm text-slate-900 select-none backdrop-blur-xl">
+          <div className="flex md:hidden px-4 py-2.5 border-b border-slate-200/80 items-center justify-between bg-white/95 w-full shadow-sm text-slate-900 select-none backdrop-blur-xl relative">
+            <button
+              type="button"
+              onClick={() =>
+                seller.isPro && seller.proUntil && seller.proUntil > Date.now()
+                  ? undefined
+                  : setTab("booster")
+              }
+              className={`absolute right-3 top-1 rounded-full px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider border leading-none ${
+                seller.isPro && seller.proUntil && seller.proUntil > Date.now()
+                  ? "bg-amber-500 text-white border-amber-500"
+                  : "bg-amber-50 text-amber-700 border-amber-200"
+              }`}
+              title={
+                seller.isPro && seller.proUntil && seller.proUntil > Date.now()
+                  ? "PRO Seller"
+                  : lang === "sw"
+                    ? "Boresha mpango wa duka"
+                    : "Upgrade store plan"
+              }
+            >
+              {seller.isPro && seller.proUntil && seller.proUntil > Date.now()
+                ? "PRO"
+                : "Upgrade"}
+            </button>
             <div className="flex items-center gap-2 min-w-0">
               <img
                 src="/icons/orbi-shop-icon-192.png"
@@ -559,35 +581,9 @@ export default function SellerApp({
                 <h2 className="text-xs font-black truncate uppercase tracking-tight text-slate-950 leading-none">
                   Orbi Shop
                 </h2>
-                <div className="mt-0.5 flex items-center gap-1.5">
-                  <span className="text-[8px] text-amber-600 font-black uppercase tracking-widest block leading-none">
-                    Seller Portal
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      seller.isPro && seller.proUntil && seller.proUntil > Date.now()
-                        ? undefined
-                        : setTab("booster")
-                    }
-                    className={`rounded-full px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider border leading-none ${
-                      seller.isPro && seller.proUntil && seller.proUntil > Date.now()
-                        ? "bg-amber-500 text-white border-amber-500"
-                        : "bg-amber-50 text-amber-700 border-amber-200"
-                    }`}
-                    title={
-                      seller.isPro && seller.proUntil && seller.proUntil > Date.now()
-                        ? "PRO Seller"
-                        : lang === "sw"
-                          ? "Boresha mpango wa duka"
-                          : "Upgrade store plan"
-                    }
-                  >
-                    {seller.isPro && seller.proUntil && seller.proUntil > Date.now()
-                      ? "PRO"
-                      : "Upgrade"}
-                  </button>
-                </div>
+                <span className="mt-0.5 text-[8px] text-amber-600 font-black uppercase tracking-widest block leading-none">
+                  Seller Portal
+                </span>
               </div>
             </div>
 
