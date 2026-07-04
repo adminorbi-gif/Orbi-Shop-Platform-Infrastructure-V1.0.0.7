@@ -518,7 +518,7 @@ export default function SellerApp({
                 <img
                   src="/icons/orbi-shop-icon-192.png"
                   alt="Orbi Shop"
-                  className="w-13 h-13 object-contain shrink-0"
+                  className="w-15 h-15 object-contain shrink-0"
                 />
                 <div className="min-w-0">
                   <h2 className="text-sm font-black truncate text-slate-950 uppercase tracking-wider">
@@ -575,7 +575,7 @@ export default function SellerApp({
               <img
                 src="/icons/orbi-shop-icon-192.png"
                 alt="Orbi Shop"
-                className="w-11 h-11 object-contain shrink-0"
+                className="w-12 h-12 object-contain shrink-0"
               />
               <div className="min-w-0">
                 <h2 className="text-xs font-black truncate uppercase tracking-tight text-slate-950 leading-none">
@@ -619,12 +619,12 @@ export default function SellerApp({
           </div>
 
           {/* DESKTOP/TABLET VERTICAL NAVIGATION */}
-          <nav className="hidden md:flex px-3 py-2 flex-col gap-1.5 text-[11px] font-bold uppercase tracking-wider flex-1 overflow-y-auto">
+          <nav className="hidden md:flex px-3 py-2 flex-col gap-1.5 text-[13px] font-bold uppercase tracking-wider flex-1 overflow-y-auto">
             <button
               onClick={() => setTab("dashboard")}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition duration-150 cursor-pointer ${tab === "dashboard" ? "bg-slate-950 text-white shadow-lg shadow-slate-950/15 font-black" : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"}`}
             >
-              <LayoutDashboard size={16} />
+              <LayoutDashboard size={17} />
               <span>
                 {lang === "sw" ? "Meneja Dashboard" : "Dashboard Overview"}
               </span>
@@ -635,7 +635,7 @@ export default function SellerApp({
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition duration-150 cursor-pointer ${tab === "products" ? "bg-slate-950 text-white shadow-lg shadow-slate-950/15 font-black" : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"}`}
             >
               <div className="flex items-center gap-3">
-                <Package size={16} />
+                <Package size={17} />
                 <span>
                   {lang === "sw" ? "Bidhaa Zangu" : "Product Catalog"}
                 </span>
@@ -654,7 +654,7 @@ export default function SellerApp({
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition duration-150 cursor-pointer ${tab === "orders" ? "bg-slate-950 text-white shadow-lg shadow-slate-950/15 font-black" : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"}`}
             >
               <div className="flex items-center gap-3">
-                <ShoppingCart size={16} />
+                <ShoppingCart size={17} />
                 <span>
                   {lang === "sw" ? "Oda za Wateja" : "Fulfillment stream"}
                 </span>
@@ -672,7 +672,7 @@ export default function SellerApp({
               onClick={() => setTab("ai_copilot")}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition duration-150 cursor-pointer ${tab === "ai_copilot" ? "bg-gradient-to-r from-slate-950 to-slate-800 text-white shadow-lg shadow-slate-950/15 font-black" : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"}`}
             >
-              <Sparkles size={16} className="animate-pulse" />
+              <Sparkles size={17} className="animate-pulse" />
               <span>
                 {lang === "sw"
                   ? "Merchant AI Assistant"
@@ -684,7 +684,7 @@ export default function SellerApp({
               onClick={() => setTab("marketing")}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition duration-150 cursor-pointer ${tab === "marketing" ? "bg-slate-950 text-white shadow-lg shadow-slate-950/15 font-black" : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"}`}
             >
-              <Megaphone size={16} />
+              <Megaphone size={17} />
               <span>{lang === "sw" ? "Promote & Ads" : "Sponsored Ads"}</span>
             </button>
 
@@ -693,7 +693,7 @@ export default function SellerApp({
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition duration-150 cursor-pointer ${tab === "booster" ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/10 font-black animate-in fade-in" : "text-slate-500 hover:bg-amber-50 hover:text-slate-950"}`}
             >
               <Zap
-                size={16}
+                size={17}
                 className={
                   tab === "booster"
                     ? "text-white"
@@ -709,7 +709,7 @@ export default function SellerApp({
               onClick={() => setTab("settings")}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition duration-150 cursor-pointer ${tab === "settings" ? "bg-slate-950 text-white shadow-lg shadow-slate-950/15 font-black" : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"}`}
             >
-              <SettingsIcon size={16} />
+              <SettingsIcon size={17} />
               <span>
                 {lang === "sw" ? "Mipangilio ya Duka" : "Store Invoicing"}
               </span>
@@ -815,7 +815,7 @@ export default function SellerApp({
                   onClick={() => setTab("settings")}
                   className="min-w-0 flex-1 text-left cursor-pointer"
                 >
-                  <p className="text-[10px] font-black text-slate-950 truncate">
+                  <p className="text-xs font-black text-slate-950 truncate">
                     {seller.name}
                   </p>
                 </button>
@@ -830,10 +830,10 @@ export default function SellerApp({
               </div>
               <div className="relative mt-1.5 grid grid-cols-[1fr_auto] items-center gap-2 rounded-xl bg-slate-50 border border-slate-100 px-2 py-1.5">
                 <div className="min-w-0">
-                  <p className="text-[7px] font-black uppercase tracking-widest text-slate-400">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">
                     {lang === "sw" ? "Mpango wa duka" : "Store plan"}
                   </p>
-                  <p className="text-[9px] font-black uppercase tracking-wide text-slate-950 truncate">
+                  <p className="text-[10px] font-black uppercase tracking-wide text-slate-950 truncate">
                     {seller.isPro && seller.proUntil && seller.proUntil > Date.now()
                       ? "VIP Gold"
                       : "Basic Free"}
@@ -841,7 +841,7 @@ export default function SellerApp({
                 </div>
                 <button
                   onClick={() => setTab("booster")}
-                  className={`rounded-lg px-2 py-1 text-[8px] font-black uppercase border shadow-sm transition active:scale-95 cursor-pointer ${
+                  className={`rounded-lg px-2 py-1 text-[9px] font-black uppercase border shadow-sm transition active:scale-95 cursor-pointer ${
                     seller.isPro && seller.proUntil && seller.proUntil > Date.now()
                       ? "bg-amber-500 text-white border-amber-500"
                       : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
