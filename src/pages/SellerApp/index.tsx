@@ -3198,10 +3198,13 @@ export default function SellerApp({
                 </div>
 
                 {/* Niche, Category & Family Segment */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white/50 p-4 rounded-2xl border border-slate-200/60 shadow-inner">
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                      {lang === "sw" ? "Soko la Bidhaa (Niche)" : "Primary Niche"}
+                <div className="grid grid-cols-1 gap-5 bg-white/60 p-5 rounded-3xl border border-slate-200/80 shadow-xs">
+                  <div>
+                    <span className="text-[9px] font-black uppercase text-emerald-650 tracking-wider block mb-1">
+                      {lang === "sw" ? "Hatua ya 1: Soko la Bidhaa" : "Step 1: Primary Niche Market"}
+                    </span>
+                    <label className="block text-xs font-black text-slate-800 mb-2">
+                      {lang === "sw" ? "Chagua Soko Kuu (Niche)" : "Primary Niche"}
                     </label>
                     <select
                       value={prodNiche}
@@ -3210,7 +3213,7 @@ export default function SellerApp({
                         setProdCategory("");
                         setProdFamily("");
                       }}
-                      className="w-full bg-white border border-slate-200/80 hover:border-slate-300 px-4 py-3 rounded-xl text-xs font-bold outline-none focus:border-emerald-600 focus:bg-white transition text-slate-700"
+                      className="w-full bg-white border border-slate-200/90 hover:border-slate-300 px-4 py-3 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-650 transition text-slate-800 shadow-xs"
                     >
                       {nichesList.map((n) => (
                         <option key={n.name} value={n.name}>
@@ -3228,89 +3231,109 @@ export default function SellerApp({
                   </div>
 
                   {selectedNiche && selectedNiche.categories && selectedNiche.categories.length > 0 && (
-                    <div className="space-y-2 sm:col-span-3">
-                      <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                        {lang === "sw" ? "Kundi la Bidhaa (Category)" : "Category"}
+                    <div className="border-t border-slate-150 pt-4">
+                      <span className="text-[9px] font-black uppercase text-emerald-650 tracking-wider block mb-1">
+                        {lang === "sw" ? "Hatua ya 2: Kundi Kuu" : "Step 2: Main Category"}
+                      </span>
+                      <label className="block text-xs font-black text-slate-800 mb-3">
+                        {lang === "sw" ? "Chagua Kundi la Bidhaa" : "Select Product Category"}
                       </label>
-                      <div className="flex overflow-x-auto gap-3 pb-2 snap-x">
-                        {selectedNiche.categories.map((cat: any) => (
-                          <button
-                            key={cat.name}
-                            type="button"
-                            onClick={() => {
-                              setProdCategory(cat.name);
-                              setProdFamily("");
-                            }}
-                            className={`flex flex-col items-center gap-2 p-2 w-24 rounded-xl border transition shrink-0 snap-start ${
-                              prodCategory === cat.name
-                                ? "border-emerald-500 bg-emerald-50 shadow-sm"
-                                : "border-slate-200 bg-white hover:border-slate-300"
-                            }`}
-                          >
-                            {cat.image ? (
-                              <img src={cat.image} alt={cat.name} className="w-12 h-12 rounded-lg object-cover bg-slate-100" />
-                            ) : (
-                              <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center">
-                                <span className="text-[9px] font-bold text-slate-400">PIC</span>
-                              </div>
-                            )}
-                            <span className="text-[10px] leading-tight text-center font-bold text-slate-700 break-words w-full line-clamp-2">
-                              {cat.name}
-                            </span>
-                          </button>
-                        ))}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {selectedNiche.categories.map((cat: any) => {
+                          const isSelected = prodCategory === cat.name;
+                          return (
+                            <button
+                              key={cat.name}
+                              type="button"
+                              onClick={() => {
+                                setProdCategory(cat.name);
+                                setProdFamily("");
+                              }}
+                              className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition-all duration-200 cursor-pointer ${
+                                isSelected
+                                  ? "border-emerald-500 bg-emerald-50/70 shadow-xs ring-1 ring-emerald-500/35"
+                                  : "border-slate-200/80 bg-white hover:border-slate-300 hover:bg-slate-50/50"
+                              }`}
+                            >
+                              {cat.image ? (
+                                <img src={cat.image} alt={cat.name} className="w-10 h-10 rounded-xl object-cover bg-slate-100 shrink-0 border border-slate-150" />
+                              ) : (
+                                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 border border-slate-150">
+                                  <ImageIcon size={14} className="text-slate-400" />
+                                </div>
+                              )}
+                              <span className={`text-[11px] font-extrabold leading-snug break-words hyphens-auto flex-1 ${isSelected ? "text-emerald-850" : "text-slate-700"}`}>
+                                {cat.name}
+                              </span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
 
                   {selectedCategory && selectedCategory.families && selectedCategory.families.length > 0 && (
-                    <div className="space-y-2 sm:col-span-3 border-t border-slate-100 pt-4">
-                      <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                        {lang === "sw" ? "Familia ya Bidhaa (Family)" : "Subcategory / Family"}
+                    <div className="border-t border-slate-150 pt-4">
+                      <span className="text-[9px] font-black uppercase text-emerald-650 tracking-wider block mb-1">
+                        {lang === "sw" ? "Hatua ya 3: Aina Ndogo" : "Step 3: Subcategory / Family"}
+                      </span>
+                      <label className="block text-xs font-black text-slate-800 mb-2">
+                        {lang === "sw" ? "Chagua Familia ya Bidhaa (Family)" : "Select Sub-Family"}
                       </label>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedCategory.families.map((fam: string) => (
-                          <button
-                            key={fam}
-                            type="button"
-                            onClick={() => setProdFamily(fam)}
-                            className={`px-3 py-1.5 rounded-lg border transition text-xs font-bold ${
-                              prodFamily === fam
-                                ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm"
-                                : "border-slate-200 bg-white hover:border-slate-300 text-slate-600 hover:bg-slate-50"
-                            }`}
-                          >
-                            {fam}
-                          </button>
-                        ))}
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {selectedCategory.families.map((fam: string) => {
+                          const isSelected = prodFamily === fam;
+                          return (
+                            <button
+                              key={fam}
+                              type="button"
+                              onClick={() => setProdFamily(fam)}
+                              className={`px-3 py-1.5 rounded-xl border transition-all text-xs font-bold cursor-pointer ${
+                                isSelected
+                                  ? "border-emerald-500 bg-emerald-600 text-white shadow-xs"
+                                  : "border-slate-200/90 bg-white hover:border-slate-300 text-slate-650 hover:bg-slate-50/80"
+                              }`}
+                            >
+                              {fam}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
 
-                  <div className="sm:col-span-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] font-bold text-slate-500">
-                    {selectedNiche ? (
-                      selectedCategory ? (
-                        <span>
-                          {lang === "sw"
-                            ? `Imeunganishwa: ${selectedNiche.name} > ${selectedCategory.name}${
-                                prodFamily ? ` > ${prodFamily}` : ""
-                              }`
-                            : `Mapped: ${selectedNiche.name} > ${selectedCategory.name}${
-                                prodFamily ? ` > ${prodFamily}` : ""
-                              }`}
-                        </span>
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 px-4 py-3 text-xs font-bold text-slate-600 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                      {selectedNiche ? (
+                        selectedCategory ? (
+                          <span className="text-slate-700 leading-normal">
+                            {lang === "sw"
+                              ? `Muundo: ${selectedNiche.name} ➔ ${selectedCategory.name}${
+                                  prodFamily ? ` ➔ ${prodFamily}` : ""
+                                }`
+                              : `Taxonomy: ${selectedNiche.name} ➔ ${selectedCategory.name}${
+                                  prodFamily ? ` ➔ ${prodFamily}` : ""
+                                }`}
+                          </span>
+                        ) : (
+                          <span className="text-slate-500 font-medium">
+                            {lang === "sw"
+                              ? "Tafadhali chagua Kundi (Category) ili bidhaa ipangwe vizuri."
+                              : "Please select a Category to correctly index this product."}
+                          </span>
+                        )
                       ) : (
-                        <span>
+                        <span className="text-slate-500 font-medium">
                           {lang === "sw"
-                            ? "Chagua category ili bidhaa ipangwe vizuri kwenye soko na analytics."
-                            : "Select a category so the product is grouped correctly in storefront and analytics."}
+                            ? "Hakuna niche zilizopakiwa kwenye mfumo."
+                            : "No niches configured in the system."}
                         </span>
-                      )
-                    ) : (
-                      <span>
-                        {lang === "sw"
-                          ? "Hakuna niche zilizopakiwa. Wasiliana na admin kuongeza taxonomy."
-                          : "No niches loaded. Ask admin to configure product taxonomy."}
+                      )}
+                    </div>
+                    {selectedCategory && (
+                      <span className="text-[9px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md uppercase font-black tracking-wider shrink-0">
+                        {lang === "sw" ? "IMEMAPISHWA" : "MAPPED"}
                       </span>
                     )}
                   </div>
