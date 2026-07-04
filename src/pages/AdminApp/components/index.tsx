@@ -14688,31 +14688,33 @@ export function SettingsAdmin() {
                             {isSw ? "Familia za Kundi" : "Category Families"}
                           </span>
                           <div className="flex gap-2">
-                            <input
-                              type="text"
+                            <textarea
+                              rows={2}
                               value={newFamilyInput}
                               onChange={(e) => setNewFamilyInput(e.target.value)}
                               onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
+                                if (e.key === 'Enter' && !e.shiftKey) {
                                   e.preventDefault();
-                                  if (newFamilyInput.trim()) {
-                                    setNewFamiliesList([...newFamiliesList, newFamilyInput.trim()]);
+                                  const vals = newFamilyInput.split(/[\n,]+/).map(v => v.trim()).filter(Boolean);
+                                  if (vals.length > 0) {
+                                    setNewFamiliesList([...newFamiliesList, ...vals]);
                                     setNewFamilyInput("");
                                   }
                                 }
                               }}
-                              placeholder={isSw ? "Ongeza Familia mpya kwenye kundi (Mf. iOS)" : "Add a new Family (e.g. iOS)"}
-                              className="w-full bg-white border border-slate-200 p-2 rounded-lg text-xs font-semibold outline-none focus:border-slate-900 transition"
+                              placeholder={isSw ? "Ongeza Familia (Tenganisha kwa koma au mistari. Mf. Freezer, AC)" : "Add Families (Comma or line separated. e.g. iOS, Android)"}
+                              className="w-full bg-white border border-slate-200 p-2 rounded-lg text-xs font-semibold outline-none focus:border-slate-900 transition resize-y"
                             />
                             <button
                               type="button"
                               onClick={() => {
-                                if (newFamilyInput.trim()) {
-                                  setNewFamiliesList([...newFamiliesList, newFamilyInput.trim()]);
+                                const vals = newFamilyInput.split(/[\n,]+/).map(v => v.trim()).filter(Boolean);
+                                if (vals.length > 0) {
+                                  setNewFamiliesList([...newFamiliesList, ...vals]);
                                   setNewFamilyInput("");
                                 }
                               }}
-                              className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 rounded-lg text-xs font-bold transition shadow-sm shrink-0 flex items-center justify-center"
+                              className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-lg text-xs font-bold transition shadow-sm shrink-0 flex items-center justify-center self-start h-9 mt-1"
                             >
                               <Plus size={14} />
                             </button>
@@ -14832,40 +14834,40 @@ export function SettingsAdmin() {
                                 </div>
                               )}
                               <div className="flex items-center gap-2">
-                                <input
-                                  type="text"
+                                <textarea
+                                  rows={1}
                                   value={inlineFamilyInputs[idx] || ""}
                                   onChange={e => setInlineFamilyInputs({...inlineFamilyInputs, [idx]: e.target.value})}
                                   onKeyDown={e => {
-                                    if (e.key === 'Enter') {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
                                       e.preventDefault();
-                                      const val = inlineFamilyInputs[idx]?.trim();
-                                      if (val) {
+                                      const vals = (inlineFamilyInputs[idx] || "").split(/[\n,]+/).map(v => v.trim()).filter(Boolean);
+                                      if (vals.length > 0) {
                                         const updated = [...nicheCategoriesList];
                                         if (!updated[idx].families) updated[idx].families = [];
-                                        updated[idx].families.push(val);
+                                        updated[idx].families.push(...vals);
                                         setNicheCategoriesList(updated);
                                         setInlineFamilyInputs({...inlineFamilyInputs, [idx]: ""});
                                       }
                                     }
                                   }}
-                                  placeholder={isSw ? "Ongeza familia... (Mf. Oven)" : "Add family... (e.g. Oven)"}
-                                  className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-medium outline-none focus:border-slate-900 transition"
+                                  placeholder={isSw ? "Tenganisha kwa koma (Mf. TV, Radio)" : "Comma separated (e.g. TV, Radio)"}
+                                  className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-medium outline-none focus:border-slate-900 transition resize-y min-h-[36px]"
                                 />
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    const val = inlineFamilyInputs[idx]?.trim();
-                                    if (val) {
+                                    const vals = (inlineFamilyInputs[idx] || "").split(/[\n,]+/).map(v => v.trim()).filter(Boolean);
+                                    if (vals.length > 0) {
                                       const updated = [...nicheCategoriesList];
                                       if (!updated[idx].families) updated[idx].families = [];
-                                      updated[idx].families.push(val);
+                                      updated[idx].families.push(...vals);
                                       setNicheCategoriesList(updated);
                                       setInlineFamilyInputs({...inlineFamilyInputs, [idx]: ""});
                                     }
                                   }}
                                   disabled={!inlineFamilyInputs[idx]?.trim()}
-                                  className="bg-slate-200 hover:bg-slate-300 disabled:opacity-50 text-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center shrink-0"
+                                  className="bg-slate-200 hover:bg-slate-300 disabled:opacity-50 text-slate-700 px-2.5 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center shrink-0 self-start mt-0.5"
                                 >
                                   <Plus size={14} />
                                 </button>
@@ -15153,18 +15155,20 @@ export function SettingsAdmin() {
 
               {/* AI NICHE SUGGESTER PANEL */}
               <div className="border-t border-slate-100 pt-6 mt-8 space-y-4">
-                <div className="bg-gradient-to-r from-violet-50 to-indigo-50/60 border border-violet-100 rounded-[2rem] p-6 sm:p-8 space-y-5 shadow-xs">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-start gap-3">
+                <div className="bg-gradient-to-r from-violet-50 to-indigo-50/60 border border-violet-100 rounded-[2rem] p-5 sm:p-8 space-y-5 shadow-xs">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3 min-w-0">
                       <div className="p-2.5 bg-violet-600 rounded-2xl text-white shadow-sm shrink-0">
                         <Sparkles size={18} className="animate-pulse" />
                       </div>
-                      <div>
-                        <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2 mb-0">
-                          {isSw
-                            ? "Mshauri wa Kitengo cha AI (Niche Suggester)"
-                            : "AI Niche & Category Suggester"}
-                          <span className="hidden sm:inline-flex bg-violet-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full tracking-widest">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider flex flex-wrap items-center gap-2 mb-0">
+                          <span>
+                            {isSw
+                              ? "Mshauri wa Kitengo cha AI (Niche Suggester)"
+                              : "AI Niche & Category Suggester"}
+                          </span>
+                          <span className="bg-violet-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full tracking-widest shrink-0">
                             Beta
                           </span>
                         </h4>
@@ -15179,7 +15183,7 @@ export function SettingsAdmin() {
                       type="button"
                       disabled={aiLoading}
                       onClick={handleScanNiches}
-                      className="bg-violet-600 hover:bg-violet-700 disabled:bg-violet-300 text-white font-black text-xs uppercase px-6 py-3 rounded-2xl shadow-md transition cursor-pointer flex items-center gap-2 self-start sm:self-center shrink-0"
+                      className="bg-violet-600 hover:bg-violet-700 disabled:bg-violet-300 text-white font-black text-xs uppercase px-6 py-3 rounded-2xl shadow-md transition cursor-pointer flex justify-center items-center gap-2 w-full lg:w-auto shrink-0"
                     >
                       {aiLoading ? (
                         <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin font-semibold"></div>
