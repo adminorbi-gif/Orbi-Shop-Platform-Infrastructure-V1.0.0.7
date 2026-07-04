@@ -14809,8 +14809,9 @@ export function SettingsAdmin() {
                         </p>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pt-2">
-                        {nicheCategoriesList.map((cat, idx) => {
+                      <div className="max-h-[500px] overflow-y-auto pr-1.5 scrollbar-thin scrollbar-thumb-slate-200 hover:scrollbar-thumb-slate-300 scrollbar-track-transparent">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pt-2 pb-2">
+                          {nicheCategoriesList.map((cat, idx) => {
                           const getPillStyle = (name: string) => {
                             const colors = [
                               "bg-indigo-50 border-indigo-150 text-indigo-700 hover:bg-indigo-100/70",
@@ -14908,23 +14909,17 @@ export function SettingsAdmin() {
                                   {isSw ? "Familia zilizo ndani" : "Sub-Families Included"}
                                 </span>
                                 {cat.families && cat.families.length > 0 ? (
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {cat.families.slice(0, 5).map((f, fi) => (
-                                      <span
-                                        key={fi}
-                                        className={`text-[9px] px-2.5 py-1 rounded-xl font-bold leading-none shrink-0 border ${getPillStyle(f)} transition-all duration-200 cursor-default`}
-                                      >
-                                        {f}
-                                      </span>
-                                    ))}
-                                    {cat.families.length > 5 && (
-                                      <span
-                                        className="text-[9px] bg-slate-900 border border-slate-900 text-white px-2.5 py-1 rounded-xl font-extrabold leading-none shrink-0 cursor-help hover:bg-slate-800 transition"
-                                        title={cat.families.slice(5).join(", ")}
-                                      >
-                                        +{cat.families.length - 5}
-                                      </span>
-                                    )}
+                                  <div className="max-h-[85px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-200 hover:scrollbar-thumb-slate-300 scrollbar-track-transparent">
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {cat.families.map((f, fi) => (
+                                        <span
+                                          key={fi}
+                                          className={`text-[9px] px-2.5 py-1 rounded-xl font-bold leading-none shrink-0 border ${getPillStyle(f)} transition-all duration-200 cursor-default`}
+                                        >
+                                          {f}
+                                        </span>
+                                      ))}
+                                    </div>
                                   </div>
                                 ) : (
                                   <p className="text-[10px] text-slate-400 italic font-medium">
@@ -14935,6 +14930,7 @@ export function SettingsAdmin() {
                             </div>
                           );
                         })}
+                        </div>
                       </div>
                     )}
                   </div>

@@ -3,7 +3,7 @@ import { supabase, getSupabase, encrypt, decrypt, decryptObject } from "../lib/s
 import { GoogleGenAI, Type } from "@google/genai";
 import { getRouteDeliveryHealth } from "../lib/routeDeliveryQuote.js";
 import { DEFAULT_DELIVERY_SETTINGS, getDeliverySettings, toDeliverySettingsRow } from "../lib/deliverySettings.js";
-import { clearCachedValue, sendResilientJson, withTimeout } from "../lib/apiResilience.js";
+import { clearCachedValue, sendResilientJson, withTimeout, getCachedValue, setCachedValue } from "../lib/apiResilience.js";
 
 const router = Router();
 
@@ -870,17 +870,41 @@ router.post("/staff", async (req, res) => {
 });
 
 // 4. SELLERS
+let lastKnownSystemSellersBackup: any[] = [
+  { id: 'S1', name: 'Orbi Official', description: 'Official products directly provided by Orbi Shop.', avatar: 'https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png' }
+];
+
+const getSystemSellersBackup = async (req: any): Promise<any[]> => {
+  const cached = getCachedValue<any[]>("global:system_sellers_backup");
+  if (cached) return cached;
+
+  try {
+    const { data } = await withTimeout(
+      getSupabase(req).from('promotions').select('description').eq('title', 'SYSTEM_SELLERS').maybeSingle(),
+      8000,
+      "seller backup query"
+    );
+    if (data && data.description) {
+      const parsed = JSON.parse(data.description);
+      if (Array.isArray(parsed)) {
+        setCachedValue("global:system_sellers_backup", parsed, 10 * 60 * 1000); // 10 minutes cache
+        lastKnownSystemSellersBackup = parsed;
+        return parsed;
+      }
+    }
+  } catch (error: any) {
+    console.info("[API Resilience] Info: loaded backup SYSTEM_SELLERS from memory cache instead of direct query.", error?.message || error);
+  }
+  return lastKnownSystemSellersBackup;
+};
+
 router.get("/sellers", async (req, res) => {
   return sendResilientJson(res, "settings:sellers", async () => {
     let backupSellers: any[] = [];
     
     // Execute the non-critical enrichment backup query and main sellers query in parallel to prevent sequential delays
     const [backupRes, sellersRes] = await Promise.allSettled([
-      withTimeout(
-        getSupabase(req).from('promotions').select('description').eq('title', 'SYSTEM_SELLERS').maybeSingle(),
-        3000,
-        "seller backup query",
-      ),
+      getSystemSellersBackup(req),
       withTimeout(
         getSupabase(req).from('sellers').select('*').order('name', { ascending: true }),
         8000,
@@ -889,17 +913,9 @@ router.get("/sellers", async (req, res) => {
     ]);
 
     if (backupRes.status === "fulfilled" && backupRes.value) {
-      const bData = backupRes.value.data;
-      if (bData && bData.description) {
-        try {
-          const parsed = JSON.parse(bData.description);
-          if (Array.isArray(parsed)) {
-            backupSellers = parsed;
-          }
-        } catch (pe) {}
-      }
-    } else if (backupRes.status === "rejected") {
-      console.warn("Failed to load SYSTEM_SELLERS backup for enrichment:", backupRes.reason);
+      backupSellers = backupRes.value;
+    } else {
+      backupSellers = lastKnownSystemSellersBackup;
     }
 
     if (sellersRes.status === "fulfilled" && sellersRes.value) {
@@ -949,13 +965,9 @@ router.get("/sellers", async (req, res) => {
     // Fallback if main database query didn't return any sellers or errored out
     let sellersList = [{ id: 'S1', name: 'Orbi Official', description: 'Official products directly provided by Orbi Shop.', avatar: 'https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png' }];
     try {
-      const { data } = await withTimeout(
-        getSupabase(req).from('promotions').select('description').eq('title', 'SYSTEM_SELLERS').maybeSingle(),
-        3000,
-        "seller fallback query",
-      );
-      if (data && data.description) {
-        try { sellersList = JSON.parse(data.description); } catch(pe) {}
+      const data = await getSystemSellersBackup(req);
+      if (data && data.length > 0) {
+        sellersList = data;
       }
     } catch (e) {
       console.warn("Failed to load fallback SYSTEM_SELLERS:", e);
