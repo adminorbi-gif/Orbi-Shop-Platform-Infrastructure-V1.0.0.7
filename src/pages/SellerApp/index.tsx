@@ -519,29 +519,6 @@ export default function SellerApp({
               </button>
             </div>
 
-            {/* Plan Badge */}
-            <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl flex items-center justify-between shadow-sm">
-              <div>
-                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">
-                  {lang === "sw" ? "MPANGO WA DUKA" : "STORE PLAN"}
-                </p>
-                <p className="text-xs font-black text-slate-950 uppercase tracking-wide mt-0.5">
-                  {seller.isPro &&
-                  seller.proUntil &&
-                  seller.proUntil > Date.now()
-                    ? "VIP GOLD MERCHANTS"
-                    : "BASIC FREE SELLER"}
-                </p>
-              </div>
-              <button
-                onClick={() => setTab("booster")}
-                className="bg-amber-50 hover:bg-amber-100 text-amber-700 text-[9px] font-black uppercase px-2 py-1 rounded-lg border border-amber-200 shadow-sm shrink-0 cursor-pointer transition active:scale-95 duration-100"
-              >
-                {seller.isPro && seller.proUntil && seller.proUntil > Date.now()
-                  ? "GOLD"
-                  : "UPGRADE"}
-              </button>
-            </div>
           </div>
 
           {/* MOBILE SLIM HEADER */}
@@ -764,6 +741,77 @@ export default function SellerApp({
 
           {/* Footer controls (Desktop only) */}
           <div className="hidden md:flex p-5 border-t border-slate-200/80 flex flex-col gap-3 bg-slate-50/60">
+            <div className="rounded-[1.45rem] border border-slate-200/80 bg-white p-3 shadow-sm overflow-hidden relative">
+              <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-blue-500/10 pointer-events-none" />
+              <div className="absolute -left-10 -bottom-12 h-24 w-24 rounded-full bg-amber-500/10 pointer-events-none" />
+              <div className="relative flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setTab("settings")}
+                  className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-900 flex items-center justify-center text-white font-bold overflow-hidden shadow-sm shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition"
+                  title={lang === "sw" ? "Fungua mipangilio ya duka" : "Open store settings"}
+                  aria-label={lang === "sw" ? "Fungua mipangilio ya duka" : "Open store settings"}
+                >
+                  {seller.avatar ? (
+                    <img
+                      src={seller.avatar}
+                      alt={seller.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Building size={20} />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTab("settings")}
+                  className="min-w-0 flex-1 text-left cursor-pointer"
+                >
+                  <p className="text-xs font-black text-slate-950 truncate">
+                    {seller.name}
+                  </p>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-0.5 truncate">
+                    {lang === "sw" ? "Duka la muuzaji" : "Seller store"}
+                  </p>
+                </button>
+                <button
+                  onClick={onLogout}
+                  className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 hover:bg-rose-100 active:scale-95 transition flex items-center justify-center cursor-pointer shrink-0"
+                  title={lang === "sw" ? "Ondoka" : "Log out"}
+                  aria-label={lang === "sw" ? "Ondoka" : "Log out"}
+                >
+                  <LogOut size={15} />
+                </button>
+              </div>
+              <div className="relative mt-3 grid grid-cols-[1fr_auto] items-center gap-2 rounded-2xl bg-slate-50 border border-slate-100 px-3 py-2">
+                <div className="min-w-0">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">
+                    {lang === "sw" ? "Mpango wa duka" : "Store plan"}
+                  </p>
+                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-950 truncate">
+                    {seller.isPro && seller.proUntil && seller.proUntil > Date.now()
+                      ? "VIP Gold"
+                      : "Basic Free"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setTab("booster")}
+                  className={`rounded-xl px-2.5 py-1.5 text-[9px] font-black uppercase border shadow-sm transition active:scale-95 cursor-pointer ${
+                    seller.isPro && seller.proUntil && seller.proUntil > Date.now()
+                      ? "bg-amber-500 text-white border-amber-500"
+                      : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                  }`}
+                >
+                  {seller.isPro && seller.proUntil && seller.proUntil > Date.now()
+                    ? "Gold"
+                    : "Upgrade"}
+                </button>
+              </div>
+              <div className="relative mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-emerald-700 border border-emerald-100">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                {lang === "sw" ? "Duka lipo mtandaoni" : "Store online"}
+              </div>
+            </div>
             <button
               onClick={() => (window.location.href = "/")}
               className="w-full bg-white border border-slate-200 text-slate-700 py-3 rounded-2xl text-xs font-black uppercase tracking-wider hover:bg-slate-50 active:scale-95 transition cursor-pointer text-center shadow-sm"
@@ -810,58 +858,13 @@ export default function SellerApp({
                         : "Your merchant command center: sales, stock, orders, and payouts in one focused view."}
                     </p>
                   </div>
-                  <div className="w-full sm:w-auto relative z-10">
-                    <div className="rounded-[1.55rem] border border-slate-200/80 bg-white/90 p-3 shadow-sm backdrop-blur-xl min-w-full sm:min-w-[20rem]">
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setTab("settings")}
-                          className="w-14 h-14 rounded-2xl bg-slate-950 border border-slate-900 flex items-center justify-center text-white font-bold overflow-hidden shadow-sm shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition"
-                          title={lang === "sw" ? "Fungua mipangilio ya duka" : "Open store settings"}
-                          aria-label={lang === "sw" ? "Fungua mipangilio ya duka" : "Open store settings"}
-                        >
-                          {seller.avatar ? (
-                            <img
-                              src={seller.avatar}
-                              alt={seller.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <Building size={22} />
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setTab("settings")}
-                          className="min-w-0 flex-1 text-left cursor-pointer"
-                        >
-                          <p className="text-sm font-black text-slate-950 truncate">
-                            {seller.name}
-                          </p>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-0.5 truncate">
-                            {seller.isPro && seller.proUntil && seller.proUntil > Date.now()
-                              ? lang === "sw"
-                                ? "Mpango: VIP Gold"
-                                : "Plan: VIP Gold"
-                              : lang === "sw"
-                                ? "Mpango: Basic"
-                                : "Plan: Basic"}
-                          </p>
-                          <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-emerald-700 border border-emerald-100">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            {lang === "sw" ? "Duka lipo mtandaoni" : "Store online"}
-                          </span>
-                        </button>
-                        <button
-                          onClick={onLogout}
-                          className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 hover:bg-rose-100 active:scale-95 transition flex items-center justify-center cursor-pointer shrink-0"
-                          title={lang === "sw" ? "Ondoka" : "Log out"}
-                          aria-label={lang === "sw" ? "Ondoka" : "Log out"}
-                        >
-                          <LogOut size={16} />
-                        </button>
-                      </div>
-                    </div>
+                  <div className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-2xl flex items-center gap-2.5 relative z-10 shadow-sm">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-700">
+                      {lang === "sw"
+                        ? "DUKA LIPO MTANDAONI"
+                        : "Merchant Terminal Active"}
+                    </span>
                   </div>
                 </div>
 
