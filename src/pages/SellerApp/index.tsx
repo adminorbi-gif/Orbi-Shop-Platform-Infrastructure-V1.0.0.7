@@ -95,6 +95,51 @@ export default function SellerApp({
   const nextLocaleFlag = lang === "sw" ? "🇬🇧" : "🇹🇿";
   const orderAxisFormatter = (value: number | string) =>
     `${Number(value).toLocaleString()} ${lang === "sw" ? "oda" : "orders"}`;
+  const dashboardPeriodOptions: Array<{
+    id: "daily" | "weekly" | "monthly" | "yearly";
+    label: string;
+  }> = [
+    { id: "daily", label: lang === "sw" ? "Siku" : "Day" },
+    { id: "weekly", label: lang === "sw" ? "Wiki" : "Week" },
+    { id: "monthly", label: lang === "sw" ? "Mwezi" : "Month" },
+    { id: "yearly", label: lang === "sw" ? "Mwaka" : "Year" },
+  ];
+  const periodSummary =
+    dashboardPeriod === "yearly"
+      ? lang === "sw"
+        ? "Miezi yote 12 ya mwaka huu"
+        : "All 12 months in the current year"
+      : dashboardPeriod === "monthly"
+        ? lang === "sw"
+          ? "Wiki 4 za mwezi huu"
+          : "4-week view for the current month"
+        : dashboardPeriod === "weekly"
+          ? lang === "sw"
+            ? "Siku 7 za mwisho"
+            : "Last 7 days"
+          : lang === "sw"
+            ? "Masaa 24 ya leo"
+            : "Today by 24 hours";
+  const periodFilterControls = (variant: "light" | "blue" = "light") => (
+    <div className={`flex w-full sm:w-auto shrink-0 flex-wrap items-center rounded-xl p-0.5 ${variant === "blue" ? "bg-slate-100" : "bg-slate-100"}`}>
+      {dashboardPeriodOptions.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => setDashboardPeriod(item.id)}
+          className={`flex-1 sm:flex-none rounded-lg px-2.5 py-1 text-[9px] font-black transition ${
+            dashboardPeriod === item.id
+              ? variant === "blue"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "bg-white text-slate-950 shadow-sm"
+              : "text-slate-500 hover:text-slate-900"
+          }`}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
   const [productFormSection, setProductFormSection] = useState<
     "basics" | "pricing" | "media" | "specs" | "publish"
   >("basics");
@@ -942,20 +987,20 @@ export default function SellerApp({
 
                 {/* Daily order activity mirrors the admin dashboard line-chart pattern. */}
                 <div className="bg-white p-3 rounded-[1.25rem] border border-slate-200/80 shadow-sm overflow-hidden">
-                  <div className="mb-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                      {lang === "sw" ? "Mwenendo wa Oda" : "Order Activity"}
-                    </h3>
-                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-                      {lang === "sw" ? "Oda kwa kipindi ulichochagua" : "Orders by selected period"}
-                    </span>
-                    <span className="text-[9px] font-bold text-slate-400">
-                      {lang === "sw" ? "X: kipindi · Y: idadi ya oda" : "X: period · Y: order count"}
-                    </span>
+                  <div className="mb-2.5 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                    <div>
+                      <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        {lang === "sw" ? "Mwenendo wa Oda" : "Order Activity"}
+                      </h3>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-1">
+                        {lang === "sw" ? "Oda zilizopokelewa" : "Orders received"}
+                      </p>
+                    </div>
+                    {periodFilterControls()}
                   </div>
                   <div className="h-52 w-full min-w-[50px] min-h-[208px] font-mono">
                     <ResponsiveContainer width="100%" height={208} minWidth={50} minHeight={50}>
-                      <LineChart data={sellerRevenueTrend} margin={{ top: 8, right: 12, left: 14, bottom: 0 }}>
+                      <LineChart data={sellerRevenueTrend} margin={{ top: 8, right: 12, left: 18, bottom: 22 }}>
                         <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e5e7eb" />
                         <XAxis
                           dataKey="name"
@@ -964,6 +1009,14 @@ export default function SellerApp({
                           tick={{ fontSize: 10, fill: "#64748b", fontWeight: 700 }}
                           tickMargin={8}
                           interval={dashboardPeriod === "daily" ? 3 : 0}
+                          label={{
+                            value: lang === "sw" ? "Kipindi" : "Period",
+                            position: "insideBottom",
+                            offset: -12,
+                            fill: "#64748b",
+                            fontSize: 10,
+                            fontWeight: 800,
+                          }}
                         />
                         <YAxis
                           axisLine={false}
@@ -972,6 +1025,14 @@ export default function SellerApp({
                           width={66}
                           allowDecimals={false}
                           tickFormatter={orderAxisFormatter}
+                          label={{
+                            value: lang === "sw" ? "Oda" : "Orders",
+                            angle: -90,
+                            position: "insideLeft",
+                            fill: "#64748b",
+                            fontSize: 10,
+                            fontWeight: 800,
+                          }}
                         />
                         <Tooltip
                           cursor={{ stroke: "#2563eb", strokeDasharray: "4 4" }}
@@ -1134,51 +1195,10 @@ export default function SellerApp({
                             </span>
                           </div>
                           <p className="text-slate-500 text-[10px] font-semibold mt-1">
-                            {dashboardPeriod === "yearly"
-                              ? lang === "sw"
-                                ? "Miezi yote 12 ya mwaka huu"
-                                : "All 12 months in the current year"
-                              : dashboardPeriod === "monthly"
-                                ? lang === "sw"
-                                  ? "Wiki 4 za mwezi huu"
-                                  : "4-week view for the current month"
-                                : dashboardPeriod === "weekly"
-                                  ? lang === "sw"
-                                    ? "Siku 7 za mwisho"
-                                    : "Last 7 days"
-                                  : lang === "sw"
-                                    ? "Masaa 24 ya leo"
-                                    : "Today by 24 hours"}
-                          </p>
-                          <p className="text-slate-400 text-[9px] font-bold mt-1">
-                            {lang === "sw" ? "X: kipindi · Y: TZS mapato" : "X: period · Y: TZS revenue"}
+                            {periodSummary}
                           </p>
                         </div>
-                        <div className="flex w-full sm:w-auto shrink-0 flex-wrap items-center rounded-xl bg-slate-100 p-0.5">
-                          {[
-                            { id: "daily", label: lang === "sw" ? "Siku" : "Day" },
-                            { id: "weekly", label: lang === "sw" ? "Wiki" : "Week" },
-                            { id: "monthly", label: lang === "sw" ? "Mwezi" : "Month" },
-                            { id: "yearly", label: lang === "sw" ? "Mwaka" : "Year" },
-                          ].map((item) => (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onClick={() =>
-                                setDashboardPeriod(
-                                  item.id as "daily" | "weekly" | "monthly" | "yearly",
-                                )
-                              }
-                              className={`flex-1 sm:flex-none rounded-lg px-2.5 py-1 text-[9px] font-black transition ${
-                                dashboardPeriod === item.id
-                                  ? "bg-white text-slate-950 shadow-sm"
-                                  : "text-slate-500 hover:text-slate-900"
-                              }`}
-                            >
-                              {item.label}
-                            </button>
-                          ))}
-                        </div>
+                        {periodFilterControls()}
                       </div>
                       <div className="h-56 w-full font-mono mt-1">
                         <ResponsiveContainer
@@ -1189,7 +1209,7 @@ export default function SellerApp({
                         >
                           <AreaChart
                             data={sellerRevenueTrend}
-                            margin={{ top: 8, right: 18, left: 8, bottom: 0 }}
+                            margin={{ top: 8, right: 18, left: 12, bottom: 22 }}
                           >
                             <defs>
                               <linearGradient
@@ -1223,6 +1243,14 @@ export default function SellerApp({
                               tick={{ fontSize: 11, fill: "#64748b", fontWeight: 700 }}
                               tickMargin={8}
                               interval={0}
+                              label={{
+                                value: lang === "sw" ? "Kipindi" : "Period",
+                                position: "insideBottom",
+                                offset: -12,
+                                fill: "#64748b",
+                                fontSize: 10,
+                                fontWeight: 800,
+                              }}
                             />
                             <YAxis
                               axisLine={false}
@@ -1236,6 +1264,14 @@ export default function SellerApp({
                                     ? (val / 1000).toFixed(0) + "k"
                                     : val
                               }
+                              label={{
+                                value: lang === "sw" ? "Mapato (TZS)" : "Revenue (TZS)",
+                                angle: -90,
+                                position: "insideLeft",
+                                fill: "#64748b",
+                                fontSize: 10,
+                                fontWeight: 800,
+                              }}
                             />
                             <Tooltip
                               cursor={{ stroke: "#2563eb", strokeDasharray: "4 4" }}
@@ -1280,23 +1316,53 @@ export default function SellerApp({
                     </div>
                     {/* New Line Chart */}
                     <div className="bg-white p-4 rounded-[1.45rem] border border-slate-200/70 shadow-sm space-y-3">
-                      <div>
-                        <h3 className="text-sm font-black text-slate-950">
-                          {lang === "sw" ? "Mwendo wa Oda" : "Order Momentum"}
-                        </h3>
-                        <p className="text-slate-500 text-[11px] font-medium mt-1">
-                          {lang === "sw" ? "Idadi ya oda kwa kipindi ulichochagua" : "Orders by the selected period"}
-                        </p>
-                        <p className="text-slate-400 text-[9px] font-bold mt-1">
-                          {lang === "sw" ? "X: kipindi · Y: idadi ya oda" : "X: period · Y: order count"}
-                        </p>
+                      <div className="flex flex-col gap-2">
+                        <div>
+                          <h3 className="text-sm font-black text-slate-950">
+                            {lang === "sw" ? "Mwendo wa Oda" : "Order Momentum"}
+                          </h3>
+                          <p className="text-slate-500 text-[11px] font-medium mt-1">
+                            {lang === "sw" ? "Oda zilizopokelewa kwa kipindi" : "Orders received by period"}
+                          </p>
+                        </div>
+                        {periodFilterControls()}
                       </div>
                       <div className="h-48 w-full font-mono mt-1">
                         <ResponsiveContainer width="100%" height={192} minWidth={50} minHeight={50}>
-                          <LineChart data={sellerRevenueTrend} margin={{ top: 8, right: 12, left: 14, bottom: 0 }}>
+                          <LineChart data={sellerRevenueTrend} margin={{ top: 8, right: 12, left: 18, bottom: 22 }}>
                             <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#e5e7eb" />
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#64748b", fontWeight: 700 }} tickMargin={8} interval={0} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#64748b", fontWeight: 700 }} width={66} allowDecimals={false} tickFormatter={orderAxisFormatter} />
+                            <XAxis
+                              dataKey="name"
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fontSize: 10, fill: "#64748b", fontWeight: 700 }}
+                              tickMargin={8}
+                              interval={dashboardPeriod === "daily" ? 3 : 0}
+                              label={{
+                                value: lang === "sw" ? "Kipindi" : "Period",
+                                position: "insideBottom",
+                                offset: -12,
+                                fill: "#64748b",
+                                fontSize: 10,
+                                fontWeight: 800,
+                              }}
+                            />
+                            <YAxis
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fontSize: 10, fill: "#64748b", fontWeight: 700 }}
+                              width={66}
+                              allowDecimals={false}
+                              tickFormatter={orderAxisFormatter}
+                              label={{
+                                value: lang === "sw" ? "Oda" : "Orders",
+                                angle: -90,
+                                position: "insideLeft",
+                                fill: "#64748b",
+                                fontSize: 10,
+                                fontWeight: 800,
+                              }}
+                            />
                             <Tooltip
                               cursor={{ stroke: "#f97316", strokeDasharray: "4 4" }}
                               contentStyle={{
@@ -2745,29 +2811,7 @@ export default function SellerApp({
                       : "Verified earnings trend"}
                   </p>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                    {[
-                      { id: "daily", label: lang === "sw" ? "Siku" : "Day" },
-                      { id: "weekly", label: lang === "sw" ? "Wiki" : "Week" },
-                      { id: "monthly", label: lang === "sw" ? "Mwezi" : "Month" },
-                      { id: "yearly", label: lang === "sw" ? "Mwaka" : "Year" },
-                    ].map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() =>
-                          setDashboardPeriod(
-                            item.id as "daily" | "weekly" | "monthly" | "yearly",
-                          )
-                        }
-                        className={`rounded-xl px-3 py-1.5 text-[10px] font-black transition ${
-                          dashboardPeriod === item.id
-                            ? "bg-blue-600 text-white shadow-sm"
-                            : "bg-slate-100 text-slate-500"
-                        }`}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
+                    {periodFilterControls("blue")}
                   </div>
                 </div>
                 <button
@@ -2788,7 +2832,7 @@ export default function SellerApp({
                   >
                     <AreaChart
                       data={sellerRevenueTrend}
-                      margin={{ top: 8, right: 18, left: 8, bottom: 0 }}
+                      margin={{ top: 8, right: 18, left: 12, bottom: 24 }}
                     >
                       <defs>
                         <linearGradient
@@ -2822,6 +2866,14 @@ export default function SellerApp({
                         tick={{ fontSize: 10, fill: "#64748b", fontWeight: 700 }}
                         tickMargin={8}
                         interval={0}
+                        label={{
+                          value: lang === "sw" ? "Kipindi" : "Period",
+                          position: "insideBottom",
+                          offset: -12,
+                          fill: "#64748b",
+                          fontSize: 10,
+                          fontWeight: 800,
+                        }}
                       />
                       <YAxis
                         axisLine={false}
@@ -2832,9 +2884,17 @@ export default function SellerApp({
                           val >= 1000000
                             ? (val / 1000000).toFixed(1) + "M"
                             : val >= 1000
-                              ? (val / 1000).toFixed(0) + "k"
-                              : val
+                            ? (val / 1000).toFixed(0) + "k"
+                            : val
                         }
+                        label={{
+                          value: lang === "sw" ? "Mapato (TZS)" : "Revenue (TZS)",
+                          angle: -90,
+                          position: "insideLeft",
+                          fill: "#64748b",
+                          fontSize: 10,
+                          fontWeight: 800,
+                        }}
                       />
                       <Tooltip
                         cursor={{ stroke: "#2563eb", strokeDasharray: "4 4" }}
