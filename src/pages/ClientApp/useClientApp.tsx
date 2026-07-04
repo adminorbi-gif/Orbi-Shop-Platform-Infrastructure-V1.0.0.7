@@ -755,29 +755,6 @@ const { showAlert, showConfirm } = useDialog();
   } | null>(null);
   const [allReviews, setAllReviews] = useState<Record<string, any[]>>({});
 
-  // Dynamic SEO URL Management
-  useEffect(() => {
-    const updateMetadata = () => {
-      if (selectedProduct) {
-        // Update URL search params silently for fallback script
-        const url = new URL(window.location.href);
-        const oldName = url.searchParams.get('name');
-        const oldPrice = url.searchParams.get('price');
-        
-        if (oldName !== selectedProduct.name || oldPrice !== selectedProduct.price.toString()) {
-          url.searchParams.set('name', selectedProduct.name);
-          if (selectedProduct.nameSw) {
-            url.searchParams.set('nameSw', selectedProduct.nameSw);
-          }
-          url.searchParams.set('price', selectedProduct.price.toString());
-          window.history.replaceState({}, '', url.toString());
-        }
-      }
-    };
-
-    updateMetadata();
-  }, [selectedProduct, lang]);
-
   useEffect(() => {
     try {
       localStorage.setItem("orbishop_lang", lang);

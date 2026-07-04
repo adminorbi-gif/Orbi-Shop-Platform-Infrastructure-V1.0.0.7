@@ -15,19 +15,22 @@ const slugify = (text: string) => {
 };
 
 router.get("/", async (req, res) => {
+  const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+  const host = req.get("host");
+  const baseUrl = process.env.NODE_ENV === "production"
+    ? "https://shop.orbifinancial.com"
+    : `${protocol}://${host}`;
+
+  res.header("Content-Type", "application/xml");
+
+  const smStream = new SitemapStream({ hostname: baseUrl });
+
+  smStream.write({ url: '/', changefreq: 'daily', priority: 1.0 });
+  smStream.write({ url: '/shop/electronics', changefreq: 'daily', priority: 0.7 });
+  smStream.write({ url: '/shop/auto-motors', changefreq: 'daily', priority: 0.7 });
+  smStream.write({ url: '/shop/groceries-food', changefreq: 'daily', priority: 0.7 });
+
   try {
-    const protocol = req.headers["x-forwarded-proto"] || req.protocol;
-    const host = req.get("host");
-    const baseUrl = process.env.NODE_ENV === "production" 
-      ? "https://shop.orbifinancial.com" 
-      : `${protocol}://${host}`;
-
-    res.header("Content-Type", "application/xml");
-    
-    const smStream = new SitemapStream({ hostname: baseUrl });
-
-    smStream.write({ url: '/', changefreq: 'daily', priority: 1.0 });
-
     const { data: products } = await supabase
       .from("products")
       .select("id, name, updated_at, category")
@@ -65,16 +68,16 @@ router.get("/", async (req, res) => {
         });
       });
     }
-
-    smStream.end();
-    
-    const sitemapOutput = await streamToPromise(smStream);
-    res.send(sitemapOutput.toString());
-
   } catch (err: any) {
-    console.error("Sitemap Error:", err);
-    res.status(500).end();
+    // Search engines should still receive a valid sitemap even if the
+    // product catalog provider is temporarily slow or unavailable.
+    console.error("Sitemap product feed unavailable; serving core sitemap:", err.message || err);
   }
+
+  smStream.end();
+
+  const sitemapOutput = await streamToPromise(smStream);
+  res.status(200).send(sitemapOutput.toString());
 });
 
 export default router;

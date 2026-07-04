@@ -1,4 +1,15 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /admin.html
+Disallow: /sellers
+Disallow: /checkout
+Disallow: /track/
+Disallow: /*?auth=
+Disallow: /*?cart=
+Disallow: /*?checkout=
+Disallow: /*?profile=
+Disallow: /*?seller-signup=
 
 Sitemap: https://shop.orbifinancial.com/sitemap.xml
