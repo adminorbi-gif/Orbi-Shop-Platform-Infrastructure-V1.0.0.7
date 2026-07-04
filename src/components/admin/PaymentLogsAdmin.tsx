@@ -17,6 +17,7 @@ import {
   Database
 } from "lucide-react";
 import { formatCurrency } from "../../lib/storage";
+import { apiFetch } from "../../lib/db";
 
 interface PaymentLog {
   id: string;
@@ -47,18 +48,7 @@ export function PaymentLogsAdmin({ lang = "en" }: PaymentLogsAdminProps) {
   const fetchLogs = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      // Fetch token if authentication header or similar is managed elsewhere
-      const token = localStorage.getItem("orbi_token") || "";
-      const response = await fetch("/api/v1/payments/ledger-logs", {
-        headers: {
-          "Authorization": token ? `Bearer ${token}` : "",
-          "Content-Type": "application/json"
-        }
-      });
-      if (!response.ok) {
-        throw new Error(lang === "sw" ? "Imeshindwa kupata leja ya malipo." : "Failed to load payment ledger logs.");
-      }
-      const data = await response.json();
+      const data = await apiFetch("/api/v1/payments/ledger-logs");
       if (data.success) {
         setLogs(data.logs || []);
         setError(null);
@@ -67,7 +57,7 @@ export function PaymentLogsAdmin({ lang = "en" }: PaymentLogsAdminProps) {
       }
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Failed to load logs");
+      setError(err.message || (lang === "sw" ? "Imeshindwa kupata leja ya malipo." : "Failed to load logs"));
     } finally {
       if (!silent) setLoading(false);
     }
