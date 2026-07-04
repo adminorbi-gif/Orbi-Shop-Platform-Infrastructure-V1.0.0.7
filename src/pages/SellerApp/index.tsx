@@ -7,6 +7,7 @@ import { PhotoQualityGuide } from "../../components/PhotoQualityGuide";
 import { supabase } from "../../lib/supabase";
 import { formatCurrency } from "../../lib/storage";
 import { PriceDisplay } from "../../components/PriceDisplay";
+import { TanzaniaFlag, UKFlag } from "../../components/client/LanguageSelector";
 import { Product, Order, SellerProfile, Niche } from "../../types";
 
 import {
@@ -92,7 +93,6 @@ export default function SellerApp({
     "daily" | "weekly" | "monthly" | "yearly"
   >("yearly");
   const nextLocaleLabel = lang === "sw" ? "English" : "Kiswahili";
-  const nextLocaleFlag = lang === "sw" ? "🇬🇧" : "🇹🇿";
   const orderAxisFormatter = (value: number | string) =>
     `${Number(value).toLocaleString()} ${lang === "sw" ? "oda" : "orders"}`;
   const dashboardPeriodOptions: Array<{
@@ -491,19 +491,17 @@ export default function SellerApp({
           <div className="hidden md:flex p-6 md:p-8 border-b border-slate-200/80 flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-[3.25rem] h-[3.25rem] rounded-[1.15rem] bg-white border border-slate-200 flex items-center justify-center overflow-hidden shadow-sm shrink-0 p-1.5">
-                  <img
-                    src="/icons/orbi-shop-icon-192.png"
-                    alt="Orbi Shop"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
+                <img
+                  src="/icons/orbi-shop-icon-192.png"
+                  alt="Orbi Shop"
+                  className="w-16 h-16 object-contain shrink-0"
+                />
                 <div className="min-w-0">
                   <h2 className="text-sm font-black truncate text-slate-950 uppercase tracking-wider">
                     Orbi Shop
                   </h2>
                   <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">
-                    Seller Console
+                    Seller Portal
                   </p>
                 </div>
               </div>
@@ -511,15 +509,12 @@ export default function SellerApp({
               {/* Language switcher flag */}
               <button
                 onClick={() => setLang(lang === "sw" ? "en" : "sw")}
-                className="hover:scale-105 active:scale-95 transition bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 cursor-pointer text-slate-700 shadow-sm"
+                className="w-10 h-10 hover:scale-105 active:scale-95 transition bg-slate-50 border border-slate-200 rounded-full flex items-center justify-center cursor-pointer text-slate-700 shadow-sm"
                 title={`${lang === "sw" ? "Badilisha kwenda" : "Switch to"} ${nextLocaleLabel}`}
                 aria-label={`${lang === "sw" ? "Badilisha kwenda" : "Switch to"} ${nextLocaleLabel}`}
               >
-                <span className="text-base leading-none" aria-hidden="true">
-                  {nextLocaleFlag}
-                </span>
-                <span className="text-[10px] font-black uppercase leading-none">
-                  {nextLocaleLabel}
+                <span className="flex items-center justify-center scale-110" aria-hidden="true">
+                  {lang === "sw" ? <UKFlag /> : <TanzaniaFlag />}
                 </span>
               </button>
             </div>
@@ -552,19 +547,17 @@ export default function SellerApp({
           {/* MOBILE SLIM HEADER */}
           <div className="flex md:hidden px-4 py-2.5 border-b border-slate-200/80 items-center justify-between bg-white/95 w-full shadow-sm text-slate-900 select-none backdrop-blur-xl">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 p-1 shadow-sm">
-                <img
-                  src="/icons/orbi-shop-icon-192.png"
-                  alt="Orbi Shop"
-                  className="w-full h-full object-contain"
-                />
-              </div>
+              <img
+                src="/icons/orbi-shop-icon-192.png"
+                alt="Orbi Shop"
+                className="w-11 h-11 object-contain shrink-0"
+              />
               <div className="min-w-0">
                 <h2 className="text-xs font-black truncate uppercase tracking-tight text-slate-950 leading-none">
                   Orbi Shop
                 </h2>
                 <span className="text-[8px] text-amber-600 font-black uppercase tracking-widest mt-0.5 block leading-none">
-                  Seller Console
+                  Seller Portal
                 </span>
               </div>
             </div>
@@ -572,12 +565,12 @@ export default function SellerApp({
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => setLang(lang === "sw" ? "en" : "sw")}
-                className="hover:scale-105 active:scale-95 transition bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-700 flex items-center gap-1"
+                className="w-8 h-8 hover:scale-105 active:scale-95 transition bg-slate-50 border border-slate-200 rounded-full text-slate-700 flex items-center justify-center"
                 title={`${lang === "sw" ? "Badilisha kwenda" : "Switch to"} ${nextLocaleLabel}`}
                 aria-label={`${lang === "sw" ? "Badilisha kwenda" : "Switch to"} ${nextLocaleLabel}`}
               >
-                <span className="text-sm leading-none" aria-hidden="true">
-                  {nextLocaleFlag}
+                <span className="flex items-center justify-center" aria-hidden="true">
+                  {lang === "sw" ? <UKFlag /> : <TanzaniaFlag />}
                 </span>
                 <span className="sr-only">{nextLocaleLabel}</span>
               </button>
