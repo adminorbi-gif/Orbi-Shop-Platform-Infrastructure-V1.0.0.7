@@ -48,6 +48,7 @@ import {
   Edit,
   Check,
   X,
+  ChevronDown,
   Image as ImageIcon,
   Search,
   Copy,
@@ -11671,6 +11672,7 @@ export function SettingsAdmin() {
   const [aiError, setAiError] = useState("");
   const [aiAppliedIds, setAiAppliedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [savingNiche, setSavingNiche] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [newNicheName, setNewNicheName] = useState("");
   const [nicheCategoriesList, setNicheCategoriesList] = useState<Category[]>([]);
@@ -11683,6 +11685,7 @@ export function SettingsAdmin() {
   const [newNicheOriginalName, setNewNicheOriginalName] = useState("");
   const [newNicheIcon, setNewNicheIcon] = useState("Smartphone");
   const [iconSearch, setIconSearch] = useState("");
+  const [showIconPicker, setShowIconPicker] = useState(false);
   const iconOptions = [
     "Smartphone",
     "Shirt",
@@ -14540,34 +14543,106 @@ export function SettingsAdmin() {
                   {isSw ? "ONGEZA NICHES MPYA" : "CREATE NEW NICHE SECTION"}
                 </span>
 
-                <div className="flex flex-col md:flex-row gap-4">
-                  {/* Left Column: Input and Add Button */}
-                  <div className="w-full md:w-1/3 space-y-3">
-                    <div className="space-y-1.5">
-                      <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                        {isSw
-                          ? "Jina la Niche / Kitengo"
-                          : "Niche Title / Name"}
-                      </label>
+                <div className="space-y-6">
+                  {/* Row 1: Niche Name and Collapsed Icon Selector side-by-side with Pill in front */}
+                  <div className="flex flex-col sm:flex-row gap-3 items-center bg-white border border-slate-200 p-4 rounded-3xl shadow-xs">
+                    {/* Collapsed Pill Icon selector with live search */}
+                    <div className="relative shrink-0 w-full sm:w-auto">
+                      <button
+                        type="button"
+                        onClick={() => setShowIconPicker(!showIconPicker)}
+                        className="w-full sm:w-auto flex items-center justify-between gap-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 px-4 py-3 rounded-full text-xs font-bold cursor-pointer transition shadow-xs min-w-[150px]"
+                      >
+                        <div className="flex items-center gap-2">
+                          {React.createElement(
+                            NicheIcons[newNicheIcon] || Smartphone,
+                            { size: 16, className: "text-slate-700 animate-pulse" },
+                          )}
+                          <span className="font-extrabold text-slate-800 tracking-wide">{newNicheIcon}</span>
+                        </div>
+                        <ChevronDown size={14} className="text-slate-400" />
+                      </button>
+
+                      {showIconPicker && (
+                        <>
+                          {/* Backdrop click to close */}
+                          <div className="fixed inset-0 z-40" onClick={() => setShowIconPicker(false)} />
+                          <div className="absolute left-0 top-full mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl p-3 z-50 space-y-2 animate-in fade-in slide-in-from-top-1 duration-150">
+                            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-xl text-xs">
+                              <Search size={14} className="text-slate-400 shrink-0" />
+                              <input
+                                type="text"
+                                placeholder={isSw ? "Tafuta icon..." : "Search icon..."}
+                                value={iconSearch}
+                                onChange={(e) => setIconSearch(e.target.value)}
+                                className="bg-transparent border-none focus:outline-none text-xs font-semibold w-full"
+                                autoFocus
+                              />
+                            </div>
+                            <div className="grid grid-cols-5 gap-1.5 max-h-[220px] overflow-y-auto pr-1">
+                              {iconOptions
+                                .filter((icon) =>
+                                  icon.toLowerCase().includes(iconSearch.toLowerCase()),
+                                )
+                                .map((icon) => {
+                                  const IconComp = NicheIcons[icon];
+                                  const active = newNicheIcon === icon;
+                                  return (
+                                    <button
+                                      key={icon}
+                                      type="button"
+                                      onClick={() => {
+                                        setNewNicheIcon(icon);
+                                        setShowIconPicker(false);
+                                      }}
+                                      className={`p-2 rounded-xl border flex flex-col items-center justify-center transition-all cursor-pointer ${
+                                        active
+                                          ? "bg-slate-950 border-slate-950 text-emerald-400"
+                                          : "bg-slate-50 hover:bg-slate-100 border-slate-150 text-slate-600 hover:text-slate-900"
+                                      }`}
+                                      title={icon}
+                                    >
+                                      {IconComp && <IconComp size={15} />}
+                                    </button>
+                                  );
+                                })}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Niche Name Input */}
+                    <div className="flex-1 w-full">
                       <input
                         type="text"
                         value={newNicheName}
                         onChange={(e) => setNewNicheName(e.target.value)}
                         placeholder={
-                          isSw ? "Mf. Viatu vya Ngozi" : "e.g. Leather Shoes"
+                          isSw ? "Ingiza Jina la Niche / Kitengo kipya..." : "Enter new Niche / Category name..."
                         }
-                        className="w-full bg-white border border-slate-200 hover:border-slate-300 p-3 rounded-2xl text-xs font-semibold outline-none focus:border-slate-900 transition"
+                        className="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 p-3 rounded-full text-xs font-bold outline-none focus:border-slate-900 focus:bg-white transition px-5"
                       />
                     </div>
+                  </div>
 
-                    <div className="space-y-4 p-4 bg-white border border-slate-200 rounded-2xl">
-                      <span className="block text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                  {/* Section 2: "MAKUNDI NA FAMILIA" (CATEGORIES & FAMILIES) */}
+                  <div className="space-y-4 p-5 bg-white border border-slate-200 rounded-3xl shadow-sm">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                      <span className="block text-[11px] font-black uppercase text-slate-800 tracking-wider">
                         {isSw ? "MAKUNDI NA FAMILIA" : "CATEGORIES & FAMILIES"}
                       </span>
+                      <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">
+                        {nicheCategoriesList.length} {isSw ? "Makundi" : "Categories"}
+                      </span>
+                    </div>
 
-                      <div className="space-y-3 bg-slate-50/50 p-3 rounded-xl border border-slate-150">
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block text-left">
+                    {/* Category Input Form */}
+                    <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-2xl space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Category Name Input */}
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block text-left">
                             {isSw ? "Jina la Kundi (Mf. Simu)" : "Category Name (e.g. Phones)"}
                           </label>
                           <input
@@ -14575,12 +14650,13 @@ export function SettingsAdmin() {
                             value={newCategoryName}
                             onChange={(e) => setNewCategoryName(e.target.value)}
                             placeholder={isSw ? "Jina la Kundi" : "Category Name"}
-                            className="w-full bg-white border border-slate-200 p-2.5 rounded-xl text-xs font-semibold outline-none focus:border-slate-900 transition"
+                            className="w-full bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-semibold outline-none focus:border-slate-900 transition shadow-xs"
                           />
                         </div>
 
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block text-left">
+                        {/* Subfamilies Input */}
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block text-left">
                             {isSw ? "Familia za Bidhaa (Zitenganishe kwa koma)" : "Sub-Families (Comma separated)"}
                           </label>
                           <input
@@ -14588,173 +14664,207 @@ export function SettingsAdmin() {
                             value={newFamilyNames}
                             onChange={(e) => setNewFamilyNames(e.target.value)}
                             placeholder={isSw ? "iOS, Android, n.k." : "iOS, Android, etc."}
-                            className="w-full bg-white border border-slate-200 p-2.5 rounded-xl text-xs font-semibold outline-none focus:border-slate-900 transition"
+                            className="w-full bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-semibold outline-none focus:border-slate-900 transition shadow-xs"
                           />
                         </div>
 
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block text-left">
-                            {isSw ? "Picha ya Kundi" : "Category Image"}
+                        {/* Image Upload/URL Input */}
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block text-left">
+                            {isSw ? "Picha ya Kundi (Pakia au URL)" : "Category Image (Upload or URL)"}
                           </label>
-                          <div className="flex items-center gap-3">
-                            {newCategoryImage ? (
-                              <div className="relative group shrink-0">
-                                <img
-                                  src={newCategoryImage}
-                                  alt="Category preview"
-                                  className="w-12 h-12 rounded-lg object-cover border border-slate-200"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setNewCategoryImage("")}
-                                  className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white rounded-full p-0.5 hover:bg-rose-600 shadow-sm transition"
-                                >
-                                  <X size={10} />
-                                </button>
-                              </div>
-                            ) : (
-                              <label className={`w-12 h-12 rounded-lg border border-dashed border-slate-300 flex flex-col items-center justify-center bg-white cursor-pointer hover:border-slate-400 hover:bg-slate-50 transition shrink-0 ${uploadingCategoryImage ? "opacity-55" : ""}`}>
-                                {uploadingCategoryImage ? (
-                                  <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                                ) : (
-                                  <ImageIcon size={16} className="text-slate-400" />
-                                )}
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  disabled={uploadingCategoryImage}
-                                  onChange={async (e) => {
-                                    const file = e.target.files?.[0];
-                                    if (!file) return;
-                                    setUploadingCategoryImage(true);
-                                    try {
-                                      const url = await uploadFileViaStorageApi(file, "niches");
-                                      setNewCategoryImage(url);
-                                    } catch (err: any) {
-                                      showAlert(err.message || "Failed to upload", "error");
-                                    } finally {
-                                      setUploadingCategoryImage(false);
-                                    }
-                                  }}
-                                />
-                              </label>
-                            )}
-
-                            <div className="flex-1 text-left min-w-0">
-                              <p className="text-[10px] text-slate-500 font-medium leading-normal">
-                                {newCategoryImage 
-                                  ? (isSw ? "✓ Picha imepakiwa kikamilifu" : "✓ Image uploaded successfully")
-                                  : (isSw ? "Pakia picha ya kategoria au weka URL" : "Upload category photo or paste URL")
-                                }
-                              </p>
-                              <input
-                                type="text"
-                                value={newCategoryImage}
-                                onChange={(e) => setNewCategoryImage(e.target.value)}
-                                placeholder={isSw ? "Weka URL ya picha..." : "Or paste image URL..."}
-                                className="w-full bg-white border border-slate-200 px-2 py-1 rounded-lg text-[10px] font-semibold outline-none focus:border-slate-900 transition mt-1"
-                              />
+                          <div className="flex gap-2">
+                            {/* Upload Button or preview */}
+                            <div className="relative shrink-0">
+                              {newCategoryImage ? (
+                                <div className="relative group shrink-0">
+                                  <img
+                                    src={newCategoryImage}
+                                    alt="Preview"
+                                    className="w-[38px] h-[38px] rounded-xl object-cover border border-slate-200 shadow-xs"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setNewCategoryImage("")}
+                                    className="absolute -top-1.5 -right-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-0.5 shadow-sm transition"
+                                  >
+                                    <X size={10} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <label className={`w-[38px] h-[38px] rounded-xl border border-dashed border-slate-300 flex items-center justify-center bg-white hover:bg-slate-50 hover:border-slate-400 cursor-pointer transition shrink-0 ${uploadingCategoryImage ? "opacity-55" : ""}`}>
+                                  {uploadingCategoryImage ? (
+                                    <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                                  ) : (
+                                    <ImageIcon size={15} className="text-slate-400" />
+                                  )}
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    disabled={uploadingCategoryImage}
+                                    onChange={async (e) => {
+                                      const file = e.target.files?.[0];
+                                      if (!file) return;
+                                      setUploadingCategoryImage(true);
+                                      try {
+                                        const url = await uploadFileViaStorageApi(file, "niches");
+                                        setNewCategoryImage(url);
+                                      } catch (err: any) {
+                                        showAlert(err.message || "Failed to upload", "error");
+                                      } finally {
+                                        setUploadingCategoryImage(false);
+                                      }
+                                    }}
+                                  />
+                                </label>
+                              )}
                             </div>
-                          </div>
-                        </div>
 
-                        <div className="pt-1.5 flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (!newCategoryName.trim()) return;
-                              const families = newFamilyNames.split(",").map(f => f.trim()).filter(Boolean);
-                              if (editingCategoryIdx !== null) {
-                                const updated = [...nicheCategoriesList];
-                                updated[editingCategoryIdx] = { name: newCategoryName.trim(), families, image: newCategoryImage };
-                                setNicheCategoriesList(updated);
-                                setEditingCategoryIdx(null);
-                              } else {
-                                setNicheCategoriesList([...nicheCategoriesList, { name: newCategoryName.trim(), families, image: newCategoryImage }]);
-                              }
-                              setNewCategoryName("");
-                              setNewFamilyNames("");
-                              setNewCategoryImage("");
-                            }}
-                            className="flex-1 bg-slate-900 text-white py-2 px-3 rounded-xl hover:bg-slate-800 transition shadow-sm text-xs font-bold flex items-center justify-center gap-1.5"
-                          >
-                            {editingCategoryIdx !== null ? (
-                              <>
-                                <Check size={14} />
-                                {isSw ? "Hifadhi Kundi" : "Update Category"}
-                              </>
-                            ) : (
-                              <>
-                                <Plus size={14} />
-                                {isSw ? "Ongeza Kundi" : "Add Category"}
-                              </>
-                            )}
-                          </button>
-                          {editingCategoryIdx !== null && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setNewCategoryName("");
-                                setNewFamilyNames("");
-                                setNewCategoryImage("");
-                                setEditingCategoryIdx(null);
-                              }}
-                              className="bg-slate-100 text-slate-600 px-3 py-2 rounded-xl hover:bg-slate-200 transition text-xs font-bold"
-                            >
-                              {isSw ? "Ghairi" : "Cancel"}
-                            </button>
-                          )}
+                            <input
+                              type="text"
+                              value={newCategoryImage}
+                              onChange={(e) => setNewCategoryImage(e.target.value)}
+                              placeholder="https://..."
+                              className="flex-1 bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-xs font-semibold outline-none focus:border-slate-900 transition shadow-xs"
+                            />
+                          </div>
                         </div>
                       </div>
 
-                      {nicheCategoriesList.length === 0 && (
-                        <div className="py-6 text-center border-2 border-dashed border-slate-100 rounded-xl">
-                          <ImageIcon className="mx-auto text-slate-300 mb-1" size={18} />
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-                            {isSw ? "Hakuna kundi lililoongezwa" : "No categories defined"}
-                          </p>
-                        </div>
-                      )}
+                      {/* Action buttons for Category */}
+                      <div className="flex justify-end gap-2 pt-2 border-t border-slate-200/40">
+                        {editingCategoryIdx !== null && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewCategoryName("");
+                              setNewFamilyNames("");
+                              setNewCategoryImage("");
+                              setEditingCategoryIdx(null);
+                            }}
+                            className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-655 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <X size={14} />
+                            <span>{isSw ? "Ghairi" : "Cancel"}</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!newCategoryName.trim()) return;
+                            const families = newFamilyNames
+                              .split(",")
+                              .map((f) => f.trim())
+                              .filter(Boolean);
+                            if (editingCategoryIdx !== null) {
+                              const updated = [...nicheCategoriesList];
+                              updated[editingCategoryIdx] = {
+                                name: newCategoryName.trim(),
+                                families,
+                                image: newCategoryImage,
+                              };
+                              setNicheCategoriesList(updated);
+                              setEditingCategoryIdx(null);
+                            } else {
+                              setNicheCategoriesList([
+                                ...nicheCategoriesList,
+                                {
+                                  name: newCategoryName.trim(),
+                                  families,
+                                  image: newCategoryImage,
+                                },
+                              ]);
+                            }
+                            setNewCategoryName("");
+                            setNewFamilyNames("");
+                            setNewCategoryImage("");
+                          }}
+                          className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                        >
+                          {editingCategoryIdx !== null ? (
+                            <>
+                              <Check size={14} />
+                              <span>{isSw ? "Hifadhi Kundi" : "Update Category"}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Plus size={14} />
+                              <span>{isSw ? "Ongeza Kundi" : "Add Category"}</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
 
-                      <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                    {/* Category preview list: Spacious bento grid layout as requested */}
+                    {nicheCategoriesList.length === 0 ? (
+                      <div className="py-8 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/40">
+                        <ImageIcon className="mx-auto text-slate-300 mb-2 animate-pulse" size={24} />
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-wider">
+                          {isSw ? "Hakuna kundi lililoongezwa bado" : "No categories defined yet"}
+                        </p>
+                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                          {isSw ? "Tumia fomu hapo juu kuongeza kategoria na familia zake." : "Use the form above to add categories with sub-families."}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pt-2">
                         {nicheCategoriesList.map((cat, idx) => (
-                          <div key={idx} className={`flex items-center justify-between p-2.5 rounded-xl border transition ${editingCategoryIdx === idx ? "bg-indigo-50/50 border-indigo-200 shadow-sm" : "bg-white border-slate-150 hover:bg-slate-50"}`}>
-                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                              {cat.image ? (
-                                <img
-                                  src={cat.image}
-                                  alt={cat.name}
-                                  className="w-10 h-10 rounded-lg object-cover bg-slate-50 border border-slate-100 shrink-0"
-                                />
-                              ) : (
-                                <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
-                                  <span className="text-[8px] font-black text-slate-400">NO PIC</span>
-                                </div>
-                              )}
-                              <div className="min-w-0 flex-1 text-left">
-                                <p className="text-xs font-bold text-slate-800 truncate leading-tight">{cat.name}</p>
-                                {cat.families && cat.families.length > 0 ? (
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {cat.families.slice(0, 3).map((f, fi) => (
-                                      <span key={fi} className="text-[8px] bg-slate-100 text-slate-600 px-1 py-0.2 rounded font-medium truncate max-w-[80px]">
-                                        {f}
-                                      </span>
-                                    ))}
-                                    {cat.families.length > 3 && (
-                                      <span className="text-[8px] bg-slate-100 text-slate-500 px-1 py-0.2 rounded font-medium">
-                                        +{cat.families.length - 3}
-                                      </span>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <p className="text-[9px] text-slate-400 italic font-medium mt-0.5">
-                                    {isSw ? "Haina familia" : "No sub-families"}
-                                  </p>
-                                )}
+                          <div
+                            key={idx}
+                            className={`p-4 rounded-3xl border transition flex items-start gap-3.5 relative ${
+                              editingCategoryIdx === idx
+                                ? "bg-indigo-50/50 border-indigo-200 shadow-xs"
+                                : "bg-slate-50/40 hover:bg-slate-50 border-slate-200 hover:border-slate-300 hover:shadow-xs"
+                            }`}
+                          >
+                            {/* Spacious, Beautiful Preview Avatar Image */}
+                            {cat.image ? (
+                              <img
+                                src={cat.image}
+                                alt={cat.name}
+                                className="w-14 h-14 rounded-2xl object-cover bg-slate-100 border border-slate-200 shadow-sm shrink-0"
+                              />
+                            ) : (
+                              <div className="w-14 h-14 rounded-2xl bg-slate-150 border border-slate-200 flex flex-col items-center justify-center shrink-0">
+                                <ImageIcon size={18} className="text-slate-400" />
+                                <span className="text-[8px] font-black text-slate-400 uppercase mt-0.5">NO PIC</span>
                               </div>
+                            )}
+
+                            <div className="flex-1 min-w-0 pr-1">
+                              <h4 className="text-xs font-black text-slate-900 truncate leading-tight uppercase tracking-wider">
+                                {cat.name}
+                              </h4>
+                              {cat.families && cat.families.length > 0 ? (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {cat.families.slice(0, 5).map((f, fi) => (
+                                    <span
+                                      key={fi}
+                                      className="text-[9px] bg-white border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded-md font-bold leading-none shrink-0"
+                                    >
+                                      {f}
+                                    </span>
+                                  ))}
+                                  {cat.families.length > 5 && (
+                                    <span
+                                      className="text-[9px] bg-indigo-50 border border-indigo-200 text-indigo-600 px-1.5 py-0.5 rounded-md font-black leading-none shrink-0"
+                                      title={cat.families.slice(5).join(", ")}
+                                    >
+                                      +{cat.families.length - 5}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="text-[9px] text-slate-400 italic mt-1.5">
+                                  {isSw ? "Haina familia" : "No sub-families"}
+                                </p>
+                              )}
                             </div>
-                            <div className="flex gap-0.5 ml-2 shrink-0">
+
+                            {/* Edit/Delete Overlay actions */}
+                            <div className="flex flex-col gap-1 shrink-0">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -14763,7 +14873,7 @@ export function SettingsAdmin() {
                                   setNewFamilyNames(cat.families.join(", "));
                                   setNewCategoryImage(cat.image || "");
                                 }}
-                                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
+                                className="p-1.5 text-slate-400 hover:text-indigo-650 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg transition cursor-pointer"
                                 title={isSw ? "Hariri" : "Edit"}
                               >
                                 <Edit size={12} />
@@ -14771,7 +14881,9 @@ export function SettingsAdmin() {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  setNicheCategoriesList(nicheCategoriesList.filter((_, i) => i !== idx));
+                                  setNicheCategoriesList(
+                                    nicheCategoriesList.filter((_, i) => i !== idx),
+                                  );
                                   if (editingCategoryIdx === idx) {
                                     setNewCategoryName("");
                                     setNewFamilyNames("");
@@ -14779,7 +14891,7 @@ export function SettingsAdmin() {
                                     setEditingCategoryIdx(null);
                                   }
                                 }}
-                                className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition"
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg transition cursor-pointer"
                                 title={isSw ? "Futa" : "Delete"}
                               >
                                 <X size={12} />
@@ -14788,102 +14900,73 @@ export function SettingsAdmin() {
                           </div>
                         ))}
                       </div>
-                    </div>
+                    )}
+                  </div>
 
-                    <div className="space-y-1.5">
-                      <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                        {isSw ? "Icon iliyochaguliwa" : "Selected Vector Logo"}
-                      </label>
-                      <div className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-2xl">
-                        <div className="p-2 bg-slate-900 text-emerald-400 rounded-xl">
-                          {React.createElement(
-                            NicheIcons[newNicheIcon] || Smartphone,
-                            { size: 20 },
-                          )}
+                  {/* Real-time Validator Panel */}
+                  {(() => {
+                    const { errors, warnings, isValid } = getNicheValidationInfo();
+                    if (
+                      errors.length === 0 &&
+                      warnings.length === 0 &&
+                      !newNicheName.trim() &&
+                      nicheCategoriesList.length === 0
+                    ) {
+                      return null; // Don't clutter if nothing at all is typed yet
+                    }
+
+                    return (
+                      <div className="space-y-2 p-4 rounded-3xl border border-slate-200 bg-slate-50 transition-all text-left">
+                        <div className="flex items-center justify-between border-b border-slate-200 pb-2 mb-2">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                            {isSw ? "Uhakiki wa Muda Halisi" : "Real-time Validation"}
+                          </span>
+                          <span
+                            className={`inline-flex h-2.5 w-2.5 rounded-full ${
+                              isValid ? "bg-emerald-500 animate-pulse" : "bg-rose-500 animate-pulse"
+                            }`}
+                          ></span>
                         </div>
-                        <div>
-                          <p className="text-xs font-black text-slate-800">
-                            {newNicheIcon}
-                          </p>
-                          <p className="text-[10px] text-slate-400 font-medium">
-                            {isSw
-                              ? "Chapa tayari kwa duka"
-                              : "Vector identifier"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
 
-                    {/* Real-time Validator Panel */}
-                    {(() => {
-                      const { errors, warnings, isValid } =
-                        getNicheValidationInfo();
-                      if (
-                        errors.length === 0 &&
-                        warnings.length === 0 &&
-                        !newNicheName.trim() &&
-                        nicheCategoriesList.length === 0
-                      ) {
-                        return null; // Don't clutter if nothing at all is typed yet
-                      }
-
-                      return (
-                        <div className="space-y-2 p-3.5 rounded-2xl border border-slate-200 bg-slate-100/50 transition-all text-left">
-                          <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 mb-1.5">
-                            <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">
-                              {isSw
-                                ? "Uhakiki wa Muda Halisi"
-                                : "Real-time Validation"}
-                            </span>
-                            <span
-                              className={`inline-flex h-2 w-2 rounded-full ${isValid ? "bg-emerald-500 animate-pulse" : "bg-rose-500 animate-pulse"}`}
-                            ></span>
+                        {errors.map((err, i) => (
+                          <div
+                            key={`err-${i}`}
+                            className="flex items-start gap-2 text-rose-600 bg-rose-50 border border-rose-100 p-2.5 rounded-xl text-[10px] font-bold leading-normal"
+                          >
+                            <AlertCircle size={13} className="shrink-0 mt-0.5" />
+                            <span>{err}</span>
                           </div>
+                        ))}
 
-                          {errors.map((err, i) => (
-                            <div
-                              key={`err-${i}`}
-                              className="flex items-start gap-1.5 text-rose-600 bg-rose-50 border border-rose-100 p-2 rounded-xl text-[10px] font-bold leading-normal"
-                            >
-                              <AlertCircle
-                                size={12}
-                                className="shrink-0 mt-0.5"
-                              />
-                              <span>{err}</span>
-                            </div>
-                          ))}
+                        {warnings.map((warn, i) => (
+                          <div
+                            key={`warn-${i}`}
+                            className="flex items-start gap-2 text-amber-700 bg-amber-50 border border-amber-150 p-2.5 rounded-xl text-[10px] font-bold leading-normal"
+                          >
+                            <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+                            <span>{warn}</span>
+                          </div>
+                        ))}
 
-                          {warnings.map((warn, i) => (
-                            <div
-                              key={`warn-${i}`}
-                              className="flex items-start gap-1.5 text-amber-700 bg-amber-50 border border-amber-150 p-2 rounded-xl text-[10px] font-bold leading-normal"
-                            >
-                              <AlertTriangle
-                                size={12}
-                                className="shrink-0 mt-0.5"
-                              />
-                              <span>{warn}</span>
-                            </div>
-                          ))}
+                        {isValid && errors.length === 0 && warnings.length === 0 && (
+                          <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 border border-emerald-100 p-2.5 rounded-xl text-[10px] font-bold">
+                            <CheckCircle2 size={13} className="shrink-0" />
+                            <span>
+                              {isSw
+                                ? "Sahihi: Kila kundi lina niche na kategoria ziko salama."
+                                : "Perfect: Parent niche and sub-category pairs are aligned safely."}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
-                          {isValid &&
-                            errors.length === 0 &&
-                            warnings.length === 0 && (
-                              <div className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 border border-emerald-100 p-2 rounded-xl text-[10px] font-bold">
-                                <CheckCircle2 size={12} className="shrink-0" />
-                                <span>
-                                  {isSw
-                                    ? "Sahihi: Kila kundi lina niche na kategoria ziko salama."
-                                    : "Perfect: Parent niche and sub-category pairs are aligned safely."}
-                                </span>
-                              </div>
-                            )}
-                        </div>
-                      );
-                    })()}
-
+                  {/* Submission and Edit Actions */}
+                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
                     <button
                       type="button"
+                      disabled={savingNiche}
                       onClick={async () => {
                         const name = newNicheName.trim();
                         const categories = nicheCategoriesList;
@@ -14901,69 +14984,69 @@ export function SettingsAdmin() {
                         }
 
                         if (name) {
-                          if (newNicheMode === "add") {
-                            if (!sysNiches.find((n) => n.name === name)) {
-                              const updated = [
-                                ...sysNiches,
-                                { name, icon, categories },
-                              ];
-                              setSysNiches(updated);
-                              await db.saveNiches(updated);
-                              setNewNicheName("");
-                              setNicheCategoriesList([]);
-                            } else {
-                              alert("Niche with this name already exists");
-                            }
-                          } else {
-                            // Edit mode
-                            const updated = [...sysNiches];
-                            const idx = updated.findIndex(
-                              (n) => n.name === newNicheOriginalName,
-                            );
-                            if (idx !== -1) {
-                              if (newNicheOriginalName !== name) {
-                                if (
-                                  await showConfirm(
-                                    `Are you sure you want to rename '${newNicheOriginalName}' to '${name}'? This will update all associated products.`,
-                                    "Rename Niche",
-                                  )
-                                ) {
-                                  await db.renameProductsNiche(
-                                    newNicheOriginalName,
-                                    name,
-                                  );
-                                } else {
-                                  // User cancelled, abort save
-                                  return;
-                                }
+                          setSavingNiche(true);
+                          try {
+                            if (newNicheMode === "add") {
+                              if (!sysNiches.find((n) => n.name === name)) {
+                                const updated = [...sysNiches, { name, icon, categories }];
+                                setSysNiches(updated);
+                                await db.saveNiches(updated);
+                                setNewNicheName("");
+                                setNicheCategoriesList([]);
+                              } else {
+                                alert("Niche with this name already exists");
                               }
-                              updated[idx] = { name, icon, categories };
-                              setSysNiches(updated);
-                              await db.saveNiches(updated);
+                            } else {
+                              // Edit mode
+                              const updated = [...sysNiches];
+                              const idx = updated.findIndex((n) => n.name === newNicheOriginalName);
+                              if (idx !== -1) {
+                                if (newNicheOriginalName !== name) {
+                                  if (
+                                    await showConfirm(
+                                      `Are you sure you want to rename '${newNicheOriginalName}' to '${name}'? This will update all associated products.`,
+                                      "Rename Niche",
+                                    )
+                                  ) {
+                                    await db.renameProductsNiche(newNicheOriginalName, name);
+                                  } else {
+                                    // User cancelled, abort save
+                                    return;
+                                  }
+                                }
+                                updated[idx] = { name, icon, categories };
+                                setSysNiches(updated);
+                                await db.saveNiches(updated);
 
-                              setNewNicheMode("add");
-                              setNewNicheName("");
-                              setNicheCategoriesList([]);
-                              setNewNicheOriginalName("");
+                                setNewNicheMode("add");
+                                setNewNicheName("");
+                                setNicheCategoriesList([]);
+                                setNewNicheOriginalName("");
+                              }
                             }
+                          } catch (err: any) {
+                            showAlert(err.message || "Failed to save", "error");
+                          } finally {
+                            setSavingNiche(false);
                           }
                         }
                       }}
-                      className="w-full bg-slate-900 hover:bg-slate-800 text-white p-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2"
+                      className="flex-1 bg-slate-900 hover:bg-slate-800 text-white p-4 rounded-2xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-55 shadow-md"
                     >
-                      {newNicheMode === "add" ? (
+                      {savingNiche ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>{isSw ? "Inahifadhi..." : "Saving..."}</span>
+                        </>
+                      ) : newNicheMode === "add" ? (
                         <>
                           <Plus size={14} />
-                          <span>
-                            {isSw ? "Ongeza Niche Mpya" : "Add Niche Entry"}
-                          </span>
+                          <span>{isSw ? "Ongeza Niche Mpya" : "Add Niche Entry"}</span>
                         </>
                       ) : (
                         <>
                           <Check size={14} />
-                          <span>
-                            {isSw ? "Hifadhi Mabadiliko" : "Save Changes"}
-                          </span>
+                          <span>{isSw ? "Hifadhi Mabadiliko" : "Save Changes"}</span>
                         </>
                       )}
                     </button>
@@ -14980,74 +15063,12 @@ export function SettingsAdmin() {
                           setNewCategoryImage("");
                           setEditingCategoryIdx(null);
                         }}
-                        className="w-full mt-2 bg-slate-100 hover:bg-slate-200 text-slate-600 p-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2"
+                        className="bg-slate-100 hover:bg-slate-200 text-slate-600 p-4 rounded-2xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2"
                       >
                         <X size={14} />
                         <span>{isSw ? "Ghairi" : "Cancel Edit"}</span>
                       </button>
                     )}
-                  </div>
-
-                  {/* Right Column: Visual list of more than 30 vector icons */}
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                        {isSw
-                          ? "Chagua kutoka kwenye orodha (Icon 40+)"
-                          : "Select Vector Icon from Visual List (40+ Icons)"}
-                      </label>
-
-                      {/* Live search */}
-                      <div className="flex items-center gap-1.5 bg-white border border-slate-250/80 px-2.5 py-1 rounded-xl text-xs max-w-[160px]">
-                        <Search size={12} className="text-slate-400 shrink-0" />
-                        <input
-                          type="text"
-                          placeholder={isSw ? "Tafuta..." : "Filter..."}
-                          value={iconSearch}
-                          onChange={(e) => setIconSearch(e.target.value)}
-                          className="bg-transparent border-none focus:outline-none text-[10px] font-semibold w-full placeholder:text-slate-350"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Responsive Grid list */}
-                    <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-7 gap-2 p-3 bg-white border border-slate-200/80 rounded-2xl max-h-[196px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
-                      {iconOptions
-                        .filter((icon) =>
-                          icon.toLowerCase().includes(iconSearch.toLowerCase()),
-                        )
-                        .map((icon) => {
-                          const IconComp = NicheIcons[icon];
-                          const active = newNicheIcon === icon;
-                          return (
-                            <button
-                              key={icon}
-                              type="button"
-                              onClick={() => setNewNicheIcon(icon)}
-                              className={`flex flex-col items-center justify-center p-2 rounded-xl transition border text-center relative cursor-pointer ${
-                                active
-                                  ? "bg-slate-950 border-slate-950 text-emerald-400 shadow-sm font-bold scale-[1.03]"
-                                  : "bg-slate-50 hover:bg-slate-100 border-slate-200/60 text-slate-600 hover:text-slate-950"
-                              }`}
-                              title={icon}
-                            >
-                              {IconComp && <IconComp size={16} />}
-                              <span className="text-[8px] mt-1 font-bold truncate max-w-full block leading-none">
-                                {icon}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      {iconOptions.filter((icon) =>
-                        icon.toLowerCase().includes(iconSearch.toLowerCase()),
-                      ).length === 0 && (
-                        <div className="col-span-full py-6 text-center text-slate-400 text-[10px] font-bold">
-                          {isSw
-                            ? "Hakuna icon inayolingana na jina hilo."
-                            : "No matching icons found!"}
-                        </div>
-                      )}
-                    </div>
                   </div>
                 </div>
               </div>
@@ -15107,6 +15128,7 @@ export function SettingsAdmin() {
                           </button>
                           <button
                             type="button"
+                            disabled={savingNiche}
                             onClick={async () => {
                               if (
                                 await showConfirm(
@@ -15115,15 +15137,22 @@ export function SettingsAdmin() {
                                     : `Are you absolutely sure you want to delete "${niche.name}"? Doing so will purge ALL associate listings in database.`,
                                 )
                               ) {
-                                await db.deleteProductsByNiche(niche.name);
-                                const updated = sysNiches.filter(
-                                  (_, i) => i !== idx,
-                                );
-                                setSysNiches(updated);
-                                await db.saveNiches(updated);
+                                setSavingNiche(true);
+                                try {
+                                  await db.deleteProductsByNiche(niche.name);
+                                  const updated = sysNiches.filter(
+                                    (_, i) => i !== idx,
+                                  );
+                                  setSysNiches(updated);
+                                  await db.saveNiches(updated);
+                                } catch (err: any) {
+                                  showAlert(err.message || "Failed to delete", "error");
+                                } finally {
+                                  setSavingNiche(false);
+                                }
                               }
                             }}
-                            className="p-1 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                            className="p-1 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition cursor-pointer disabled:opacity-40"
                           >
                             <X size={14} />
                           </button>
@@ -15133,7 +15162,7 @@ export function SettingsAdmin() {
                   })}
                 </div>
               </div>
-
+ 
               <div className="border-t border-slate-100 pt-5 flex justify-end items-center gap-4">
                 {nichesSaved && (
                   <span className="text-emerald-600 text-xs font-bold flex items-center gap-1 animate-pulse">
@@ -15147,14 +15176,29 @@ export function SettingsAdmin() {
                 )}
                 <button
                   type="button"
+                  disabled={savingNiche}
                   onClick={async () => {
-                    await db.saveNiches(sysNiches);
-                    setNichesSaved(true);
-                    setTimeout(() => setNichesSaved(false), 3000);
+                    setSavingNiche(true);
+                    try {
+                      await db.saveNiches(sysNiches);
+                      setNichesSaved(true);
+                      setTimeout(() => setNichesSaved(false), 3000);
+                    } catch (err: any) {
+                      showAlert(err.message || "Failed to save", "error");
+                    } finally {
+                      setSavingNiche(false);
+                    }
                   }}
-                  className="bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase px-7 py-3 rounded-2xl shadow-md transition cursor-pointer"
+                  className="bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase px-7 py-3 rounded-2xl shadow-md transition cursor-pointer disabled:opacity-55 flex items-center justify-center gap-2"
                 >
-                  {isSw ? "Hifadhi Katalogi" : "Save and rebuild Niches"}
+                  {savingNiche ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>{isSw ? "Inahifadhi..." : "Saving..."}</span>
+                    </>
+                  ) : (
+                    <span>{isSw ? "Hifadhi Katalogi" : "Save and rebuild Niches"}</span>
+                  )}
                 </button>
               </div>
 

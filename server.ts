@@ -321,6 +321,13 @@ async function startServer() {
   app.use("/api/talk", talkRouter);
   app.use("/api/v1/tra", traRouter);
 
+  // Serve uploads folder statically in both dev and prod
+  const uploadsDir = path.join(process.cwd(), "public", "uploads");
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+  app.use("/uploads", express.static(uploadsDir));
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },

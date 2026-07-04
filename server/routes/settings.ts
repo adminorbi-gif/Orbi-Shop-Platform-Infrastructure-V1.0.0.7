@@ -873,12 +873,23 @@ router.post("/staff", async (req, res) => {
 router.get("/sellers", async (req, res) => {
   return sendResilientJson(res, "settings:sellers", async () => {
     let backupSellers: any[] = [];
-    try {
-      const { data: bData } = await withTimeout(
+    
+    // Execute the non-critical enrichment backup query and main sellers query in parallel to prevent sequential delays
+    const [backupRes, sellersRes] = await Promise.allSettled([
+      withTimeout(
         getSupabase(req).from('promotions').select('description').eq('title', 'SYSTEM_SELLERS').maybeSingle(),
-        15000,
+        3000,
         "seller backup query",
-      );
+      ),
+      withTimeout(
+        getSupabase(req).from('sellers').select('*').order('name', { ascending: true }),
+        8000,
+        "sellers query",
+      )
+    ]);
+
+    if (backupRes.status === "fulfilled" && backupRes.value) {
+      const bData = backupRes.value.data;
       if (bData && bData.description) {
         try {
           const parsed = JSON.parse(bData.description);
@@ -887,16 +898,12 @@ router.get("/sellers", async (req, res) => {
           }
         } catch (pe) {}
       }
-    } catch (be) {
-      console.warn("Failed to load SYSTEM_SELLERS backup for enrichment:", be);
+    } else if (backupRes.status === "rejected") {
+      console.warn("Failed to load SYSTEM_SELLERS backup for enrichment:", backupRes.reason);
     }
 
-    try {
-      const { data, error } = await withTimeout(
-        getSupabase(req).from('sellers').select('*').order('name', { ascending: true }),
-        12000,
-        "sellers query",
-      );
+    if (sellersRes.status === "fulfilled" && sellersRes.value) {
+      const { data, error } = sellersRes.value;
       if (!error && data && data.length > 0) {
         const decryptedData = decryptObject(data);
         const mapped = decryptedData.map((s: any) => {
@@ -937,16 +944,21 @@ router.get("/sellers", async (req, res) => {
         });
         return mapped;
       }
-    } catch (e) {}
+    }
 
-    const { data } = await withTimeout(
-      getSupabase(req).from('promotions').select('description').eq('title', 'SYSTEM_SELLERS').maybeSingle(),
-      15000,
-      "seller fallback query",
-    );
+    // Fallback if main database query didn't return any sellers or errored out
     let sellersList = [{ id: 'S1', name: 'Orbi Official', description: 'Official products directly provided by Orbi Shop.', avatar: 'https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png' }];
-    if (data && data.description) {
-      try { sellersList = JSON.parse(data.description); } catch(pe) {}
+    try {
+      const { data } = await withTimeout(
+        getSupabase(req).from('promotions').select('description').eq('title', 'SYSTEM_SELLERS').maybeSingle(),
+        3000,
+        "seller fallback query",
+      );
+      if (data && data.description) {
+        try { sellersList = JSON.parse(data.description); } catch(pe) {}
+      }
+    } catch (e) {
+      console.warn("Failed to load fallback SYSTEM_SELLERS:", e);
     }
     return sellersList;
   }, {

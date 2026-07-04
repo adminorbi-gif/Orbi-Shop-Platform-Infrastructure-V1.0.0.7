@@ -1,8 +1,9 @@
 import { Router, Request, Response } from "express";
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 import { randomUUID } from "crypto";
-import { getAdminSupabase, getSupabase } from "../lib/supabase.js";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 const router = Router();
 
@@ -68,6 +69,39 @@ function handleStorageError(res: Response, error: any, fallbackMessage: string) 
   });
 }
 
+let s3Client: S3Client | null = null;
+
+function getS3Client(): S3Client | null {
+  if (!s3Client) {
+    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+    const accessKeyId = process.env.CLOUDFLARE_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.CLOUDFLARE_SECRET_ACCESS_KEY;
+
+    if (!accountId || !accessKeyId || !secretAccessKey) {
+      console.warn("[STORAGE] Missing Cloudflare R2 credentials. Falling back to local storage.");
+      return null;
+    }
+
+    s3Client = new S3Client({
+      endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+      credentials: {
+        accessKeyId: accessKeyId,
+        secretAccessKey: secretAccessKey,
+      },
+      region: "auto",
+    });
+  }
+  return s3Client;
+}
+
+const getBucketName = () => {
+  return process.env.CLOUDFLARE_BUCKET_NAME || "";
+};
+
+const getPublicUrlPrefix = () => {
+  return process.env.CLOUDFLARE_PUBLIC_URL_PREFIX || "";
+};
+
 router.post("/upload", async (req: Request, res: Response) => {
   try {
     await multerSingleFile(req, res);
@@ -86,31 +120,64 @@ router.post("/upload", async (req: Request, res: Response) => {
     const baseName = path.basename(fileName, ext).replace(/[^a-zA-Z0-9_-]/g, "_");
     const objectKey = `${folder}/${Date.now()}-${randomUUID()}-${baseName}${ext}`;
 
-    const supabase = getAdminSupabase();
-    
-    const { data, error } = await supabase.storage
-      .from("orbi-shop-images")
-      .upload(objectKey, file.buffer, {
-        contentType: file.mimetype,
-        upsert: false,
-      });
+    const bucketName = getBucketName();
+    const s3 = getS3Client();
 
-    if (error) {
-      throw error;
+    if (bucketName && s3) {
+      try {
+        await s3.send(new PutObjectCommand({
+          Bucket: bucketName,
+          Key: objectKey,
+          Body: file.buffer,
+          ContentType: file.mimetype,
+        }));
+
+        const prefix = getPublicUrlPrefix();
+        const cleanPrefix = prefix.endsWith("/") ? prefix.slice(0, -1) : prefix;
+        const publicUrl = `${cleanPrefix}/${objectKey}`;
+
+        console.log(`[STORAGE] Uploaded to Cloudflare R2: ${publicUrl}`);
+
+        return res.json({
+          success: true,
+          publicUrl,
+          objectKey,
+          size: file.size,
+          contentType: file.mimetype,
+          maxUploadMb: MAX_UPLOAD_MB,
+        });
+      } catch (r2Error: any) {
+        console.error("[STORAGE] Cloudflare R2 upload failed, falling back to local storage:", r2Error.message || r2Error);
+      }
     }
 
-    const { data: publicUrlData } = supabase.storage
-      .from("orbi-shop-images")
-      .getPublicUrl(objectKey);
+    // Local Fallback
+    console.log("[STORAGE] Saving file locally as fallback...");
+    const uploadsDir = path.join(process.cwd(), "public", "uploads");
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const safeFileName = `${Date.now()}-${randomUUID()}-${baseName}${ext}`;
+    const localFilePath = path.join(uploadsDir, safeFileName);
+
+    await fs.promises.writeFile(localFilePath, file.buffer);
+
+    // Return relative URL for browser, and prefix the objectKey so we know it's local
+    const publicUrl = `/uploads/${safeFileName}`;
+    const localKey = `local-uploads/${safeFileName}`;
+
+    console.log(`[STORAGE] Local fallback saved: ${publicUrl}`);
 
     return res.json({
       success: true,
-      publicUrl: publicUrlData.publicUrl,
-      objectKey,
+      publicUrl,
+      objectKey: localKey,
       size: file.size,
       contentType: file.mimetype,
       maxUploadMb: MAX_UPLOAD_MB,
     });
+
   } catch (error: any) {
     return handleStorageError(res, error, "Upload failed");
   }
@@ -126,14 +193,41 @@ router.post("/delete", async (req: Request, res: Response) => {
       });
     }
 
-    const supabase = getAdminSupabase();
-    
-    const { error } = await supabase.storage
-      .from("orbi-shop-images")
-      .remove([storagePath]);
+    console.log(`[STORAGE] Deleting file: ${storagePath}`);
 
-    if (error) {
-      throw error;
+    // If it's local fallback storage
+    if (storagePath.startsWith("local-uploads/")) {
+      const fileName = storagePath.replace("local-uploads/", "");
+      const localFilePath = path.join(process.cwd(), "public", "uploads", fileName);
+      if (fs.existsSync(localFilePath)) {
+        await fs.promises.unlink(localFilePath);
+        console.log(`[STORAGE] Deleted local file: ${localFilePath}`);
+      }
+      return res.json({
+        success: true,
+      });
+    }
+
+    // Otherwise delete from Cloudflare R2
+    const bucketName = getBucketName();
+    const s3 = getS3Client();
+    if (bucketName && s3) {
+      try {
+        await s3.send(new DeleteObjectCommand({
+          Bucket: bucketName,
+          Key: storagePath,
+        }));
+        console.log(`[STORAGE] Deleted from Cloudflare R2: ${storagePath}`);
+        return res.json({
+          success: true,
+        });
+      } catch (r2Error: any) {
+        console.error("[STORAGE] Cloudflare R2 delete failed:", r2Error.message || r2Error);
+        return res.json({
+          success: true,
+          warn: "Cloudflare delete failed but completed operation"
+        });
+      }
     }
 
     return res.json({
