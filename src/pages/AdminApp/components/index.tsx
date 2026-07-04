@@ -239,6 +239,7 @@ import {
   Waves,
   Webcam,
   Wheat,
+  ChevronDown,
 } from "lucide-react";
 import {
   AreaChart,
@@ -11666,6 +11667,7 @@ export function SettingsAdmin() {
   const [newNicheOriginalName, setNewNicheOriginalName] = useState("");
   const [newNicheIcon, setNewNicheIcon] = useState("Smartphone");
   const [iconSearch, setIconSearch] = useState("");
+  const [isIconDropdownOpen, setIsIconDropdownOpen] = useState(false);
   const iconOptions = [
     "Smartphone",
     "Shirt",
@@ -12134,20 +12136,25 @@ export function SettingsAdmin() {
     // 3. Find subcategories of products that will become orphaned based on the current state/edit
     const proposedNichesMap = new Map<string, Set<string>>();
     sysNiches.forEach((n) => {
+      const nNameLower = String(n.name || "").toLowerCase();
+      const nCatsLower = (n.categories || []).map((c: any) => 
+        String(typeof c === "string" ? c : (c?.name || "")).toLowerCase()
+      );
+
       if (
         newNicheMode === "edit" &&
-        n.name.toLowerCase() === newNicheOriginalName.toLowerCase()
+        nNameLower === String(newNicheOriginalName || "").toLowerCase()
       ) {
         if (name) {
           proposedNichesMap.set(
             name.toLowerCase(),
-            new Set(categories.map((c) => c.toLowerCase())),
+            new Set(categories.map((c) => String(c || "").toLowerCase())),
           );
         }
-      } else {
+      } else if (nNameLower) {
         proposedNichesMap.set(
-          n.name.toLowerCase(),
-          new Set((n.categories || []).map((c) => c.toLowerCase())),
+          nNameLower,
+          new Set(nCatsLower),
         );
       }
     });
@@ -12155,7 +12162,7 @@ export function SettingsAdmin() {
     if (newNicheMode === "add" && name) {
       proposedNichesMap.set(
         name.toLowerCase(),
-        new Set(categories.map((c) => c.toLowerCase())),
+        new Set(categories.map((c) => String(c || "").toLowerCase())),
       );
     }
 
@@ -12535,7 +12542,7 @@ export function SettingsAdmin() {
   ];
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-6 animate-in fade-in duration-200">
+    <div className="w-full max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-200">
       {/* Settings Top Banner */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white rounded-[2.25rem] p-6 sm:p-8 shadow-md relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3 pointer-events-none" />
@@ -12567,7 +12574,7 @@ export function SettingsAdmin() {
       {/* Main Container Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Navigation Sidebar/Pills */}
-        <div className="lg:col-span-3 xl:col-span-2 bg-white rounded-3xl border border-slate-200/80 p-3.5 space-y-1 shadow-xs">
+        <div className="lg:col-span-4 xl:col-span-4 bg-white rounded-3xl border border-slate-200/80 p-3.5 space-y-1 shadow-xs">
           <span className="block text-[10px] font-black uppercase text-slate-400 tracking-widest px-3 mb-2.5">
             {isSw ? "Kategoria za Seti" : "Settings Domains"}
           </span>
@@ -12612,7 +12619,7 @@ export function SettingsAdmin() {
         </div>
 
         {/* Dynamic Display Area */}
-        <div className="lg:col-span-9 xl:col-span-10 space-y-6">
+        <div className="lg:col-span-8 xl:col-span-8 space-y-6">
           {activeSubTab === "system" && (
             <div className="bg-white rounded-[2.25rem] border border-slate-200/80 p-6 sm:p-8 shadow-xs space-y-5 animate-in fade-in duration-200 text-left">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
@@ -14504,7 +14511,7 @@ export function SettingsAdmin() {
           )}
 
           {activeSubTab === "niches" && (
-            <div id="niche-designer-container" className="bg-white rounded-[2.25rem] border border-slate-200/80 p-6 sm:p-8 shadow-xs space-y-6 animate-in fade-in duration-200 text-left">
+            <div className="bg-white rounded-[2.25rem] border border-slate-200/80 p-6 sm:p-8 shadow-xs space-y-6 animate-in fade-in duration-200 text-left">
               <div className="border-b border-slate-100 pb-4">
                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
                   {isSw
@@ -14518,164 +14525,173 @@ export function SettingsAdmin() {
                 </p>
               </div>
 
-              <div className="bg-slate-50 border border-slate-200/60 rounded-3xl p-6 sm:p-8 space-y-5">
-                <span className="block text-xs font-black uppercase text-slate-800 tracking-wider">
-                  {isSw ? "SANIFU NA UHARIRI NICHES" : "DESIGN & CONFIGURE NICHES"}
+              <div className="bg-slate-50 border border-slate-200/60 rounded-3xl p-5 space-y-4">
+                <span className="block text-[10px] font-black uppercase text-slate-700 tracking-wider">
+                  {isSw ? "ONGEZA NICHES MPYA" : "CREATE NEW NICHE SECTION"}
                 </span>
 
-                <div className="flex flex-col gap-8">
-                  {/* Top Section: Form Inputs */}
+                <div className="flex flex-col gap-4">
+                  {/* Left Column: Input and Add Button */}
                   <div className="w-full space-y-5">
-                    <div className="space-y-1.5">
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        {isSw
-                          ? "Jina la Niche / Kitengo"
-                          : "Niche Title / Name"}
-                      </label>
-                      <input
-                        type="text"
-                        value={newNicheName}
-                        onChange={(e) => setNewNicheName(e.target.value)}
-                        placeholder={
-                          isSw ? "Mf. Viatu vya Ngozi" : "e.g. Leather Shoes"
-                        }
-                        className="w-full bg-white border border-slate-200 hover:border-slate-300 p-3.5 rounded-2xl text-xs font-semibold outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition"
-                      />
-                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4">
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                          {isSw
+                            ? "Jina la Niche / Kitengo"
+                            : "Niche Title / Name"}
+                        </label>
+                        <input
+                          type="text"
+                          value={newNicheName}
+                          onChange={(e) => setNewNicheName(e.target.value)}
+                          placeholder={
+                            isSw ? "Mf. Viatu vya Ngozi" : "e.g. Leather Shoes"
+                          }
+                          className="w-full bg-white border border-slate-200 hover:border-slate-300 p-3.5 rounded-2xl text-xs font-semibold outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition"
+                        />
+                      </div>
+                      <div className="space-y-1.5 relative">
+                        <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                          {isSw ? "Aikoni ya Niche" : "Niche Icon"}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setIsIconDropdownOpen(!isIconDropdownOpen)}
+                          className="bg-white border border-slate-200 hover:border-slate-300 p-3.5 rounded-2xl flex items-center gap-3 transition cursor-pointer min-w-[160px] justify-between h-[46px]"
+                        >
+                          <div className="flex items-center gap-2 text-slate-700">
+                            {NicheIcons[newNicheIcon] ? (
+                              React.createElement(NicheIcons[newNicheIcon], { size: 16 })
+                            ) : (
+                              <Search size={16} />
+                            )}
+                            <span className="text-xs font-bold">{newNicheIcon}</span>
+                          </div>
+                          <ChevronDown size={14} className="text-slate-400" />
+                        </button>
 
-                    <div className="space-y-4 p-5 bg-white border border-slate-200 rounded-2xl">
-                      <span className="block text-[10px] font-black uppercase text-slate-500 tracking-wider border-b border-slate-100 pb-2">
-                        {isSw ? "MAKUNDI NA FAMILIA YA BIDHAA" : "CATEGORIES & PRODUCT FAMILIES"}
+                        {isIconDropdownOpen && (
+                          <div className="absolute top-full right-0 mt-2 w-[280px] bg-white border border-slate-200 shadow-xl rounded-2xl z-50 overflow-hidden">
+                            <div className="p-2 border-b border-slate-100 bg-slate-50">
+                              <div className="flex items-center gap-2 bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs w-full">
+                                <Search size={12} className="text-slate-400 shrink-0" />
+                                <input
+                                  type="text"
+                                  placeholder={isSw ? "Tafuta aikoni..." : "Filter icons..."}
+                                  value={iconSearch}
+                                  onChange={(e) => setIconSearch(e.target.value)}
+                                  className="bg-transparent border-none focus:outline-none text-xs font-semibold w-full placeholder:text-slate-350"
+                                />
+                              </div>
+                            </div>
+                            <div className="p-2 grid grid-cols-4 gap-1 max-h-[240px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                              {iconOptions
+                                .filter((icon) =>
+                                  icon.toLowerCase().includes(iconSearch.toLowerCase()),
+                                )
+                                .map((icon) => {
+                                  const IconComp = NicheIcons[icon];
+                                  const active = newNicheIcon === icon;
+                                  return (
+                                    <button
+                                      key={icon}
+                                      type="button"
+                                      onClick={() => {
+                                        setNewNicheIcon(icon);
+                                        setIsIconDropdownOpen(false);
+                                        setIconSearch("");
+                                      }}
+                                      className={`flex flex-col items-center justify-center p-2.5 rounded-xl transition cursor-pointer ${
+                                        active
+                                          ? "bg-slate-900 text-emerald-400 shadow-sm font-bold scale-105"
+                                          : "hover:bg-slate-100 text-slate-600 hover:text-slate-900"
+                                      }`}
+                                      title={icon}
+                                    >
+                                      {IconComp && <IconComp size={18} />}
+                                    </button>
+                                  );
+                                })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-4 p-4 bg-white border border-slate-200 rounded-2xl">
+                      <span className="block text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                        {isSw ? "MAKUNDI NA FAMILIA" : "CATEGORIES & FAMILIES"}
                       </span>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-1.5">
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                            {isSw ? "Jina la Kundi (Mf. Simu)" : "Category Name (e.g. Phones)"}
-                          </label>
+                      <div className="flex gap-2">
+                        <div className="flex-1 space-y-1.5">
                           <input
                             type="text"
                             value={newCategoryName}
                             onChange={(e) => setNewCategoryName(e.target.value)}
-                            placeholder={isSw ? "Mf. Simu" : "e.g. Phones"}
-                            className="w-full bg-slate-50 border border-slate-200 hover:border-slate-350 p-3 rounded-xl text-xs font-semibold outline-none focus:bg-white focus:border-slate-900 transition"
+                            placeholder={isSw ? "Jina la Kundi (Mf. Simu)" : "Category Name (e.g. Phones)"}
+                            className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-semibold outline-none focus:border-slate-900 transition"
                           />
                         </div>
-                        <div className="space-y-1.5">
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                            {isSw ? "Familia (Tenganisha kwa koma)" : "Families (Comma separated)"}
-                          </label>
+                        <div className="flex-1 space-y-1.5">
                           <input
                             type="text"
                             value={newFamilyNames}
                             onChange={(e) => setNewFamilyNames(e.target.value)}
-                            placeholder={isSw ? "Mf. Android, iOS" : "e.g. Android, iOS"}
-                            className="w-full bg-slate-50 border border-slate-200 hover:border-slate-350 p-3 rounded-xl text-xs font-semibold outline-none focus:bg-white focus:border-slate-900 transition"
+                            placeholder={isSw ? "Familia (Koma: iOS, Android)" : "Families (Comma: iOS, Android)"}
+                            className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-semibold outline-none focus:border-slate-900 transition"
                           />
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!newCategoryName.trim()) return;
+                            const families = newFamilyNames.split(",").map(f => f.trim()).filter(Boolean);
+                            if (editingCategoryIdx !== null) {
+                              const updated = [...nicheCategoriesList];
+                              updated[editingCategoryIdx] = { name: newCategoryName.trim(), families };
+                              setNicheCategoriesList(updated);
+                              setEditingCategoryIdx(null);
+                            } else {
+                              setNicheCategoriesList([...nicheCategoriesList, { name: newCategoryName.trim(), families }]);
+                            }
+                            setNewCategoryName("");
+                            setNewFamilyNames("");
+                          }}
+                          className="bg-slate-900 text-white p-2.5 rounded-xl hover:bg-slate-800 transition shadow-sm"
+                        >
+                          {editingCategoryIdx !== null ? <Check size={16} /> : <Plus size={16} />}
+                        </button>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!newCategoryName.trim()) return;
-                          const families = newFamilyNames.split(",").map(f => f.trim()).filter(Boolean);
-                          if (editingCategoryIdx !== null) {
-                            const updated = [...nicheCategoriesList];
-                            updated[editingCategoryIdx] = { name: newCategoryName.trim(), families };
-                            setNicheCategoriesList(updated);
-                            setEditingCategoryIdx(null);
-                          } else {
-                            setNicheCategoriesList([...nicheCategoriesList, { name: newCategoryName.trim(), families }]);
-                          }
-                          setNewCategoryName("");
-                          setNewFamilyNames("");
-                        }}
-                        className="w-full bg-slate-900 hover:bg-slate-800 text-white p-3 rounded-xl text-xs font-bold transition shadow-sm flex items-center justify-center gap-2"
-                      >
-                        {editingCategoryIdx !== null ? (
-                          <>
-                            <Check size={14} />
-                            <span>{isSw ? "Hifadhi Mabadiliko ya Kundi" : "Save Category Changes"}</span>
-                          </>
-                        ) : (
-                          <>
-                            <Plus size={14} />
-                            <span>{isSw ? "Weka Kundi Kwenye Orodha" : "Add Category Item"}</span>
-                          </>
-                        )}
-                      </button>
-
-                      <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                      <div className="space-y-2 max-h-[150px] overflow-y-auto pr-1">
                         {nicheCategoriesList.map((cat, idx) => (
-                          <div key={idx} className="flex items-center justify-between bg-slate-50 border border-slate-200/80 p-3 rounded-xl hover:bg-slate-100/50 transition">
+                          <div key={idx} className="flex items-center justify-between bg-slate-50 border border-slate-200 p-2.5 rounded-xl">
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs font-black text-slate-900 flex items-center gap-2">
-                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-slate-900"></span>
-                                {cat.name}
-                              </p>
-                              <div className="flex flex-wrap gap-1 mt-1.5">
-                                {(cat.families || []).length > 0 ? (
-                                  (cat.families || []).map((fam, fIdx) => (
-                                    <span key={fIdx} className="bg-white border border-slate-200 text-slate-600 px-2 py-0.5 rounded-lg text-[9px] font-bold">
-                                      {fam}
-                                    </span>
-                                  ))
-                                ) : (
-                                  <span className="text-[9px] text-slate-400 italic">
-                                    {isSw ? "Hakuna familia" : "No families"}
-                                  </span>
-                                )}
-                              </div>
+                              <p className="text-xs font-black text-slate-800 truncate">{cat.name}</p>
+                              <p className="text-[10px] text-slate-500 truncate">{cat.families.join(", ")}</p>
                             </div>
-                            <div className="flex gap-1.5 ml-2 shrink-0">
+                            <div className="flex gap-1 ml-2">
                               <button
                                 type="button"
                                 onClick={() => {
                                   setEditingCategoryIdx(idx);
                                   setNewCategoryName(cat.name);
-                                  setNewFamilyNames((cat.families || []).join(", "));
+                                  setNewFamilyNames(cat.families.join(", "));
                                 }}
-                                className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg transition"
-                                title={isSw ? "Hariri" : "Edit"}
+                                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition"
                               >
                                 <Edit size={12} />
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setNicheCategoriesList(nicheCategoriesList.filter((_, i) => i !== idx))}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-lg transition"
-                                title={isSw ? "Futa" : "Delete"}
+                                className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition"
                               >
                                 <X size={12} />
                               </button>
                             </div>
                           </div>
                         ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                        {isSw ? "Icon iliyochaguliwa" : "Selected Vector Logo"}
-                      </label>
-                      <div className="flex items-center gap-3 p-3.5 bg-white border border-slate-200 rounded-2xl">
-                        <div className="p-3 bg-slate-900 text-emerald-400 rounded-xl shrink-0">
-                          {React.createElement(
-                            NicheIcons[newNicheIcon] || Smartphone,
-                            { size: 22 },
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-xs font-black text-slate-800">
-                            {newNicheIcon}
-                          </p>
-                          <p className="text-[10px] text-slate-400 font-medium">
-                            {isSw
-                              ? "Chapa tayari kwa duka"
-                              : "Vector identifier"}
-                          </p>
-                        </div>
                       </div>
                     </div>
 
@@ -14693,7 +14709,7 @@ export function SettingsAdmin() {
                       }
 
                       return (
-                        <div className="space-y-2 p-3.5 rounded-2xl border border-slate-200 bg-slate-150/30 transition-all text-left">
+                        <div className="space-y-2 p-3.5 rounded-2xl border border-slate-200 bg-slate-100/50 transition-all text-left">
                           <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 mb-1.5">
                             <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">
                               {isSw
@@ -14747,214 +14763,145 @@ export function SettingsAdmin() {
                       );
                     })()}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const name = newNicheName.trim();
-                          const categories = nicheCategoriesList;
-                          const icon = newNicheIcon;
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const name = newNicheName.trim();
+                        const categories = nicheCategoriesList;
+                        const icon = newNicheIcon;
 
-                          const validator = getNicheValidationInfo();
-                          if (!validator.isValid) {
-                            showAlert(
-                              isSw
-                                ? "Haiwezi kuhifadhi: Tafadhali rekebisha makosa kwenye fomu kwanza."
-                                : "Cannot save: Please fix validation errors on the form first.",
-                              "error",
-                            );
-                            return;
-                          }
+                        const validator = getNicheValidationInfo();
+                        if (!validator.isValid) {
+                          showAlert(
+                            isSw
+                              ? "Haiwezi kuhifadhi: Tafadhali rekebisha makosa kwenye fomu kwanza."
+                              : "Cannot save: Please fix validation errors on the form first.",
+                            "error",
+                          );
+                          return;
+                        }
 
-                          if (name) {
-                            if (newNicheMode === "add") {
-                              if (!sysNiches.find((n) => n.name === name)) {
-                                const updated = [
-                                  ...sysNiches,
-                                  { name, icon, categories },
-                                ];
-                                setSysNiches(updated);
-                                await db.saveNiches(updated);
-                                setNewNicheName("");
-                                setNicheCategoriesList([]);
-                              } else {
-                                alert("Niche with this name already exists");
-                              }
+                        if (name) {
+                          if (newNicheMode === "add") {
+                            if (!sysNiches.find((n) => n.name === name)) {
+                              const updated = [
+                                ...sysNiches,
+                                { name, icon, categories },
+                              ];
+                              setSysNiches(updated);
+                              await db.saveNiches(updated);
+                              setNewNicheName("");
+                              setNicheCategoriesList([]);
                             } else {
-                              // Edit mode
-                              const updated = [...sysNiches];
-                              const idx = updated.findIndex(
-                                (n) => n.name === newNicheOriginalName,
-                              );
-                              if (idx !== -1) {
-                                if (newNicheOriginalName !== name) {
-                                  if (
-                                    await showConfirm(
-                                      `Are you sure you want to rename '${newNicheOriginalName}' to '${name}'? This will update all associated products.`,
-                                      "Rename Niche",
-                                    )
-                                  ) {
-                                    await db.renameProductsNiche(
-                                      newNicheOriginalName,
-                                      name,
-                                    );
-                                  } else {
-                                    // User cancelled, abort save
-                                    return;
-                                  }
+                              alert("Niche with this name already exists");
+                            }
+                          } else {
+                            // Edit mode
+                            const updated = [...sysNiches];
+                            const idx = updated.findIndex(
+                              (n) => n.name === newNicheOriginalName,
+                            );
+                            if (idx !== -1) {
+                              if (newNicheOriginalName !== name) {
+                                if (
+                                  await showConfirm(
+                                    `Are you sure you want to rename '${newNicheOriginalName}' to '${name}'? This will update all associated products.`,
+                                    "Rename Niche",
+                                  )
+                                ) {
+                                  await db.renameProductsNiche(
+                                    newNicheOriginalName,
+                                    name,
+                                  );
+                                } else {
+                                  // User cancelled, abort save
+                                  return;
                                 }
-                                updated[idx] = { name, icon, categories };
-                                setSysNiches(updated);
-                                await db.saveNiches(updated);
-
-                                setNewNicheMode("add");
-                                setNewNicheName("");
-                                setNicheCategoriesList([]);
-                                setNewNicheOriginalName("");
                               }
+                              updated[idx] = { name, icon, categories };
+                              setSysNiches(updated);
+                              await db.saveNiches(updated);
+
+                              setNewNicheMode("add");
+                              setNewNicheName("");
+                              setNicheCategoriesList([]);
+                              setNewNicheOriginalName("");
                             }
                           }
-                        }}
-                        className="bg-slate-900 hover:bg-slate-800 text-white p-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2 shadow-sm"
-                      >
-                        {newNicheMode === "add" ? (
-                          <>
-                            <Plus size={14} />
-                            <span>
-                              {isSw ? "Ongeza Niche Mpya" : "Add Niche Entry"}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <Check size={14} />
-                            <span>
-                              {isSw ? "Hifadhi Mabadiliko" : "Save Changes"}
-                            </span>
-                          </>
-                        )}
-                      </button>
-
-                      {newNicheMode === "edit" ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setNewNicheMode("add");
-                            setNewNicheName("");
-                            setNicheCategoriesList([]);
-                            setNewNicheOriginalName("");
-                          }}
-                          className="bg-slate-200 hover:bg-slate-300 text-slate-700 p-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2"
-                        >
-                          <X size={14} />
-                          <span>{isSw ? "Ghairi" : "Cancel Edit"}</span>
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {/* Bottom Section: Visual list of vector icons */}
-                  <div className="w-full space-y-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                        {isSw
-                          ? "Chagua kutoka kwenye orodha (Icon 40+)"
-                          : "Select Vector Icon from Visual List (40+ Icons)"}
-                      </label>
-
-                      {/* Live search */}
-                      <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-xl text-xs w-full sm:max-w-[160px]">
-                        <Search size={12} className="text-slate-400 shrink-0" />
-                        <input
-                          type="text"
-                          placeholder={isSw ? "Tafuta..." : "Filter..."}
-                          value={iconSearch}
-                          onChange={(e) => setIconSearch(e.target.value)}
-                          className="bg-transparent border-none focus:outline-none text-[10px] font-semibold w-full placeholder:text-slate-350"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Responsive Grid list */}
-                    <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3 p-5 bg-white border border-slate-200/80 rounded-2xl max-h-[380px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
-                      {iconOptions
-                        .filter((icon) =>
-                          icon.toLowerCase().includes(iconSearch.toLowerCase()),
-                        )
-                        .map((icon) => {
-                          const IconComp = NicheIcons[icon];
-                          const active = newNicheIcon === icon;
-                          return (
-                            <button
-                              key={icon}
-                              type="button"
-                              onClick={() => setNewNicheIcon(icon)}
-                              className={`flex flex-col items-center justify-center p-2.5 rounded-xl transition border text-center relative cursor-pointer ${
-                                active
-                                  ? "bg-slate-950 border-slate-950 text-emerald-400 shadow-sm font-bold scale-[1.03]"
-                                  : "bg-slate-50 hover:bg-slate-100 border-slate-200/60 text-slate-600 hover:text-slate-950"
-                              }`}
-                              title={icon}
-                            >
-                              {IconComp && <IconComp size={18} />}
-                              <span className="text-[8px] mt-1.5 font-bold truncate max-w-full block leading-none">
-                                {icon}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      {iconOptions.filter((icon) =>
-                        icon.toLowerCase().includes(iconSearch.toLowerCase()),
-                      ).length === 0 && (
-                        <div className="col-span-full py-6 text-center text-slate-400 text-[10px] font-bold">
-                          {isSw
-                            ? "Hakuna icon inayolingana na jina hilo."
-                            : "No matching icons found!"}
-                        </div>
+                        }
+                      }}
+                      className="w-full bg-slate-900 hover:bg-slate-800 text-white p-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      {newNicheMode === "add" ? (
+                        <>
+                          <Plus size={14} />
+                          <span>
+                            {isSw ? "Ongeza Niche Mpya" : "Add Niche Entry"}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Check size={14} />
+                          <span>
+                            {isSw ? "Hifadhi Mabadiliko" : "Save Changes"}
+                          </span>
+                        </>
                       )}
-                    </div>
+                    </button>
+                    {newNicheMode === "edit" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewNicheMode("add");
+                          setNewNicheName("");
+                          setNicheCategoriesList([]);
+                          setNewNicheOriginalName("");
+                        }}
+                        className="w-full mt-2 bg-slate-100 hover:bg-slate-200 text-slate-600 p-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        <X size={14} />
+                        <span>{isSw ? "Ghairi" : "Cancel Edit"}</span>
+                      </button>
+                    )}
                   </div>
-                </div>
+
+                  </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <span className="block text-[10px] font-black uppercase text-slate-400 tracking-wider">
                   {isSw
                     ? "ORODHA KAMILI YA NICHES AMILIFU"
                     : "ACTIVE CATEGORY ITEMS"}
                 </span>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[280px] overflow-y-auto pr-1">
                   {sysNiches.map((niche, idx) => {
                     const IconComp = NicheIcons[niche.icon];
                     return (
                       <div
                         key={idx}
-                        className="flex flex-col md:flex-row md:items-center justify-between bg-white border border-slate-200 p-4 rounded-2xl gap-3 transition hover:border-slate-300"
+                        className="flex items-center justify-between bg-slate-55 border border-slate-200 p-3.5 rounded-2xl font-medium text-xs text-slate-700"
                       >
-                        <div className="flex items-start gap-3 min-w-0 flex-1">
-                          <div className="p-2.5 bg-slate-100 rounded-xl text-slate-700 shrink-0 mt-0.5">
-                            {IconComp && <IconComp size={18} />}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="font-black text-slate-900 text-sm block">
-                              {niche.name}
-                            </span>
-                            {niche.categories && niche.categories.length > 0 ? (
-                              <div className="flex flex-wrap gap-1 mt-1.5">
-                                {niche.categories.map((c, cIdx) => (
-                                  <span key={cIdx} className="bg-slate-50 border border-slate-150 text-slate-600 px-2 py-0.5 rounded-lg text-[9px] font-bold">
-                                    {c.name}
-                                  </span>
-                                ))}
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 bg-slate-100 rounded-lg text-slate-600 shrink-0">
+                                {IconComp && <IconComp size={15} />}
                               </div>
-                            ) : (
-                              <span className="text-[10px] text-slate-400 italic block mt-1">
-                                {isSw ? "Hakuna kundi lililowekwa bado" : "No sub-categories defined yet"}
+                              <span className="font-bold text-slate-800 truncate">
+                                {niche.name}
                               </span>
-                            )}
+                            </div>
+                            {niche.categories &&
+                              niche.categories.length > 0 && (
+                                <span className="text-[9px] text-slate-400 font-medium truncate mt-1">
+                                  {niche.categories.map(c => c.name).join(", ")}
+                                </span>
+                              )}
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5 self-end md:self-center shrink-0">
+                        <div className="flex items-center gap-1 shadow-xs bg-white rounded-xl border border-slate-100 p-0.5 shrink-0 ml-2">
                           <button
                             type="button"
                             onClick={() => {
@@ -14963,18 +14910,12 @@ export function SettingsAdmin() {
                               setNewNicheName(niche.name);
                               setNewNicheIcon(niche.icon);
                               setNicheCategoriesList(niche.categories || []);
-                              // Scroll to top of the niches card container beautifully
-                              const el = document.getElementById("niche-designer-container");
-                              if (el) {
-                                el.scrollIntoView({ behavior: "smooth" });
-                              } else {
-                                window.scrollTo({ top: 0, behavior: "smooth" });
-                              }
+                              // Scroll to top so the user sees the form
+                              window.scrollTo({ top: 0, behavior: "smooth" });
                             }}
-                            className="p-2 text-slate-550 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
+                            className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer"
                           >
-                            <Edit size={12} />
-                            <span>{isSw ? "Hariri" : "Edit"}</span>
+                            <Edit size={14} />
                           </button>
                           <button
                             type="button"
@@ -14994,10 +14935,9 @@ export function SettingsAdmin() {
                                 await db.saveNiches(updated);
                               }
                             }}
-                            className="p-2 text-rose-500 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-100 hover:border-rose-600 rounded-xl transition cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
+                            className="p-1 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition cursor-pointer"
                           >
-                            <X size={12} />
-                            <span>{isSw ? "Futa" : "Delete"}</span>
+                            <X size={14} />
                           </button>
                         </div>
                       </div>
