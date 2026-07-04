@@ -788,15 +788,15 @@ export default function SellerApp({
           </div>
 
           {/* Footer controls (Desktop only) */}
-          <div className="hidden md:flex px-3 py-3 border-t border-slate-200/80 flex flex-col gap-2 bg-slate-50/60">
-            <div className="rounded-[1.25rem] border border-slate-200/80 bg-white p-2.5 shadow-sm overflow-hidden relative">
+          <div className="hidden md:flex px-3 py-2.5 border-t border-slate-200/80 flex flex-col gap-2 bg-slate-50/60">
+            <div className="rounded-[1.1rem] border border-slate-200/80 bg-white p-2 shadow-sm overflow-hidden relative">
               <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-blue-500/10 pointer-events-none" />
               <div className="absolute -left-10 -bottom-12 h-24 w-24 rounded-full bg-amber-500/10 pointer-events-none" />
               <div className="relative flex items-center gap-2.5">
                 <button
                   type="button"
                   onClick={() => setTab("settings")}
-                  className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-900 flex items-center justify-center text-white font-bold overflow-hidden shadow-sm shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition"
+                  className="w-9 h-9 rounded-xl bg-slate-950 border border-slate-900 flex items-center justify-center text-white font-bold overflow-hidden shadow-sm shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition"
                   title={lang === "sw" ? "Fungua mipangilio ya duka" : "Open store settings"}
                   aria-label={lang === "sw" ? "Fungua mipangilio ya duka" : "Open store settings"}
                 >
@@ -807,7 +807,7 @@ export default function SellerApp({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <Building size={17} />
+                    <Building size={15} />
                   )}
                 </button>
                 <button
@@ -815,11 +815,8 @@ export default function SellerApp({
                   onClick={() => setTab("settings")}
                   className="min-w-0 flex-1 text-left cursor-pointer"
                 >
-                  <p className="text-[11px] font-black text-slate-950 truncate">
+                  <p className="text-[10px] font-black text-slate-950 truncate">
                     {seller.name}
-                  </p>
-                  <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 mt-0.5 truncate">
-                    {lang === "sw" ? "Duka la muuzaji" : "Seller store"}
                   </p>
                 </button>
                 <button
@@ -831,12 +828,12 @@ export default function SellerApp({
                   <LogOut size={14} />
                 </button>
               </div>
-              <div className="relative mt-2 grid grid-cols-[1fr_auto] items-center gap-2 rounded-xl bg-slate-50 border border-slate-100 px-2.5 py-1.5">
+              <div className="relative mt-1.5 grid grid-cols-[1fr_auto] items-center gap-2 rounded-xl bg-slate-50 border border-slate-100 px-2 py-1.5">
                 <div className="min-w-0">
-                  <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">
+                  <p className="text-[7px] font-black uppercase tracking-widest text-slate-400">
                     {lang === "sw" ? "Mpango wa duka" : "Store plan"}
                   </p>
-                  <p className="text-[10px] font-black uppercase tracking-wide text-slate-950 truncate">
+                  <p className="text-[9px] font-black uppercase tracking-wide text-slate-950 truncate">
                     {seller.isPro && seller.proUntil && seller.proUntil > Date.now()
                       ? "VIP Gold"
                       : "Basic Free"}
@@ -901,14 +898,6 @@ export default function SellerApp({
                         ? "Kituo chako cha biashara: fuatilia mauzo, stoku, oda na malipo kwa haraka."
                         : "Your merchant command center: sales, stock, orders, and payouts in one focused view."}
                     </p>
-                  </div>
-                  <div className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-2xl flex items-center gap-2.5 relative z-10 shadow-sm">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-700">
-                      {lang === "sw"
-                        ? "DUKA LIPO MTANDAONI"
-                        : "Merchant Terminal Active"}
-                    </span>
                   </div>
                 </div>
 
