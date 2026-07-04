@@ -30,7 +30,12 @@ export function requireRole(...allowedRoles: string[]) {
       (req as any).user?.app_metadata?.role ||
       (req as any).user?.user_metadata?.role;
 
-    if (!role || !allowedRoles.includes(role)) {
+    const effectiveRoles = [...allowedRoles];
+    if (allowedRoles.includes("admin") && !effectiveRoles.includes("super_admin")) {
+      effectiveRoles.push("super_admin");
+    }
+
+    if (!role || !effectiveRoles.includes(role)) {
       return res.status(403).json({ success: false, error: "Permission denied." });
     }
 
