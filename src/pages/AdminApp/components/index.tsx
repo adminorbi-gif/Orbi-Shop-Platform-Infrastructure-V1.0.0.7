@@ -14810,95 +14810,132 @@ export function SettingsAdmin() {
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pt-2">
-                        {nicheCategoriesList.map((cat, idx) => (
-                          <div
-                            key={idx}
-                            className={`p-4 rounded-3xl border transition flex items-start gap-3.5 relative ${
-                              editingCategoryIdx === idx
-                                ? "bg-indigo-50/50 border-indigo-200 shadow-xs"
-                                : "bg-slate-50/40 hover:bg-slate-50 border-slate-200 hover:border-slate-300 hover:shadow-xs"
-                            }`}
-                          >
-                            {/* Spacious, Beautiful Preview Avatar Image */}
-                            {cat.image ? (
-                              <img
-                                src={cat.image}
-                                alt={cat.name}
-                                className="w-14 h-14 rounded-2xl object-cover bg-slate-100 border border-slate-200 shadow-sm shrink-0"
-                              />
-                            ) : (
-                              <div className="w-14 h-14 rounded-2xl bg-slate-150 border border-slate-200 flex flex-col items-center justify-center shrink-0">
-                                <ImageIcon size={18} className="text-slate-400" />
-                                <span className="text-[8px] font-black text-slate-400 uppercase mt-0.5">NO PIC</span>
-                              </div>
-                            )}
+                        {nicheCategoriesList.map((cat, idx) => {
+                          const getPillStyle = (name: string) => {
+                            const colors = [
+                              "bg-indigo-50 border-indigo-150 text-indigo-700 hover:bg-indigo-100/70",
+                              "bg-emerald-50 border-emerald-150 text-emerald-700 hover:bg-emerald-100/70",
+                              "bg-sky-50 border-sky-150 text-sky-700 hover:bg-sky-100/70",
+                              "bg-amber-50 border-amber-150 text-amber-700 hover:bg-amber-100/70",
+                              "bg-rose-50 border-rose-150 text-rose-700 hover:bg-rose-100/70",
+                              "bg-violet-50 border-violet-150 text-violet-700 hover:bg-violet-100/70",
+                              "bg-teal-50 border-teal-150 text-teal-700 hover:bg-teal-100/70",
+                              "bg-fuchsia-50 border-fuchsia-150 text-fuchsia-700 hover:bg-fuchsia-100/70"
+                            ];
+                            let hash = 0;
+                            for (let i = 0; i < name.length; i++) {
+                              hash = name.charCodeAt(i) + ((hash << 5) - hash);
+                            }
+                            return colors[Math.abs(hash) % colors.length];
+                          };
 
-                            <div className="flex-1 min-w-0 pr-1">
-                              <h4 className="text-xs font-black text-slate-900 truncate leading-tight uppercase tracking-wider">
-                                {cat.name}
-                              </h4>
-                              {cat.families && cat.families.length > 0 ? (
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                  {cat.families.slice(0, 5).map((f, fi) => (
-                                    <span
-                                      key={fi}
-                                      className="text-[9px] bg-white border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded-md font-bold leading-none shrink-0"
-                                    >
-                                      {f}
-                                    </span>
-                                  ))}
-                                  {cat.families.length > 5 && (
-                                    <span
-                                      className="text-[9px] bg-indigo-50 border border-indigo-200 text-indigo-600 px-1.5 py-0.5 rounded-md font-black leading-none shrink-0"
-                                      title={cat.families.slice(5).join(", ")}
-                                    >
-                                      +{cat.families.length - 5}
-                                    </span>
-                                  )}
+                          return (
+                            <div
+                              key={idx}
+                              className={`p-5 rounded-[28px] border transition-all flex flex-col gap-4 relative group ${
+                                editingCategoryIdx === idx
+                                  ? "bg-indigo-50/70 border-indigo-300 shadow-sm"
+                                  : "bg-white hover:bg-slate-50 border-slate-200/80 hover:border-slate-300/90 hover:shadow-md"
+                              }`}
+                            >
+                              {/* Top Section with Image and Title */}
+                              <div className="flex items-center gap-3.5">
+                                {/* Beautiful Squircle Preview Avatar Image */}
+                                {cat.image ? (
+                                  <img
+                                    src={cat.image}
+                                    alt={cat.name}
+                                    className="w-14 h-14 rounded-2xl object-cover bg-slate-50 border border-slate-150 shadow-xs shrink-0"
+                                  />
+                                ) : (
+                                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-150 flex flex-col items-center justify-center shrink-0">
+                                    <ImageIcon size={16} className="text-slate-400" />
+                                    <span className="text-[7px] font-extrabold text-slate-400 uppercase mt-0.5 tracking-wider">NO PIC</span>
+                                  </div>
+                                )}
+
+                                {/* Category Name with plenty of space (no truncate, wraps beautifully) */}
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-[9px] font-black text-indigo-650 tracking-wider uppercase block mb-0.5">
+                                    {isSw ? "Jamii" : "Category"}
+                                  </span>
+                                  <h4 className="text-sm font-black text-slate-800 break-words uppercase tracking-wide leading-tight">
+                                    {cat.name}
+                                  </h4>
                                 </div>
-                              ) : (
-                                <p className="text-[9px] text-slate-400 italic mt-1.5">
-                                  {isSw ? "Haina familia" : "No sub-families"}
-                                </p>
-                              )}
-                            </div>
 
-                            {/* Edit/Delete Overlay actions */}
-                            <div className="flex flex-col gap-1 shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEditingCategoryIdx(idx);
-                                  setNewCategoryName(cat.name);
-                                  setNewFamilyNames(cat.families.join(", "));
-                                  setNewCategoryImage(cat.image || "");
-                                }}
-                                className="p-1.5 text-slate-400 hover:text-indigo-650 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg transition cursor-pointer"
-                                title={isSw ? "Hariri" : "Edit"}
-                              >
-                                <Edit size={12} />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setNicheCategoriesList(
-                                    nicheCategoriesList.filter((_, i) => i !== idx),
-                                  );
-                                  if (editingCategoryIdx === idx) {
-                                    setNewCategoryName("");
-                                    setNewFamilyNames("");
-                                    setNewCategoryImage("");
-                                    setEditingCategoryIdx(null);
-                                  }
-                                }}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg transition cursor-pointer"
-                                title={isSw ? "Futa" : "Delete"}
-                              >
-                                <X size={12} />
-                              </button>
+                                {/* Floating-style Edit/Delete Actions */}
+                                <div className="flex items-center gap-1 shrink-0 opacity-80 group-hover:opacity-100 transition">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingCategoryIdx(idx);
+                                      setNewCategoryName(cat.name);
+                                      setNewFamilyNames(cat.families.join(", "));
+                                      setNewCategoryImage(cat.image || "");
+                                    }}
+                                    className="p-1.5 text-slate-400 hover:text-indigo-650 hover:bg-indigo-50/50 border border-transparent hover:border-indigo-100 rounded-xl transition cursor-pointer"
+                                    title={isSw ? "Hariri" : "Edit"}
+                                  >
+                                    <Edit size={13} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setNicheCategoriesList(
+                                        nicheCategoriesList.filter((_, i) => i !== idx),
+                                      );
+                                      if (editingCategoryIdx === idx) {
+                                        setNewCategoryName("");
+                                        setNewFamilyNames("");
+                                        setNewCategoryImage("");
+                                        setEditingCategoryIdx(null);
+                                      }
+                                    }}
+                                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50/50 border border-transparent hover:border-rose-100 rounded-xl transition cursor-pointer"
+                                    title={isSw ? "Futa" : "Delete"}
+                                  >
+                                    <X size={13} />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Subtle separating line */}
+                              <div className="h-px w-full bg-slate-100" />
+
+                              {/* Bottom families tags cloud distributed beautifully */}
+                              <div className="flex-1">
+                                <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 block mb-2">
+                                  {isSw ? "Familia zilizo ndani" : "Sub-Families Included"}
+                                </span>
+                                {cat.families && cat.families.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {cat.families.slice(0, 5).map((f, fi) => (
+                                      <span
+                                        key={fi}
+                                        className={`text-[9px] px-2.5 py-1 rounded-xl font-bold leading-none shrink-0 border ${getPillStyle(f)} transition-all duration-200 cursor-default`}
+                                      >
+                                        {f}
+                                      </span>
+                                    ))}
+                                    {cat.families.length > 5 && (
+                                      <span
+                                        className="text-[9px] bg-slate-900 border border-slate-900 text-white px-2.5 py-1 rounded-xl font-extrabold leading-none shrink-0 cursor-help hover:bg-slate-800 transition"
+                                        title={cat.families.slice(5).join(", ")}
+                                      >
+                                        +{cat.families.length - 5}
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <p className="text-[10px] text-slate-400 italic font-medium">
+                                    {isSw ? "Haina familia" : "No sub-families mapped yet"}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>

@@ -1,10 +1,10 @@
 import React from "react";
-import { Search, ShoppingCart, User, Menu, X, Sparkles, Zap, Bot, MessageSquare, History, Tag, Smartphone, Shirt, Sofa, Heart, CarFront, ShoppingBag, TrendingUp, Compass, Footprints, Crown, GlassWater, Wrench, Flower2, Anchor, Apple, Banana, Beer, Bone, Box, Brain, Brush, Bus, Calculator, Candy, Cat, ChefHat, Clapperboard, Cloud, Cookie, Dog, Dices, Disc, Egg, Fan, Feather, Fish, Gamepad2, Gavel, Guitar, Hammer, IceCream, Joystick, Lightbulb, Luggage, Map, Mic, Microscope, Moon, Mountain, Paintbrush, PenTool, Pill, Pizza, Plane, Plug, Printer, Puzzle, Radio, Receipt, Rocket, Ruler, Scale, Server, Shell, ShowerHead, Shovel, Sprout, Stethoscope, Sun, Table, Tablet, Tent, Thermometer, Trophy, Umbrella, Utensils, Wallet, Wine, Pause, Play, Armchair, Bath, Battery, Bed, Beef, BellRing, Bird, Book, Castle, Clover, Construction, Container, CupSoda, Glasses, GraduationCap, HardHat, Heater, Martini, Notebook, PackageOpen, PawPrint, Pen, Pencil, PiggyBank, PlugZap, Rabbit, Refrigerator, Salad, Sandwich, ShoppingBasket, Smile, Snowflake, Soup, Speaker, Target, Telescope, Terminal, ToyBrick, Train, Trees, Volleyball, Wand, Warehouse, WashingMachine, Waves, Webcam, Wheat } from "lucide-react";
+import { Search, ShoppingCart, User, Menu, X, Sparkles, Zap, Bot, MessageSquare, History, Tag, Smartphone, Shirt, Sofa, Heart, CarFront, ShoppingBag, TrendingUp, Compass, Footprints, Crown, GlassWater, Wrench, Flower2, Anchor, Apple, Banana, Beer, Bone, Box, Brain, Brush, Bus, Calculator, Candy, Cat, ChefHat, Clapperboard, Cloud, Cookie, Dog, Dices, Disc, Egg, Fan, Feather, Fish, Gamepad2, Gavel, Guitar, Hammer, IceCream, Joystick, Lightbulb, Luggage, Map, Mic, Microscope, Moon, Mountain, Paintbrush, PenTool, Pill, Pizza, Plane, Plug, Printer, Puzzle, Radio, Receipt, Rocket, Ruler, Scale, Server, Shell, ShowerHead, Shovel, Sprout, Stethoscope, Sun, Table, Tablet, Tent, Thermometer, Trophy, Umbrella, Utensils, Wallet, Wine, Pause, Play, Armchair, Bath, Battery, Bed, Beef, BellRing, Bird, Book, Castle, Clover, Construction, Container, CupSoda, Glasses, GraduationCap, HardHat, Heater, Martini, Notebook, PackageOpen, PawPrint, Pen, Pencil, PiggyBank, PlugZap, Rabbit, Refrigerator, Salad, Sandwich, ShoppingBasket, Smile, Snowflake, Soup, Speaker, Target, Telescope, Terminal, ToyBrick, Train, Trees, Volleyball, Wand, Warehouse, WashingMachine, Waves, Webcam, Wheat, Package, Store, Ticket, Activity, Award, Cpu, Camera, FileText, Laptop, Baby, Palette, Coffee, Dumbbell, Scissors, Briefcase, Gift, Headphones, Cake, Watch, Bike, Key, BookOpen, Leaf, Flame, Music, Gem, Tv, Coins } from "lucide-react";
 import { TanzaniaFlag, LanguageSelector } from "./LanguageSelector";
 import { formatCurrency } from "../../lib/storage";
 
 const iconMap: Record<string, any> = {
-  Search, ShoppingCart, User, Menu, X, Sparkles, Zap, Bot, MessageSquare, History, Tag, Smartphone, Shirt, Sofa, Heart, CarFront, ShoppingBag, TrendingUp, Compass, Footprints, Crown, GlassWater, Wrench, Flower2, Anchor, Apple, Banana, Beer, Bone, Box, Brain, Brush, Bus, Calculator, Candy, Cat, ChefHat, Clapperboard, Cloud, Cookie, Dog, Dices, Disc, Egg, Fan, Feather, Fish, Gamepad2, Gavel, Guitar, Hammer, IceCream, Joystick, Lightbulb, Luggage, Map, Mic, Microscope, Moon, Mountain, Paintbrush, PenTool, Pill, Pizza, Plane, Plug, Printer, Puzzle, Radio, Receipt, Rocket, Ruler, Scale, Server, Shell, ShowerHead, Shovel, Sprout, Stethoscope, Sun, Table, Tablet, Tent, Thermometer, Trophy, Umbrella, Utensils, Wallet, Wine, Pause, Play, Armchair, Bath, Battery, Bed, Beef, BellRing, Bird, Book, Castle, Clover, Construction, Container, CupSoda, Glasses, GraduationCap, HardHat, Heater, Martini, Notebook, PackageOpen, PawPrint, Pen, Pencil, PiggyBank, PlugZap, Rabbit, Refrigerator, Salad, Sandwich, ShoppingBasket, Smile, Snowflake, Soup, Speaker, Target, Telescope, Terminal, ToyBrick, Train, Trees, Volleyball, Wand, Warehouse, WashingMachine, Waves, Webcam, Wheat
+  Search, ShoppingCart, User, Menu, X, Sparkles, Zap, Bot, MessageSquare, History, Tag, Smartphone, Shirt, Sofa, Heart, CarFront, ShoppingBag, TrendingUp, Compass, Footprints, Crown, GlassWater, Wrench, Flower2, Anchor, Apple, Banana, Beer, Bone, Box, Brain, Brush, Bus, Calculator, Candy, Cat, ChefHat, Clapperboard, Cloud, Cookie, Dog, Dices, Disc, Egg, Fan, Feather, Fish, Gamepad2, Gavel, Guitar, Hammer, IceCream, Joystick, Lightbulb, Luggage, Map, Mic, Microscope, Moon, Mountain, Paintbrush, PenTool, Pill, Pizza, Plane, Plug, Printer, Puzzle, Radio, Receipt, Rocket, Ruler, Scale, Server, Shell, ShowerHead, Shovel, Sprout, Stethoscope, Sun, Table, Tablet, Tent, Thermometer, Trophy, Umbrella, Utensils, Wallet, Wine, Pause, Play, Armchair, Bath, Battery, Bed, Beef, BellRing, Bird, Book, Castle, Clover, Construction, Container, CupSoda, Glasses, GraduationCap, HardHat, Heater, Martini, Notebook, PackageOpen, PawPrint, Pen, Pencil, PiggyBank, PlugZap, Rabbit, Refrigerator, Salad, Sandwich, ShoppingBasket, Smile, Snowflake, Soup, Speaker, Target, Telescope, Terminal, ToyBrick, Train, Trees, Volleyball, Wand, Warehouse, WashingMachine, Waves, Webcam, Wheat, Package, Store, Ticket, Activity, Award, Cpu, Camera, FileText, Laptop, Baby, Palette, Coffee, Dumbbell, Scissors, Briefcase, Gift, Headphones, Cake, Watch, Bike, Key, BookOpen, Leaf, Flame, Music, Gem, Tv, Globe, Coins
 };
 
 interface NavigationProps {
@@ -313,21 +313,23 @@ export function Navigation({
   );
 }
 
-const Globe = (props: any) => (
-  <svg
-    {...props}
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="12" cy="12" r="10" />
-    <line x1="2" y1="12" x2="22" y2="12" />
-    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-  </svg>
-);
+function Globe(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
+  );
+}

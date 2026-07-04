@@ -2632,6 +2632,7 @@ Zawadi ya Alama za Uaminifu zilizoongezwa kwenye kibeti chako: +${earned} Points
   }, [products, salesCounts, selectedNiche]);
 
   const iconMap: Record<string, any> = {
+    Coins,
     Smartphone,
     Shirt,
     Sofa,
