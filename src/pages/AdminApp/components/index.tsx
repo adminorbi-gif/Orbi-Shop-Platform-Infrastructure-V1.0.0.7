@@ -2797,7 +2797,7 @@ export function ProductsAdmin({
       setPrice(prod.price.toString());
       setOldPrice(prod.oldPrice ? prod.oldPrice.toString() : "");
       setStock(prod.stock.toString());
-      setTags(prod.tags.join(", "));
+      setTags((prod.tags || []).join(", "));
       setDesc(prod.description);
       setImages(prod.images);
       setVisible(prod.visible !== false);
