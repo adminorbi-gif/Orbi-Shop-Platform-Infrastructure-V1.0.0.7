@@ -261,7 +261,7 @@ body {
 
 .orbi-product-list-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
   gap: clamp(0.65rem, 1.55vw, 1.2rem);
 }
 
@@ -358,13 +358,13 @@ body {
 
 @media (min-width: 640px) {
   .orbi-product-list-grid {
-    grid-template-columns: repeat(auto-fit, minmax(11.75rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   }
 }
 
 @media (min-width: 430px) and (max-width: 639px) {
   .orbi-product-list-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   }
 
   .orbi-product-price {
@@ -374,7 +374,7 @@ body {
 
 @media (max-width: 429px) {
   .orbi-product-list-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   }
 
   .orbi-product-price {
@@ -384,7 +384,7 @@ body {
 
 @media (min-width: 1280px) {
   .orbi-product-list-grid {
-    grid-template-columns: repeat(auto-fill, minmax(12.75rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   }
 }
 

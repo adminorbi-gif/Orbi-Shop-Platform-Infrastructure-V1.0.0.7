@@ -1566,10 +1566,13 @@ export default function ClientApp() {
                             <motion.div
                               key={p.id}
                               layout
-                              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                              animate={{ opacity: 1, scale: 1, y: 0 }}
-                              exit={{ opacity: 0, scale: 0.95 }}
-                              transition={{ duration: 0.3, ease: "easeOut" }}
+                              initial={{ opacity: 0, scale: 0.9, y: 15, rotate: -1 }}
+                              animate={{ opacity: 1, scale: 1, y: 0, rotate: 0 }}
+                              exit={{ opacity: 0, scale: 0.9, rotate: 1 }}
+                              transition={{ 
+                                layout: { type: "spring", stiffness: 250, damping: 22 },
+                                default: { duration: 0.3, ease: "easeOut" }
+                              }}
                             >
                               <ProductCard
                                 p={p}
@@ -2211,27 +2214,68 @@ export default function ClientApp() {
                 </div>
 
                 {/* All Products Header and Filters unified in same row */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-5 mb-6 bg-transparent">
-                  <div className="shrink-0">
-                    <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
-                      Our Collection
-                    </h2>
-                    <p className="text-sm text-slate-500 mt-1">
-                      {filteredProducts.length}{" "}
-                      {lang === "sw"
-                        ? "Bidhaa Zilizopatikana"
-                        : "Products Found"}
-                    </p>
+                <div className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-5 mb-6 bg-transparent">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
+                    <div className="shrink-0">
+                      <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
+                        Our Collection
+                      </h2>
+                      <p className="text-sm text-slate-500 mt-1">
+                        {filteredProducts.length}{" "}
+                        {lang === "sw"
+                          ? "Bidhaa Zilizopatikana"
+                          : "Products Found"}
+                      </p>
+                    </div>
+
+                    {/* Sorting Selection Dropdown with Custom Personalized Indicator */}
+                    <div className="flex items-center gap-2 shrink-0 bg-transparent transition-all self-start sm:self-auto min-w-[170px] z-20">
+                      {likedProductIds.length > 0 &&
+                        sortOrder === "default" && (
+                          <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 border border-rose-100 text-[10px] font-black text-rose-600 animate-pulse shrink-0 shadow-xs">
+                            <Heart
+                              size={11}
+                              fill="currentColor"
+                              className="text-rose-500"
+                            />
+                            <span>
+                              {lang === "sw"
+                                ? `${likedProductIds.length} Pendwa Zimepewa Kipaumbele!`
+                                : `Favorites Highlighted (${likedProductIds.length})`}
+                            </span>
+                          </div>
+                        )}
+
+                      <CustomSelect
+                        value={sortOrder}
+                        onChange={(v) => setSortOrder(v as any)}
+                        iconLabel={
+                          <ArrowUpDown size={13} className="text-slate-500" />
+                        }
+                        label={
+                          lang === "sw"
+                            ? "Upangaji wa Bidhaa"
+                            : "Sort Preferences"
+                        }
+                        options={[
+                          { id: "default", label: t(lang, "filter.default") },
+                          { id: "asc", label: t(lang, "filter.asc") },
+                          { id: "desc", label: t(lang, "filter.desc") },
+                          { id: "newest", label: t(lang, "filter.newest") },
+                          { id: "popular", label: t(lang, "filter.popular") },
+                        ]}
+                      />
+                    </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1 min-w-0 lg:justify-end">
-                    {/* Categories list as capsule buttons (Horizontal Scroll) */}
+                  <div className="w-full flex justify-center mt-2">
+                    {/* Categories list */}
                     <div
-                      className="relative flex-1 max-w-full lg:max-w-xl"
+                      className="relative w-full"
                       onMouseLeave={() => setHoveredCategory(null)}
                     >
-                      <div className="overflow-x-auto scrollbar-hide py-1">
-                        <div className="flex items-center gap-6">
+                      <div className="py-2 w-full">
+                        <div className="flex justify-center items-center gap-6 flex-wrap w-full px-2">
                           {isLoading
                             ? Array.from({ length: 4 }).map((_, i) => (
                                 <div
@@ -2272,20 +2316,20 @@ export default function ClientApp() {
                                       );
                                     }
                                   }}
-                                  className={`flex flex-col items-center gap-1.5 transition-all outline-none cursor-pointer shrink-0 ${
+                                  className={`flex flex-col items-center gap-1.5 transition-all duration-300 outline-none cursor-pointer shrink-0 ${
                                     selectedCategory === c
-                                      ? "opacity-100"
-                                      : "opacity-60 hover:opacity-100"
+                                      ? "opacity-100 scale-105"
+                                      : "opacity-60 hover:opacity-100 hover:scale-[1.02]"
                                   }`}
                                 >
-                                  <div className={`w-[46px] h-[46px] shrink-0 rounded-full bg-slate-100 border-[2.5px] overflow-hidden flex items-center justify-center ${selectedCategory === c ? "border-slate-900 shadow-md" : "border-transparent"}`}>
+                                  <div className={`w-[92px] h-[92px] shrink-0 rounded-full bg-slate-100 border-[5px] overflow-hidden flex items-center justify-center transition-transform duration-300 ${selectedCategory === c ? "border-slate-900 shadow-lg" : "border-transparent"}`}>
                                     {catImage ? (
                                       <img src={catImage} alt={c} className="w-full h-full object-cover" />
                                     ) : (
                                       <span className="text-[10px] font-bold text-slate-400 uppercase">{c === "Zote" ? (lang === "sw" ? "ZOTE" : "ALL") : c.slice(0,3)}</span>
                                     )}
                                   </div>
-                                  <span className={`text-[10px] font-bold whitespace-nowrap ${selectedCategory === c ? "text-slate-900" : "text-slate-500"}`}>
+                                  <span className={`text-[10px] font-bold whitespace-nowrap transition-colors duration-300 ${selectedCategory === c ? "text-slate-900" : "text-slate-500"}`}>
                                     {c}
                                   </span>
                                 </button>
@@ -2408,45 +2452,6 @@ export default function ClientApp() {
                           </div>
                         </div>
                       )}
-                    </div>
-
-                    {/* Sorting Selection Dropdown with Custom Personalized Indicator */}
-                    <div className="flex items-center gap-2 shrink-0 bg-transparent transition-all self-start sm:self-auto min-w-[170px] z-20">
-                      {likedProductIds.length > 0 &&
-                        sortOrder === "default" && (
-                          <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 border border-rose-100 text-[10px] font-black text-rose-600 animate-pulse shrink-0 shadow-xs">
-                            <Heart
-                              size={11}
-                              fill="currentColor"
-                              className="text-rose-500"
-                            />
-                            <span>
-                              {lang === "sw"
-                                ? `${likedProductIds.length} Pendwa Zimepewa Kipaumbele!`
-                                : `Favorites Highlighted (${likedProductIds.length})`}
-                            </span>
-                          </div>
-                        )}
-
-                      <CustomSelect
-                        value={sortOrder}
-                        onChange={(v) => setSortOrder(v as any)}
-                        iconLabel={
-                          <ArrowUpDown size={13} className="text-slate-500" />
-                        }
-                        label={
-                          lang === "sw"
-                            ? "Upangaji wa Bidhaa"
-                            : "Sort Preferences"
-                        }
-                        options={[
-                          { id: "default", label: t(lang, "filter.default") },
-                          { id: "asc", label: t(lang, "filter.asc") },
-                          { id: "desc", label: t(lang, "filter.desc") },
-                          { id: "newest", label: t(lang, "filter.newest") },
-                          { id: "popular", label: t(lang, "filter.popular") },
-                        ]}
-                      />
                     </div>
                   </div>
                 </div>
@@ -2606,10 +2611,13 @@ export default function ClientApp() {
                             <motion.div
                               key={p.id}
                               layout
-                              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                              animate={{ opacity: 1, scale: 1, y: 0 }}
-                              exit={{ opacity: 0, scale: 0.95 }}
-                              transition={{ duration: 0.3, ease: "easeOut" }}
+                              initial={{ opacity: 0, scale: 0.9, y: 15, rotate: -1 }}
+                              animate={{ opacity: 1, scale: 1, y: 0, rotate: 0 }}
+                              exit={{ opacity: 0, scale: 0.9, rotate: 1 }}
+                              transition={{ 
+                                layout: { type: "spring", stiffness: 250, damping: 22 },
+                                default: { duration: 0.3, ease: "easeOut" }
+                              }}
                             >
                               <ProductCard
                                 p={p}
@@ -2766,10 +2774,13 @@ export default function ClientApp() {
                                   <motion.div
                                     key={`similar-${p.id}`}
                                     layout
-                                    initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    transition={{ duration: 0.3, ease: "easeOut" }}
+                                    initial={{ opacity: 0, scale: 0.9, y: 15, rotate: -1 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0, rotate: 0 }}
+                                    exit={{ opacity: 0, scale: 0.9, rotate: 1 }}
+                                    transition={{ 
+                                      layout: { type: "spring", stiffness: 250, damping: 22 },
+                                      default: { duration: 0.3, ease: "easeOut" }
+                                    }}
                                   >
                                     <ProductCard
                                       p={p}
