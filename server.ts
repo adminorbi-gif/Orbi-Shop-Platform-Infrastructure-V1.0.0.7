@@ -239,15 +239,22 @@ async function startServer() {
     })
   );
 
-  // 3. Rate Limiting for API routes
-  const apiLimiter = rateLimit({
+  // 3. Rate Limiting Configuration
+  const strictLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minute
-    max: 1000, // limit each IP to 1000 requests per windowMs
+    max: 100, // Limit sensitive routes to 100 requests per minute
     message: { error: "Too many requests, please try again later." },
     standardHeaders: true,
     legacyHeaders: false,
   });
-  app.use("/api", apiLimiter);
+
+  const looseLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 5000, // Allow 5000 requests per minute for product routes
+    message: { error: "Too many requests, please try again later." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
 
   // Checkout payloads are intentionally lean, but allow room for admin/product APIs.
   app.use(express.json({ limit: "1mb" }));
@@ -289,37 +296,37 @@ async function startServer() {
     }
   });
 
-  // Mount API Routes
-  app.use("/api/v1/admin", adminRouter);
-  app.use("/api/ads", adsRouter);
-  app.use("/api/v1/ai", aiRouter);
-  app.use("/api/v1/analytics", analyticsRouter);
-  app.use("/api/analytics", analyticsRouter);
-  app.use("/api/auth", authRouter);
-  app.use("/api/v1/checkout", checkoutRouter);
-  app.use("/api/checkout", checkoutRouter);
-  app.use("/api/v1/customers", customersRouter);
-  app.use("/api/v1/delivery", deliveryRouter);
-  app.use("/api/v1/messages", messagesRouter);
-  app.use("/api/v1/newsletters", newslettersRouter);
-  app.use("/api/v1/orders", ordersRouter);
-  app.use("/api/v1/payments", paymentsRouter);
-  app.use("/api/orbi-pay", paymentsRouter);
-  app.use("/api/v1/places", placesRouter);
-  app.use("/api/v1/products", productsRouter);
-  app.use("/api/v1/campaigns", promotionsRouter);
-  app.use("/api/v1/reviews", reviewsRouter);
-  app.use("/api/v1/search", searchRouter);
-  app.use("/api/search", searchRouter);
-  app.use("/api/v1/settings", settingsRouter);
-  app.use("/api/sitemap", sitemapRouter);
-  app.use("/sitemap.xml", sitemapRouter);
-  app.use("/api/v1/stock-notifications", stockNotificationsRouter);
-  app.use("/api/v1/price-alerts", priceAlertsRouter);
-  app.use("/api/v1/storage", storageRouter);
-  app.use("/api/v1/subscriptions", subscriptionsRouter);
-  app.use("/api/talk", talkRouter);
-  app.use("/api/v1/tra", traRouter);
+  // Mount API Routes with appropriate rate limiting
+  app.use("/api/v1/admin", strictLimiter, adminRouter);
+  app.use("/api/ads", looseLimiter, adsRouter);
+  app.use("/api/v1/ai", looseLimiter, aiRouter);
+  app.use("/api/v1/analytics", looseLimiter, analyticsRouter);
+  app.use("/api/analytics", looseLimiter, analyticsRouter);
+  app.use("/api/auth", strictLimiter, authRouter);
+  app.use("/api/v1/checkout", strictLimiter, checkoutRouter);
+  app.use("/api/checkout", strictLimiter, checkoutRouter);
+  app.use("/api/v1/customers", strictLimiter, customersRouter);
+  app.use("/api/v1/delivery", looseLimiter, deliveryRouter);
+  app.use("/api/v1/messages", looseLimiter, messagesRouter);
+  app.use("/api/v1/newsletters", looseLimiter, newslettersRouter);
+  app.use("/api/v1/orders", strictLimiter, ordersRouter);
+  app.use("/api/v1/payments", strictLimiter, paymentsRouter);
+  app.use("/api/orbi-pay", strictLimiter, paymentsRouter);
+  app.use("/api/v1/places", looseLimiter, placesRouter);
+  app.use("/api/v1/products", looseLimiter, productsRouter);
+  app.use("/api/v1/campaigns", looseLimiter, promotionsRouter);
+  app.use("/api/v1/reviews", looseLimiter, reviewsRouter);
+  app.use("/api/v1/search", looseLimiter, searchRouter);
+  app.use("/api/search", looseLimiter, searchRouter);
+  app.use("/api/v1/settings", looseLimiter, settingsRouter);
+  app.use("/api/sitemap", looseLimiter, sitemapRouter);
+  app.use("/sitemap.xml", looseLimiter, sitemapRouter);
+  app.use("/api/v1/stock-notifications", looseLimiter, stockNotificationsRouter);
+  app.use("/api/v1/price-alerts", looseLimiter, priceAlertsRouter);
+  app.use("/api/v1/storage", looseLimiter, storageRouter);
+  app.use("/api/v1/subscriptions", looseLimiter, subscriptionsRouter);
+  app.use("/api/talk", looseLimiter, talkRouter);
+  app.use("/api/v1/tra", looseLimiter, traRouter);
 
   // Serve uploads folder statically in both dev and prod
   const uploadsDir = path.join(process.cwd(), "public", "uploads");
