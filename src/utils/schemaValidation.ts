@@ -134,6 +134,7 @@ class SchemaValidator {
       sku,
       niche: String(data.niche || "Electronics").trim(),
       category,
+      family: data.family ? String(data.family).trim() : undefined,
       price,
       oldPrice,
       stock,

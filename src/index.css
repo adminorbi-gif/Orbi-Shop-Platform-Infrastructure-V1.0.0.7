@@ -260,9 +260,13 @@ body {
 }
 
 .orbi-product-list-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: clamp(0.65rem, 1.55vw, 1.2rem);
+}
+.orbi-product-list-grid > * {
+  flex: 1 1 clamp(130px, 40%, 220px);
+  max-width: 300px;
 }
 
 .orbi-market-product-card {
@@ -357,14 +361,14 @@ body {
 }
 
 @media (min-width: 640px) {
-  .orbi-product-list-grid {
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  .orbi-product-list-grid > * {
+    flex-basis: 180px;
   }
 }
 
 @media (min-width: 430px) and (max-width: 639px) {
-  .orbi-product-list-grid {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  .orbi-product-list-grid > * {
+    flex-basis: 150px;
   }
 
   .orbi-product-price {
@@ -373,8 +377,8 @@ body {
 }
 
 @media (max-width: 429px) {
-  .orbi-product-list-grid {
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  .orbi-product-list-grid > * {
+    flex-basis: 130px;
   }
 
   .orbi-product-price {
@@ -383,8 +387,8 @@ body {
 }
 
 @media (min-width: 1280px) {
-  .orbi-product-list-grid {
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  .orbi-product-list-grid > * {
+    flex-basis: 220px;
   }
 }
 
