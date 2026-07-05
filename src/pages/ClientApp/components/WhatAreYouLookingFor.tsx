@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, ChevronRight, Award, Flame, ArrowRight, Layers } from "lucide-react";
+import { Sparkles, Award, Flame, ArrowRight, Layers, Eye } from "lucide-react";
 import { Product, SellerProfile } from "../../../types";
 
 interface WhatAreYouLookingForProps {
@@ -8,6 +8,7 @@ interface WhatAreYouLookingForProps {
   sellers: SellerProfile[];
   lang: "sw" | "en";
   onSelectFamily: (family: string) => void;
+  onSelectProduct?: (productId: string) => void; // optional product detail navigation
 }
 
 interface FamilyGroup {
@@ -18,8 +19,7 @@ interface FamilyGroup {
   isPushed: boolean;
 }
 
-// A very simple, reliable SVG placeholder (gray square with "No image" text)
-// Encoded as a data URI – tested and works in all modern browsers.
+// Reliable SVG placeholder
 const PLACEHOLDER_IMAGE =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='20' text-anchor='middle' dominant-baseline='central' fill='%2394a3b8'%3ENo image%3C/text%3E%3C/svg%3E";
 
@@ -28,10 +28,13 @@ export const WhatAreYouLookingFor: React.FC<WhatAreYouLookingForProps> = ({
   sellers,
   lang,
   onSelectFamily,
+  onSelectProduct,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [shuffledGroups, setShuffledGroups] = useState<FamilyGroup[]>([]);
 
-  const familyGroups = useMemo(() => {
+  // ---- 1. Group and score (deterministic) ----
+  const sortedGroups = useMemo(() => {
     if (!products || !sellers) return [];
 
     const sellerMap = new Map<string, SellerProfile>();
@@ -108,7 +111,39 @@ export const WhatAreYouLookingFor: React.FC<WhatAreYouLookingForProps> = ({
     });
   }, [products, sellers]);
 
-  const totalFamilies = familyGroups.length;
+  // ---- 2. Shuffle within each priority tier (per user session) ----
+  useEffect(() => {
+    if (sortedGroups.length === 0) {
+      setShuffledGroups([]);
+      return;
+    }
+
+    const priorityMap = new Map<number, FamilyGroup[]>();
+    sortedGroups.forEach((group) => {
+      const score = (group.hasProTrader ? 100 : 0) + (group.isPushed ? 50 : 0);
+      if (!priorityMap.has(score)) {
+        priorityMap.set(score, []);
+      }
+      priorityMap.get(score)!.push(group);
+    });
+
+    const shuffled: FamilyGroup[] = [];
+    const sortedScores = Array.from(priorityMap.keys()).sort((a, b) => b - a);
+    sortedScores.forEach((score) => {
+      const group = priorityMap.get(score)!;
+      const shuffledGroup = [...group];
+      for (let i = shuffledGroup.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledGroup[i], shuffledGroup[j]] = [shuffledGroup[j], shuffledGroup[i]];
+      }
+      shuffled.push(...shuffledGroup);
+    });
+
+    setShuffledGroups(shuffled);
+  }, [sortedGroups]);
+
+  // ---- 3. Auto‑rotation (uses shuffledGroups) ----
+  const totalFamilies = shuffledGroups.length;
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -122,25 +157,34 @@ export const WhatAreYouLookingFor: React.FC<WhatAreYouLookingForProps> = ({
     };
   }, [totalFamilies]);
 
-  if (familyGroups.length === 0) return null;
+  if (shuffledGroups.length === 0) return null;
 
-  const activeSpotlight = familyGroups[currentIndex % totalFamilies];
+  const activeSpotlight = shuffledGroups[currentIndex % totalFamilies];
 
-  // Helper to get a valid image src. If the product has an image, use it; otherwise placeholder.
+  // Helper to get a valid image src from product.images[0]
   const getImageSrc = (product: Product): string => {
-    // Try images[0] first (the interface-compliant way), then fallback to image (legacy/alternate)
-    const img = (product?.images && product.images[0]) || (product as any)?.image;
+    const img = product?.images && product.images[0];
     if (img && typeof img === "string" && img.trim() !== "" && img !== "null" && img !== "undefined") {
       return img;
     }
     return PLACEHOLDER_IMAGE;
   };
 
+  // Stop propagation so parent family click doesn't fire
+  const handleProductClick = (productId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onSelectProduct) {
+      onSelectProduct(productId);
+    }
+  };
+
   return (
     <div className="w-full bg-white text-slate-900 rounded-2xl p-4 md:p-6 shadow-sm border border-slate-100 relative overflow-hidden my-4">
+      {/* Decorative glows */}
       <div className="absolute top-0 right-0 -mt-16 -mr-16 w-48 h-48 bg-indigo-50 rounded-full blur-[80px] opacity-50 pointer-events-none"></div>
       <div className="absolute bottom-0 left-0 -mb-16 -ml-16 w-48 h-48 bg-emerald-50 rounded-full blur-[80px] opacity-50 pointer-events-none"></div>
 
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-1 mb-2 relative z-10 border-b border-slate-100 pb-2">
         <div>
           <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-600 border border-indigo-100 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider mb-1">
@@ -157,13 +201,14 @@ export const WhatAreYouLookingFor: React.FC<WhatAreYouLookingForProps> = ({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className="bg-slate-100 text-indigo-700 font-black px-2 py-0.5 rounded-lg text-[10px] border border-slate-200">
-            {familyGroups.length}
+            {shuffledGroups.length}
           </span>
         </div>
       </div>
 
+      {/* Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 relative z-10 items-stretch">
-        {/* Left Spotlight */}
+        {/* Spotlight (left) */}
         <div className="lg:col-span-5 bg-slate-50 rounded-xl border border-slate-100 p-2 flex flex-col gap-1 overflow-hidden relative min-h-[240px]">
           <div className="absolute top-1 right-2 z-20 flex gap-1">
             {activeSpotlight.hasProTrader && (
@@ -201,26 +246,52 @@ export const WhatAreYouLookingFor: React.FC<WhatAreYouLookingForProps> = ({
                 </p>
               </div>
 
+              {/* Representative product card with dual actions */}
               <div
                 onClick={() => onSelectFamily(activeSpotlight.name)}
-                className="bg-white hover:bg-slate-100 border border-slate-200 rounded-lg p-3 flex items-center gap-4 transition duration-200 cursor-pointer group shadow-sm mt-auto"
+                className="bg-white hover:bg-slate-100 border border-slate-200 rounded-lg p-3 flex items-center gap-4 transition duration-200 cursor-pointer group shadow-sm mt-auto relative"
               >
-                <div className="w-16 h-16 bg-slate-200 rounded-md overflow-hidden shrink-0 border border-slate-200 relative">
+                {/* Image – click opens product detail (if callback exists) */}
+                <div
+                  className="w-16 h-16 bg-slate-200 rounded-md overflow-hidden shrink-0 border border-slate-200 relative cursor-pointer"
+                  onClick={(e) =>
+                    handleProductClick(activeSpotlight.representativeProduct.id, e)
+                  }
+                  title={lang === "sw" ? "Tazama bidhaa" : "View product"}
+                >
                   <img
                     src={getImageSrc(activeSpotlight.representativeProduct)}
                     alt={activeSpotlight.representativeProduct.name || activeSpotlight.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     style={{ display: "block", background: "#e2e8f0" }}
                     onError={(e) => {
-                      // If the original image fails, set to placeholder
                       e.currentTarget.src = PLACEHOLDER_IMAGE;
                     }}
                   />
+                  {onSelectProduct && (
+                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200">
+                      <Eye size={18} className="text-white" />
+                    </div>
+                  )}
                 </div>
+
                 <div className="flex-1 min-w-0">
-                  <span className="text-[9px] text-indigo-600 font-extrabold uppercase tracking-wide block">
-                    {lang === "sw" ? "Mwakilishi" : "Top Representative Item"}
-                  </span>
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[9px] text-indigo-600 font-extrabold uppercase tracking-wide block">
+                      {lang === "sw" ? "Mwakilishi" : "Top Representative"}
+                    </span>
+                    {onSelectProduct && (
+                      <button
+                        onClick={(e) =>
+                          handleProductClick(activeSpotlight.representativeProduct.id, e)
+                        }
+                        className="text-[9px] font-bold text-emerald-600 hover:text-emerald-800 transition flex items-center gap-0.5 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 hover:bg-emerald-100"
+                      >
+                        <Eye size={10} />
+                        {lang === "sw" ? "Bidhaa" : "Product"}
+                      </button>
+                    )}
+                  </div>
                   <p className="text-xs font-black text-slate-900 truncate group-hover:text-indigo-700 transition-colors">
                     {activeSpotlight.representativeProduct.name}
                   </p>
@@ -232,8 +303,9 @@ export const WhatAreYouLookingFor: React.FC<WhatAreYouLookingForProps> = ({
             </motion.div>
           </AnimatePresence>
 
+          {/* Carousel dots */}
           <div className="flex justify-center gap-1 pt-2 border-t border-slate-100 flex-wrap">
-            {familyGroups.map((_, idx) => (
+            {shuffledGroups.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentIndex(idx)}
@@ -248,7 +320,7 @@ export const WhatAreYouLookingFor: React.FC<WhatAreYouLookingForProps> = ({
           </div>
         </div>
 
-        {/* Right Scroller */}
+        {/* Right side: Horizontal scroller */}
         <div className="lg:col-span-7 flex flex-col justify-center min-w-0">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-[10px] text-slate-500 font-extrabold tracking-widest uppercase">
@@ -261,7 +333,7 @@ export const WhatAreYouLookingFor: React.FC<WhatAreYouLookingForProps> = ({
           </div>
 
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory pt-0.5">
-            {familyGroups.map((group) => (
+            {shuffledGroups.map((group) => (
               <div
                 key={group.name}
                 onClick={() => onSelectFamily(group.name)}
@@ -303,6 +375,7 @@ export const WhatAreYouLookingFor: React.FC<WhatAreYouLookingForProps> = ({
             ))}
           </div>
 
+          {/* Bottom quick tip */}
           <div className="mt-1 bg-indigo-50 border border-indigo-100 rounded-lg p-1.5 flex items-center justify-between gap-2">
             <div className="flex items-center gap-1">
               <div className="w-5 h-5 rounded-md bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
@@ -316,12 +389,12 @@ export const WhatAreYouLookingFor: React.FC<WhatAreYouLookingForProps> = ({
             </div>
             <button
               onClick={() => {
-                if (familyGroups.length > 0) {
-                  onSelectFamily(familyGroups[0].name);
+                if (shuffledGroups.length > 0) {
+                  onSelectFamily(shuffledGroups[0].name);
                 }
               }}
               className="text-[9px] font-black text-indigo-700 hover:text-indigo-800 transition shrink-0 flex items-center gap-0.5"
-              disabled={familyGroups.length === 0}
+              disabled={shuffledGroups.length === 0}
             >
               {lang === "sw" ? "Zaidi" : "View"} &rarr;
             </button>
