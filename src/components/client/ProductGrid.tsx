@@ -146,7 +146,20 @@ export function ProductGrid({
             {/* Content */}
             <div className="flex flex-1 flex-col justify-between gap-3 p-3 sm:p-3.5">
               <div className="space-y-2">
-                <p className="break-words text-[8.5px] font-black uppercase tracking-[0.14em] text-slate-400">{p.category || "General"}</p>
+                {(() => {
+                  let catText = p.category || "General";
+                  let familyText = p.family || "";
+                  if (catText.includes("::")) {
+                    const parts = catText.split("::");
+                    catText = parts[1] || parts[0] || "General";
+                    familyText = parts[2] || familyText;
+                  }
+                  return (
+                    <p className="break-words text-[8.5px] font-black uppercase tracking-[0.14em] text-slate-400">
+                      {catText}{familyText ? ` • ${familyText}` : ""}
+                    </p>
+                  );
+                })()}
                 <h4 className="orbi-product-title text-[12px] font-black leading-[1.2] text-slate-950 transition-colors group-hover:text-[#ff4c00] sm:text-[14px]">
                   {lang === "sw" ? (p.nameSw || p.name) : p.name}
                 </h4>

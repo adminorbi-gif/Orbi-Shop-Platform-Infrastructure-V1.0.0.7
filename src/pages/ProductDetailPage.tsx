@@ -14,9 +14,11 @@ import {
   Store,
   ArrowLeft,
   Star,
+  Sparkles,
   CheckCircle2,
   Heart,
   Tag,
+  Layers,
   Info,
   ShieldCheck,
   Award,
@@ -42,6 +44,7 @@ import {
   getDeliveryZoneName,
   normalizeDeliveryZones,
 } from "../lib/deliveryZones";
+import { slugify } from "../lib/slugify";
 
 // Inline Flag assets styled exactly as in the main app layout
 const TanzaniaFlag = () => (
@@ -70,6 +73,7 @@ interface Props {
   product: Product;
   seller?: SellerProfile;
   relatedProducts?: Product[];
+  allProducts?: Product[];
   onClose: () => void;
   onAdd: (p: Product, openCart?: boolean, customQty?: number) => void;
   onViewSeller?: (s: SellerProfile) => void;
@@ -78,6 +82,7 @@ interface Props {
   activeUser?: Customer | null;
   isLiked?: boolean;
   onLikeToggle?: (productId: string, niche?: string) => void;
+  onFilterByFamily?: (family: string) => void;
   
   // Standalone App Bar configurations
   globalSettings?: any;
@@ -187,6 +192,7 @@ export default function ProductDetailPage({
   product,
   seller,
   relatedProducts = [],
+  allProducts = [],
   onClose,
   onAdd,
   onViewSeller,
@@ -195,6 +201,7 @@ export default function ProductDetailPage({
   activeUser,
   isLiked = false,
   onLikeToggle,
+  onFilterByFamily,
   
   globalSettings,
   cart = [],
@@ -218,6 +225,75 @@ export default function ProductDetailPage({
       visible: true,
     } as SellerProfile;
   }, [seller, lang]);
+
+  const { displayNiche, displayCategory, displayFamily } = useMemo(() => {
+    let niche = product.niche || "";
+    let category = product.category || "";
+    let family = product.family || "";
+
+    if (product.category && product.category.includes("::")) {
+      const parts = product.category.split("::");
+      niche = parts[0] || niche;
+      category = parts[1] || category;
+      family = parts[2] || family;
+    }
+
+    return {
+      displayNiche: niche,
+      displayCategory: category,
+      displayFamily: family
+    };
+  }, [product]);
+
+  // Find combined functional family products ("People who buy this also buy...")
+  const combinedFamilyProducts = useMemo(() => {
+    const pool = allProducts && allProducts.length > 0 ? allProducts : relatedProducts;
+    if (!pool || pool.length === 0) return [];
+
+    // Filter out the current product itself
+    const filtered = pool.filter((p) => p.id !== product.id);
+
+    // Score based on complementarity
+    const scored = filtered.map((p) => {
+      let score = 0;
+      
+      const currentFam = (product.family || "").toLowerCase();
+      const pFam = (p.family || "").toLowerCase();
+      
+      // A) Same brand family matching (+60 points)
+      if (currentFam && pFam && currentFam === pFam) {
+        score += 60;
+      }
+
+      // B) Same first word / brand similarity (+30 points)
+      const w1 = product.name.trim().split(/\s+/)[0]?.toLowerCase();
+      const w2 = p.name.trim().split(/\s+/)[0]?.toLowerCase();
+      if (w1 && w1 === w2) {
+        score += 30;
+      }
+
+      // C) Tag overlap similarity (+10 points per overlapping tag)
+      const t1 = product.tags || [];
+      const t2 = p.tags || [];
+      const commonTags = t1.filter((t) => t2.includes(t));
+      score += commonTags.length * 10;
+
+      // D) Promoted/Pushed product boost (+15 points)
+      const isPushed = p.tags && p.tags.some(t => {
+        const tl = t.toLowerCase();
+        return tl.includes("promoted") || tl.includes("promo") || tl.includes("trend") || tl.includes("recommend");
+      });
+      if (isPushed) score += 15;
+
+      return { product: p, score };
+    });
+
+    // Sort by highest complementary score
+    scored.sort((a, b) => b.score - a.score);
+
+    // Take top 4 unique products
+    return scored.slice(0, 4).map((x) => x.product);
+  }, [allProducts, relatedProducts, product]);
 
   const [imgIdx, setImgIdx] = useState(0);
   const [showFullImage, setShowFullImage] = useState(false);
@@ -326,35 +402,48 @@ export default function ProductDetailPage({
   // SEO: Breadcrumb Structured Data for Google/AI Crawlers
   const structuredData = useMemo(() => {
     const base = window.location.origin;
+    
+    const elements: any[] = [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Orbi Shop",
+        "item": base
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": displayNiche || "Marketplace",
+        "item": `${base}/?niche=${encodeURIComponent(displayNiche || "")}`
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": displayCategory || "General",
+        "item": `${base}/?category=${encodeURIComponent(displayCategory || "")}`
+      }
+    ];
+
+    if (displayFamily) {
+      elements.push({
+        "@type": "ListItem",
+        "position": 4,
+        "name": displayFamily,
+        "item": `${base}/family/${slugify(displayFamily)}`
+      });
+    }
+
+    elements.push({
+      "@type": "ListItem",
+      "position": elements.length + 1,
+      "name": product.name,
+      "item": `${base}/?product=${product.id}`
+    });
+
     const breadcrumbList = {
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
-      "itemListElement": [
-        {
-          "@type": "ListItem",
-          "position": 1,
-          "name": "Orbi Shop",
-          "item": base
-        },
-        {
-          "@type": "ListItem",
-          "position": 2,
-          "name": product.niche || "Marketplace",
-          "item": `${base}/?niche=${encodeURIComponent(product.niche || "")}`
-        },
-        {
-          "@type": "ListItem",
-          "position": 3,
-          "name": product.category,
-          "item": `${base}/?category=${encodeURIComponent(product.category)}`
-        },
-        {
-          "@type": "ListItem",
-          "position": 4,
-          "name": product.name,
-          "item": `${base}/?product=${product.id}`
-        }
-      ]
+      "itemListElement": elements
     };
 
     const productSchema = {
@@ -789,13 +878,25 @@ export default function ProductDetailPage({
             
             <div className="flex flex-col mb-5">
               <div className="flex items-center gap-2 flex-wrap mb-2">
-                <span className="bg-orange-100 text-orange-700 text-[11px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest">
-                  {product.category}
-                </span>
-                {(product.niche && product.niche !== "Zote") && (
-                  <span className="bg-amber-100 text-amber-800 text-[11px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest">
-                    {product.niche}
+                {displayCategory && (
+                  <span className="bg-orange-100 text-orange-700 text-[11px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest">
+                    {displayCategory}
                   </span>
+                )}
+                {(displayNiche && displayNiche !== "Zote") && (
+                  <span className="bg-amber-100 text-amber-800 text-[11px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest">
+                    {displayNiche}
+                  </span>
+                )}
+                {displayFamily && (
+                  <button 
+                    onClick={() => onFilterByFamily?.(displayFamily)}
+                    className="bg-indigo-50 text-indigo-700 text-[11px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest border border-indigo-200 shadow-xs flex items-center gap-1.5 transition-all hover:bg-indigo-100 hover:scale-105 active:scale-95 cursor-pointer"
+                    title={lang === "sw" ? `Bonyeza kuona bidhaa za familia ya ${displayFamily}` : `Click to view all products from ${displayFamily} family`}
+                  >
+                    <Layers size={11} className="text-indigo-600" />
+                    {displayFamily}
+                  </button>
                 )}
                 {product.tags && product.tags.map(t => (
                   <span key={t} className="bg-slate-100 text-slate-600 text-[11px] font-bold px-2.5 py-1 rounded-full">
@@ -803,8 +904,17 @@ export default function ProductDetailPage({
                   </span>
                 ))}
               </div>
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-950 leading-[1.02] mb-3 tracking-[-0.045em]">
-                {product.name}
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-950 leading-[1.02] mb-3 tracking-[-0.045em] flex items-center gap-3.5 flex-wrap">
+                {displayFamily && (
+                  <button 
+                    onClick={() => onFilterByFamily?.(displayFamily)}
+                    className="inline-flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 text-white font-black text-sm md:text-base shadow-md uppercase border-2 border-white ring-2 ring-indigo-100 shrink-0 cursor-pointer hover:scale-110 active:scale-95 transition-all duration-200" 
+                    title={lang === "sw" ? `Bonyeza kuona bidhaa za familia ya ${displayFamily}` : `Click to view all products from ${displayFamily} family`}
+                  >
+                    {displayFamily.substring(0, 2)}
+                  </button>
+                )}
+                <span>{product.name}</span>
               </h2>
               
               {/* Product Stock Status & Warranty */}
@@ -1427,6 +1537,85 @@ export default function ProductDetailPage({
           </div>
         </section>
 
+        {/* Combined Complementary Cross-Selling Products Section */}
+        {combinedFamilyProducts && combinedFamilyProducts.length > 0 && (
+          <section className="w-full bg-slate-50 border-y border-slate-200/80 py-10 my-4 select-none">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-left">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+                <div>
+                  <h3 className="text-xl md:text-2xl font-black text-slate-900 flex items-center gap-2">
+                    <Sparkles className="text-amber-500 animate-pulse" size={22} />
+                    <span>
+                      {lang === "sw"
+                        ? "Wateja walionunua hii pia walinunua"
+                        : "People who bought this also bought"}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {lang === "sw"
+                      ? "Vifaa na bidhaa zinazoandamana kikamilifu kwa matumizi bora zaidi."
+                      : "Perfect functional add-ons and matching gear for an optimized experience."}
+                  </p>
+                </div>
+                <span className="self-start sm:self-auto bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">
+                  {lang === "sw" ? "Mchanganyiko Pendekezwa" : "Recommended Combinations"}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {combinedFamilyProducts.map((p) => (
+                  <div
+                    key={`combined-${p.id}`}
+                    className="bg-white border border-slate-200/60 rounded-2xl p-4 flex flex-col justify-between hover:border-indigo-500/50 hover:shadow-md transition duration-300 group cursor-pointer relative"
+                    onClick={() => {
+                      if (onSelectProduct) {
+                        onSelectProduct(p);
+                        window.scrollTo(0, 0);
+                      }
+                    }}
+                  >
+                    <div>
+                      {/* Thumbnail frame */}
+                      <div className="w-full aspect-square bg-slate-50 rounded-xl overflow-hidden mb-3.5 relative border border-slate-100 flex items-center justify-center p-2">
+                        <img
+                          src={p.images[0]}
+                          alt={p.name}
+                          className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                          referrerPolicy="no-referrer"
+                        />
+                        {p.family && (
+                          <span className="absolute bottom-2 left-2 bg-slate-900/80 text-white text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
+                            {p.family}
+                          </span>
+                        )}
+                      </div>
+
+                      <h4 className="text-xs font-black text-slate-800 line-clamp-2 leading-tight group-hover:text-indigo-600 transition-colors">
+                        {p.name}
+                      </h4>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                      <PriceDisplay amount={p.price} colorClass="text-[#ff4c00]" className="text-xs sm:text-sm font-black" />
+                      
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAdd(p, false);
+                        }}
+                        className="bg-slate-900 hover:bg-[#ff4c00] text-white hover:text-white p-2 rounded-xl transition duration-200 flex items-center justify-center shadow-xs cursor-pointer active:scale-95 shrink-0"
+                        title={lang === "sw" ? "Weka kwenye Kikapu" : "Add to Cart"}
+                      >
+                        <ShoppingCart size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Related Similar Products Section (Full Width, Bottom) */}
         {relatedProducts && relatedProducts.length > 0 && (
           <div className="w-full py-12 mt-4">
@@ -1437,7 +1626,7 @@ export default function ProductDetailPage({
                 <div className="relative z-10 p-8 md:p-12 md:w-2/3 flex flex-col items-start gap-4 text-left">
                   <span className="bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-xs flex items-center gap-1.5">
                     <Star size={12} className="fill-current" />
-                    {(product.niche && product.niche !== "Zote") ? product.niche : product.category}
+                    {(displayNiche && displayNiche !== "Zote") ? displayNiche : displayCategory}
                   </span>
                   <h2 className="text-3xl md:text-5xl font-extrabold text-white leading-tight tracking-tight">
                     {lang === "sw" ? "Gundua Bidhaa Zaidi" : "Explore More Products"}

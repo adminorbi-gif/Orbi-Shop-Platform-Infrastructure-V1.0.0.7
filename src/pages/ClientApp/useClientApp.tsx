@@ -559,6 +559,7 @@ const { showAlert, showConfirm } = useDialog();
       return "Zote";
     }
   });
+  const [selectedFamily, setSelectedFamily] = useState<string | null>(null);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [hoveredCategoryX, setHoveredCategoryX] = useState<number | null>(null);
   const [hoveredNiche, setHoveredNiche] = useState<string | null>(null);
@@ -626,6 +627,7 @@ const { showAlert, showConfirm } = useDialog();
   useEffect(() => {
     syncStatesRef.current = {
       selectedProduct,
+      selectedFamily,
       viewSeller,
       showCart,
       showCheckout,
@@ -836,6 +838,40 @@ const { showAlert, showConfirm } = useDialog();
           }
       }
 
+      // 1c. Handle family from path
+      if (pathParts[0] === 'family' && pathParts.length >= 2) {
+        const familySlug = pathParts[1];
+        const matchingProduct = products.find(p => {
+          let fam = p.family || "";
+          if (p.category && p.category.includes("::")) {
+            fam = p.category.split("::")[2] || fam;
+          }
+          return slugify(fam) === familySlug;
+        });
+
+        if (matchingProduct) {
+          let actualFamily = matchingProduct.family || "";
+          if (matchingProduct.category && matchingProduct.category.includes("::")) {
+            actualFamily = matchingProduct.category.split("::")[2] || actualFamily;
+          }
+          if (cur.selectedFamily !== actualFamily) {
+            setSelectedFamily(actualFamily);
+          }
+        } else {
+          const reconstructed = familySlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          if (cur.selectedFamily !== reconstructed) {
+            setSelectedFamily(reconstructed);
+          }
+        }
+        if (cur.selectedProduct) {
+          setSelectedProduct(null);
+        }
+      } else {
+        if (cur.selectedFamily) {
+          setSelectedFamily(null);
+        }
+      }
+
       // 2. Handle seller storefront
       const sellerId = search.get("seller") || search.get("seller-id") || search.get("seller-profile");
       if (sellerId) {
@@ -936,11 +972,14 @@ const { showAlert, showConfirm } = useDialog();
       
       params.delete("product");
       params.delete("product-id");
+    } else if (selectedFamily) {
+      newPath = `/family/${slugify(selectedFamily)}`;
+      params.delete("product");
     } else if (selectedCategory && selectedCategory !== "Zote") {
       newPath = `/shop/${slugify(selectedCategory)}`;
       params.delete("product");
     } else {
-      if (newPath.startsWith('/shop/')) {
+      if (newPath.startsWith('/shop/') || newPath.startsWith('/family/')) {
         newPath = '/';
       }
     }
@@ -3388,6 +3427,8 @@ Zawadi ya Alama za Uaminifu zilizoongezwa kwenye kibeti chako: +${earned} Points
     setIsExpandingSearch,
     selectedCategory,
     setSelectedCategory,
+    selectedFamily,
+    setSelectedFamily,
     selectedNiche,
     setSelectedNiche,
     hoveredCategory,

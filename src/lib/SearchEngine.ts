@@ -85,7 +85,7 @@ export class BilingualSearchEngine {
     const prodTexts = this.getProductTexts(product);
     const words = new Set<string>();
     for (const text of prodTexts) {
-      const parts = text.split(/[\s,.\-\/]+/).filter(w => w.length >= 2);
+      const parts = text.split(/[\s,.\-\/:]+/).filter(w => w.length >= 2);
       for (const p of parts) {
         words.add(p);
       }
@@ -107,6 +107,7 @@ export class BilingualSearchEngine {
       ...(product.tags || []).map(t => t.toLowerCase()),
       (product.niche || "").toLowerCase(),
       (product.category || "").toLowerCase(),
+      (product.family || "").toLowerCase(),
       (product.vibe || "").toLowerCase(),
       (product.arrangeTier || "").toLowerCase(),
       (product.presentationStyle || "").toLowerCase(),
@@ -121,7 +122,7 @@ export class BilingualSearchEngine {
     if (this.productNameWordsCache.has(cacheKey)) {
       return this.productNameWordsCache.get(cacheKey)!;
     }
-    const words = product.name.toLowerCase().split(/[\s,.\-\/]+/).filter(w => w.length >= 3);
+    const words = product.name.toLowerCase().split(/[\s,.\-\/:]+/).filter(w => w.length >= 3);
     this.productNameWordsCache.set(cacheKey, words);
     return words;
   }

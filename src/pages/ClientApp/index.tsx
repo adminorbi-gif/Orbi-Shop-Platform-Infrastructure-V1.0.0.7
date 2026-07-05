@@ -1,4 +1,5 @@
 import { useClientApp } from "./useClientApp";
+import { WhatAreYouLookingFor } from "./components/WhatAreYouLookingFor";
 import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from "react";
 import { lazyWithRetry } from "../../utils/lazyWithRetry";
 import { Helmet } from "react-helmet-async";
@@ -573,6 +574,8 @@ export default function ClientApp() {
     setIsExpandingSearch,
     selectedCategory,
     setSelectedCategory,
+    selectedFamily,
+    setSelectedFamily,
     selectedNiche,
     setSelectedNiche,
     hoveredCategory,
@@ -724,19 +727,71 @@ export default function ClientApp() {
     renderSearchSuggestions
   } = useClientApp();
 
+  const [familySearch, setFamilySearch] = useState("");
+  const [familySortOrder, setFamilySortOrder] = useState("default");
+
+  const familyProducts = useMemo(() => {
+    if (!selectedFamily) return [];
+    return products.filter(p => {
+      let fam = p.family || "";
+      if (p.category && p.category.includes("::")) {
+        fam = p.category.split("::")[2] || fam;
+      }
+      return fam.toLowerCase() === selectedFamily.toLowerCase();
+    });
+  }, [products, selectedFamily]);
+
+  const filteredFamilyProducts = useMemo(() => {
+    let list = [...familyProducts];
+    
+    // Apply local search
+    if (familySearch.trim()) {
+      const q = familySearch.toLowerCase();
+      list = list.filter(p => {
+        const name = (p.name || "").toLowerCase();
+        const nameSw = (p.nameSw || "").toLowerCase();
+        const desc = (p.description || "").toLowerCase();
+        return name.includes(q) || nameSw.includes(q) || desc.includes(q);
+      });
+    }
+
+    // Apply sorting
+    if (familySortOrder === "asc") {
+      list.sort((a, b) => a.price - b.price);
+    } else if (familySortOrder === "desc") {
+      list.sort((a, b) => b.price - a.price);
+    } else if (familySortOrder === "newest") {
+      list.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+    } else if (familySortOrder === "popular") {
+      list.sort((a, b) => (salesCounts[b.id] || 0) - (salesCounts[a.id] || 0));
+    }
+    
+    return list;
+  }, [familyProducts, familySearch, familySortOrder, salesCounts]);
+
+  // Reset family filters when selected family changes
+  useEffect(() => {
+    setFamilySearch("");
+    setFamilySortOrder("default");
+  }, [selectedFamily]);
+
   return (
     <>
       <Helmet>
         <title>
           {selectedProduct 
             ? `Bei ya ${selectedProduct.nameSw || selectedProduct.name} - ${lang === "sw" ? 'TSh ' : ''}${formatCurrency(selectedProduct.price)}${lang !== "sw" ? ' TZS' : ''} | Orbi Shop` 
-            : (lang === "sw" ? "Orbi Shop - Soko Linaloaminika Tanzania" : "Orbi Shop - Trusted E-Commerce Marketplace Tanzania")}
+            : selectedFamily
+              ? `${lang === "sw" ? `Bidhaa za Familia ya ${selectedFamily}` : `${selectedFamily} Product Family`} | Orbi Shop`
+              : (lang === "sw" ? "Orbi Shop - Soko Linaloaminika Tanzania" : "Orbi Shop - Trusted E-Commerce Marketplace Tanzania")}
         </title>
         <meta 
           name="description" 
           content={selectedProduct 
-            ? `Nunua ${selectedProduct.nameSw || selectedProduct.name} kwa bei ya ${formatCurrency(selectedProduct.price)}. ${selectedProduct.description.substring(0, 150)}... Wauzaji walioidhinishwa Orbi Shop Tanzania.`
-            : (lang === "sw" ? "Nunua na Orbi - Soko linaloaminika zaidi la E-commerce nchini Tanzania na Afrika. Ubora na usalama wa malipo uliothibitishwa." : "Shop with Orbi - The Most Trusted E-Commerce Marketplace in Tanzania and Africa. quality, authenticity, and guaranteed payment protection.")}
+            ? `Nunua ${selectedProduct.nameSw || selectedProduct.name} kwa bei ya ${formatCurrency(selectedProduct.price)}. ${selectedProduct.description.substring(0, 150)}... Wauzaji walioidhinishwa Orbi Shop Tanzania.` 
+            : selectedFamily
+              ? `${lang === "sw" ? `Gundua mkusanyiko rasmi wa bidhaa za familia ya ${selectedFamily} nchini Tanzania.` : `Discover the official product collection from the ${selectedFamily} brand family in Tanzania.`} Nunua kwa amani Orbi Shop.`
+              : (lang === "sw" ? "Soko linaloaminika la mtandaoni Tanzania linalounganisha wauzaji na wanunuzi kwa bidhaa bora za elektroniki, mitindo, na nyumbani." : "Tanzania's trusted online marketplace connecting sellers and buyers with premium electronics, fashion, and home goods.")} 
         />
         <meta property="og:title" content={selectedProduct 
             ? `Bei ya ${selectedProduct.nameSw || selectedProduct.name} - ${lang === "sw" ? 'TSh ' : ''}${formatCurrency(selectedProduct.price)}${lang !== "sw" ? ' TZS' : ''} | Orbi Shop` 
@@ -1391,8 +1446,212 @@ export default function ClientApp() {
           </main>
         ) : (
           <main className="flex-1 w-full bg-slate-50 pb-12 overflow-hidden flex flex-col pt-0 md:pt-4">
-            <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8">
-              {!viewSeller ? (
+            {selectedFamily ? (
+              <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 py-4">
+                {/* Breadcrumbs */}
+                <div className="flex items-center gap-2 mb-6 text-xs text-slate-500 font-medium">
+                  <button 
+                    onClick={() => {
+                      setSelectedFamily(null);
+                    }} 
+                    className="hover:text-slate-800 transition flex items-center gap-1"
+                  >
+                    Home
+                  </button>
+                  <span>/</span>
+                  <span className="text-slate-400">Brand Family</span>
+                  <span>/</span>
+                  <span className="bg-slate-200/80 text-slate-700 px-2 py-0.5 rounded-md font-semibold">{selectedFamily}</span>
+                </div>
+
+                {/* Brand Hero Card */}
+                <div className="relative mb-10 overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white rounded-[2rem] p-6 md:p-10 shadow-xl border border-slate-700">
+                  {/* Decorative background patterns */}
+                  <div className="absolute top-0 right-0 -mt-10 -mr-10 w-60 h-60 bg-indigo-500 rounded-full blur-3xl opacity-20 pointer-events-none"></div>
+                  <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-48 h-48 bg-emerald-500 rounded-full blur-3xl opacity-10 pointer-events-none"></div>
+                  
+                  <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="max-w-3xl">
+                      <div className="inline-flex items-center gap-1.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3.5 py-1.5 rounded-full text-xs font-black tracking-wide uppercase mb-4 shadow-sm backdrop-blur-md">
+                        <Award size={14} className="animate-pulse" />
+                        <span>{lang === "sw" ? "Mkusanyiko Rasmi uliothibitishwa" : "Official Certified Family"}</span>
+                      </div>
+                      <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white mb-4">
+                        {selectedFamily} <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-indigo-300">{lang === "sw" ? "Mkusanyiko wetu" : "Collection"}</span>
+                      </h1>
+                      <p className="text-slate-300 text-sm md:text-base leading-relaxed max-w-2xl">
+                        {lang === "sw" 
+                          ? `Gundua kila bidhaa bora inayomilikiwa na familia mashuhuri ya ${selectedFamily}. Bidhaa zote hapa zimethibitishwa nchini Tanzania kuwa halisi kutoka kwa wauzaji wakuu wenye dhamana kamili ya malipo ya Orbi.` 
+                          : `Browse all high-end certified assets within the prestigious ${selectedFamily} ecosystem. Safe purchases backed by our Orbi payment protection system and trusted sellers across Tanzania.`}
+                      </p>
+                    </div>
+
+                    <div className="bg-white/10 backdrop-blur-md border border-white/10 p-5 rounded-2xl shrink-0 text-center md:text-left flex flex-row md:flex-col items-center justify-around gap-4 shadow-inner md:w-56">
+                      <div className="text-center md:text-left">
+                        <span className="text-xs text-indigo-200 block font-semibold">{lang === "sw" ? "Bidhaa Zinazopatikana" : "Available Catalog"}</span>
+                        <strong className="text-2xl font-black text-white">{familyProducts.length}</strong>
+                      </div>
+                      <div className="h-8 w-px bg-white/10 md:h-px md:w-full"></div>
+                      <div className="text-center md:text-left">
+                        <span className="text-xs text-indigo-200 block font-semibold">{lang === "sw" ? "Kiwango cha Chini" : "Lowest Price"}</span>
+                        <strong className="text-xl font-black text-emerald-300">
+                          {familyProducts.length > 0 
+                            ? `TSh ${formatCurrency(Math.min(...familyProducts.map(p => p.price)))}` 
+                            : "TSh 0"}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filter and Search Panel */}
+                <div className="bg-white rounded-2xl p-4 md:p-6 mb-8 border border-slate-200 shadow-xs flex flex-col md:flex-row gap-4 items-center justify-between">
+                  {/* Search input */}
+                  <div className="relative w-full md:max-w-md">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input
+                      type="text"
+                      value={familySearch}
+                      onChange={(e) => setFamilySearch(e.target.value)}
+                      placeholder={lang === "sw" ? `Tafuta ndani ya familia ya ${selectedFamily}...` : `Search inside ${selectedFamily}...`}
+                      className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition"
+                    />
+                    {familySearch && (
+                      <button 
+                        onClick={() => setFamilySearch("")} 
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Sorting controls */}
+                  <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+                    <span className="text-xs font-black text-slate-500 whitespace-nowrap flex items-center gap-1 shrink-0">
+                      <ArrowUpDown size={14} /> {lang === "sw" ? "Panga kwa:" : "Sort by:"}
+                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {[
+                        { id: "default", label: lang === "sw" ? "Kawaida" : "Default" },
+                        { id: "asc", label: lang === "sw" ? "Bei Chini" : "Price Low-High" },
+                        { id: "desc", label: lang === "sw" ? "Bei Juu" : "Price High-Low" },
+                        { id: "newest", label: lang === "sw" ? "Mpya Zaidi" : "Newest" },
+                        { id: "popular", label: lang === "sw" ? "Maarufu" : "Popular" },
+                      ].map(opt => (
+                        <button
+                          key={opt.id}
+                          onClick={() => setFamilySortOrder(opt.id)}
+                          className={`text-xs px-3 py-1.5 rounded-lg border font-black transition whitespace-nowrap ${
+                            familySortOrder === opt.id
+                              ? "bg-slate-900 border-slate-900 text-white shadow-xs"
+                              : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Product Listing Area */}
+                <div>
+                  {filteredFamilyProducts.length > 0 ? (
+                    <div className="orbi-product-list-grid py-1">
+                      <AnimatePresence mode="popLayout">
+                        {filteredFamilyProducts.map((p) => {
+                          const pSeller = sellers.find(s => s.id === p.sellerId);
+                          return (
+                            <motion.div
+                              key={p.id}
+                              layout
+                              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.95 }}
+                              transition={{ duration: 0.3, ease: "easeOut" }}
+                            >
+                              <ProductCard
+                                p={p}
+                                seller={pSeller}
+                                onAdd={(openCart) => addToCart(p, openCart)}
+                                onSelect={() => handleProductSelect(p)}
+                                onInteract={() => trackProductInteraction(p)}
+                                onViewSeller={setViewSeller}
+                                lang={lang}
+                                isLiked={likedProductIds.includes(p.id)}
+                                onLikeToggle={toggleLikeProduct}
+                              />
+                            </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
+                    </div>
+                  ) : (
+                    <div className="text-center py-20 bg-white rounded-3xl border border-slate-200/60 shadow-xs px-6">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+                        <Search size={28} />
+                      </div>
+                      <h3 className="text-lg font-black text-slate-800 mb-1">
+                        {lang === "sw" ? "Hakuna bidhaa inayolingana" : "No matching products found"}
+                      </h3>
+                      <p className="text-sm text-slate-500 max-w-md mx-auto mb-6">
+                        {lang === "sw" 
+                          ? `Tulishindwa kupata bidhaa yoyote katika familia ya ${selectedFamily} inayolingana na neno lako la utafutaji.` 
+                          : `We couldn't find any products in the ${selectedFamily} brand family matching your search term.`}
+                      </p>
+                      <button
+                        onClick={() => setFamilySearch("")}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black px-5 py-2.5 rounded-xl transition"
+                      >
+                        {lang === "sw" ? "Anza upya utafutaji" : "Reset Search"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* What are you looking for automated recommendation bar */}
+                <div className="mt-12">
+                  <WhatAreYouLookingFor
+                    products={products}
+                    sellers={sellers}
+                    lang={lang}
+                    onSelectFamily={(fam) => {
+                      setSelectedFamily(fam);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                  />
+                </div>
+
+                {/* Brand Footer Info Card */}
+                <div className="mt-16 bg-slate-100 border border-slate-200/60 rounded-3xl p-6 flex flex-col md:flex-row items-center gap-6">
+                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-700 shadow-xs border border-slate-150">
+                    <Store size={22} />
+                  </div>
+                  <div className="flex-1 text-center md:text-left">
+                    <h4 className="text-sm font-black text-slate-800 mb-1">
+                      {lang === "sw" ? `Kuhusu Familia ya Bidhaa za ${selectedFamily}` : `About the ${selectedFamily} Brand Family`}
+                    </h4>
+                    <p className="text-xs text-slate-500 leading-relaxed max-w-3xl">
+                      {lang === "sw"
+                        ? `Bidhaa hizi zimeorodheshwa na wauzaji wenye leseni na kusafirishwa chini ya mfumo thabiti wa ukaguzi vya bidhaa ili kuhakikisha usalama na kuridhika kwa 100%. Wasiliana na msaada wetu ikiwa una maswali zaidi.`
+                        : `These products are registered by authorized dealers and shipped under a strict authentication process to ensure maximum security and 100% customer satisfaction. Contact support if you need assistance.`}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedFamily(null);
+                    }}
+                    className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 text-xs font-black px-5 py-2.5 rounded-xl transition"
+                  >
+                    {lang === "sw" ? "Gundua Bidhaa Zingine" : "Explore Other Brands"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8">
+                {!viewSeller ? (
                 <>
                   {/* Promos */}
                   {isLoading ? (
@@ -2373,6 +2632,31 @@ export default function ClientApp() {
                             </motion.div>,
                           ];
 
+                          // Inject dynamic "What are you looking for?" scrolling banner in the product stream
+                          if (idx === 6 || (filteredProducts.length < 7 && idx === filteredProducts.length - 1)) {
+                            cards.push(
+                              <motion.div
+                                key="what-are-you-looking-for-row-break"
+                                layout
+                                className="col-span-full py-4"
+                                initial={{ opacity: 0, y: 15 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.3 }}
+                              >
+                                <WhatAreYouLookingFor
+                                  products={products}
+                                  sellers={sellers}
+                                  lang={lang}
+                                  onSelectFamily={(fam) => {
+                                    setSelectedFamily(fam);
+                                    window.scrollTo({ top: 0, behavior: "smooth" });
+                                  }}
+                                />
+                              </motion.div>
+                            );
+                          }
+
                           if (
                             idx === adPlacementIndex &&
                             sortedAdsList.length > 0
@@ -2532,6 +2816,8 @@ export default function ClientApp() {
                 </div>
               </div>
             </div>
+            </>
+            )}
 
             {/* Contact Form */}
             <div
@@ -3437,6 +3723,7 @@ export default function ClientApp() {
             <ProductDetailPage
               product={selectedProduct}
               seller={sellers.find((s) => s.id === selectedProduct.sellerId)}
+              allProducts={products}
               relatedProducts={(() => {
               // 1. Must match the same category to avoid unrelated categories in the same broad niche
               const sameCategoryProducts = products.filter((p) => {
@@ -3535,6 +3822,10 @@ export default function ClientApp() {
                 "",
                 `${window.location.pathname}${suffix}`,
               );
+            }}
+            onFilterByFamily={(family) => {
+              const url = `/family/${slugify(family)}`;
+              window.open(url, "_blank");
             }}
             onAdd={addToCart}
             lang={lang}
