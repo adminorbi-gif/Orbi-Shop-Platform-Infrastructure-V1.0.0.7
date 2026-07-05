@@ -367,7 +367,7 @@ export const WhatAreYouLookingFor: React.FC<WhatAreYouLookingForProps> = ({
           <div className="lg:col-span-7 flex flex-col justify-center min-w-0">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-[10px] text-slate-500 font-extrabold tracking-widest uppercase">
-                {lang === "sw" ? "Bidhaa bora zinazofanana" : "Familiar top products"}
+                {lang === "sw" ? "Bidhaa bora zinazoendana" : "Familiar top products"}
               </span>
               <div className="flex items-center gap-1 text-[9px] text-indigo-600 font-bold">
                 <span>{lang === "sw" ? "Sogeza" : "Scroll"}</span>
