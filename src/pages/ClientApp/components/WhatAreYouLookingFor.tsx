@@ -278,7 +278,7 @@ export const WhatAreYouLookingFor: React.FC<WhatAreYouLookingForProps> = ({
               >
                 <div>
                   <span className="text-[10px] text-slate-500 font-extrabold tracking-widest uppercase block mb-1">
-                    {lang === "sw" ? "FAMILIA INAYOONGOZA" : "SPOTLIGHT ECOSYSTEM"}
+                    {lang === "sw" ? "Makundi yanayo ongoza" : "SPOTLIGHT ECOSYSTEM"}
                   </span>
                   <h3 className="text-xl font-black text-slate-950 mb-2 leading-tight">
                     {activeSpotlight.name}
