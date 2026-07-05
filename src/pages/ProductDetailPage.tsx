@@ -292,7 +292,7 @@ export default function ProductDetailPage({
     scored.sort((a, b) => b.score - a.score);
 
     // Take top 4 unique products
-    return scored.slice(0, 4).map((x) => x.product);
+    return scored.slice(0, 4);
   }, [allProducts, relatedProducts, product]);
 
   const [imgIdx, setImgIdx] = useState(0);
@@ -1394,7 +1394,7 @@ export default function ProductDetailPage({
             <div id="reviews" className="orbi-product-detail-card rounded-[1.75rem] overflow-hidden mb-8">
               <div className="border-b border-slate-200/70 bg-slate-50/70 px-5 py-4 flex justify-between items-center">
                 <h3 className="font-black text-slate-900">
-                  {lang === "sw" ? "Maeni ya Wateja" : "Customer Reviews"} ({reviews.length})
+                  {lang === "sw" ? "Maoni ya Wateja" : "Customer Reviews"} ({reviews.length})
                 </h3>
               </div>
               
@@ -1562,8 +1562,8 @@ export default function ProductDetailPage({
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {combinedFamilyProducts.map((p) => (
+              <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {combinedFamilyProducts.map(({ product: p, score }) => (
                   <div
                     key={`combined-${p.id}`}
                     className="bg-white border border-slate-200/60 rounded-2xl p-4 flex flex-col justify-between hover:border-indigo-500/50 hover:shadow-md transition duration-300 group cursor-pointer relative"
