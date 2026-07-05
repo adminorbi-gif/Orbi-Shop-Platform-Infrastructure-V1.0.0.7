@@ -132,7 +132,7 @@ class SchemaValidator {
       ...(data.id ? { id: String(data.id) } : {}),
       name,
       sku,
-      niche: String(data.niche || "Electronics").trim(),
+      niche: String(data.niche || "").trim(),
       category,
       family: data.family ? String(data.family).trim() : undefined,
       price,

@@ -20,7 +20,7 @@ import { motion } from "motion/react";
 import { supabase } from "../../../lib/supabase";
 import { formatCurrency } from "../../../lib/storage";
 import { PriceDisplay } from "../../../components/PriceDisplay";
-import { db } from "../../../lib/db";
+import { db, apiFetch } from "../../../lib/db";
 import GooglePlacePicker from "../../../components/GooglePlacePicker";
 import { quoteProductDelivery } from "../../../lib/deliveryZones";
 import { SchemaValidator } from "../../../utils/schemaValidation";
@@ -2791,7 +2791,7 @@ export function ProductsAdmin({
     if (prod) {
       setEditId(prod.id);
       setName(prod.name);
-      setNiche(prod.niche || "Electronics");
+      setNiche(prod.niche || "");
       setCategory(prod.category);
       setFamily(prod.family || "");
       setPrice(prod.price.toString());
@@ -2882,9 +2882,8 @@ export function ProductsAdmin({
 
     setGeneratingDesc(true);
     try {
-      const resp = await fetch("/api/v1/products/ai-suggest-description", {
+      const data = await apiFetch("/api/v1/products/ai-suggest-description", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
           category,
@@ -2892,8 +2891,7 @@ export function ProductsAdmin({
           tags: tags ? tags.split(",").map((t) => t.trim()) : [],
         }),
       });
-      const data = await resp.json();
-      if (data.success && data.description) {
+      if (data.description) {
         setDesc(data.description);
         showAlert(
           lang === "sw"
@@ -2930,17 +2928,15 @@ export function ProductsAdmin({
 
     setClassifying(true);
     try {
-      const resp = await fetch("/api/v1/products/ai-suggest-niche", {
+      const data = await apiFetch("/api/v1/products/ai-suggest-niche", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
           description: desc,
           availableNiches: globalNiches,
         }),
       });
-      const data = await resp.json();
-      if (data.success && data.suggestedNiche) {
+      if (data.suggestedNiche) {
         setNiche(data.suggestedNiche);
         setCategory(data.suggestedCategory || "");
         setFamily(data.suggestedFamily || "");

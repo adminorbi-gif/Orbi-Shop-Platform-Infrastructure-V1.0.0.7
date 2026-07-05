@@ -1100,7 +1100,7 @@ const { showAlert, showConfirm } = useDialog();
         ad.image ||
         "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500",
       badge: lang === "sw" ? "Imedhaminiwa" : "Sponsored",
-      niche: ad.niche || "Electronics",
+      niche: ad.niche || "",
       action: () => handleMarketplaceAdClick(ad),
     }));
 
