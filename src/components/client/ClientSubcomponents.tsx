@@ -15,20 +15,6 @@ import { supabase } from "../../lib/supabase";
 import { db } from "../../lib/db";
 
 export function AboutUsSection({ lang }: { lang: Lang }) {
-  const [liveNiches, setLiveNiches] = useState<any[]>([]);
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const fetched = await db.getNiches();
-        if (fetched && fetched.length > 0) {
-          setLiveNiches(fetched);
-        }
-      } catch (err) {}
-    }
-    load();
-  }, []);
-
   return (
     <div className="relative z-10 w-full mb-6 rounded-[2rem] overflow-hidden bg-white shadow-sm border border-slate-200/60 p-6 sm:p-8 lg:p-10 flex flex-col items-center justify-center text-center" id="about-us-section">
       {/* Dynamic Background Pattern */}
@@ -48,27 +34,61 @@ export function AboutUsSection({ lang }: { lang: Lang }) {
         </p>
 
         {/* Trust Badges - Marquee */}
-        {liveNiches.length > 0 && (
-          <div className="w-full overflow-hidden relative [mask-image:linear-gradient(to_right,transparent,black_5%,black_95%,transparent)]">
-            <div className="flex flex-row flex-nowrap w-max gap-3 text-[10px] sm:text-xs font-bold text-slate-700 animate-marquee">
-              {/* NICHE SET */}
-              {liveNiches.map((n, i) => (
-                <div key={i} className="flex flex-row items-center justify-center gap-2 bg-slate-50 px-3 py-2 rounded-full border border-slate-100 text-center shrink-0">
-                  <Store className="w-3.5 h-3.5 text-slate-500 shrink-0" />{" "}
-                  <span>{n.name}</span>
-                </div>
-              ))}
+        <div className="w-full overflow-hidden relative [mask-image:linear-gradient(to_right,transparent,black_5%,black_95%,transparent)]">
+          <div className="flex flex-row flex-nowrap w-max gap-3 text-[10px] sm:text-xs font-bold text-slate-700 animate-marquee">
+            {/* NICHE SET */}
+            <div className="flex flex-row items-center justify-center gap-2 bg-slate-50 px-3 py-2 rounded-full border border-slate-100 text-center shrink-0">
+              <Smartphone className="w-3.5 h-3.5 text-blue-500 shrink-0" />{" "}
+              <span>{t(lang, "feat.niche1")}</span>
+            </div>
+            <div className="flex flex-row items-center justify-center gap-2 bg-slate-50 px-3 py-2 rounded-full border border-slate-100 text-center shrink-0">
+              <Shirt className="w-3.5 h-3.5 text-pink-500 shrink-0" />{" "}
+              <span>{t(lang, "feat.niche2")}</span>
+            </div>
+            <div className="flex flex-row items-center justify-center gap-2 bg-slate-50 px-3 py-2 rounded-full border border-slate-100 text-center shrink-0">
+              <Sofa className="w-3.5 h-3.5 text-amber-600 shrink-0" />{" "}
+              <span>{t(lang, "feat.niche3")}</span>
+            </div>
+            <div className="flex flex-row items-center justify-center gap-2 bg-slate-50 px-3 py-2 rounded-full border border-slate-100 text-center shrink-0">
+              <Heart className="w-3.5 h-3.5 text-red-500 shrink-0" />{" "}
+              <span>{t(lang, "feat.niche4")}</span>
+            </div>
+            <div className="flex flex-row items-center justify-center gap-2 bg-slate-50 px-3 py-2 rounded-full border border-slate-100 text-center shrink-0">
+              <CarFront className="w-3.5 h-3.5 text-slate-800 shrink-0" />{" "}
+              <span>{t(lang, "feat.niche5")}</span>
+            </div>
+            <div className="flex flex-row items-center justify-center gap-2 bg-slate-50 px-3 py-2 rounded-full border border-slate-100 text-center shrink-0">
+              <ShoppingBag className="w-3.5 h-3.5 text-emerald-500 shrink-0" />{" "}
+              <span>{t(lang, "feat.niche6")}</span>
+            </div>
 
-              {/* NICHE DUPLICATE SET FOR SEAMLESS LOOP */}
-              {liveNiches.map((n, i) => (
-                <div key={`dup-${i}`} className="flex flex-row items-center justify-center gap-2 bg-slate-50 px-3 py-2 rounded-full border border-slate-100 text-center shrink-0">
-                  <Store className="w-3.5 h-3.5 text-slate-500 shrink-0" />{" "}
-                  <span>{n.name}</span>
-                </div>
-              ))}
+            {/* NICHE DUPLICATE SET FOR SEAMLESS LOOP */}
+            <div className="flex flex-row items-center justify-center gap-2 bg-slate-50 px-3 py-2 rounded-full border border-slate-100 text-center shrink-0">
+              <Smartphone className="w-3.5 h-3.5 text-blue-500 shrink-0" />{" "}
+              <span>{t(lang, "feat.niche1")}</span>
+            </div>
+            <div className="flex flex-row items-center justify-center gap-2 bg-slate-50 px-3 py-2 rounded-full border border-slate-100 text-center shrink-0">
+              <Shirt className="w-3.5 h-3.5 text-pink-500 shrink-0" />{" "}
+              <span>{t(lang, "feat.niche2")}</span>
+            </div>
+            <div className="flex flex-row items-center justify-center gap-2 bg-slate-50 px-3 py-2 rounded-full border border-slate-100 text-center shrink-0">
+              <Sofa className="w-3.5 h-3.5 text-amber-600 shrink-0" />{" "}
+              <span>{t(lang, "feat.niche3")}</span>
+            </div>
+            <div className="flex flex-row items-center justify-center gap-2 bg-slate-50 px-3 py-2 rounded-full border border-slate-100 text-center shrink-0">
+              <Heart className="w-3.5 h-3.5 text-red-500 shrink-0" />{" "}
+              <span>{t(lang, "feat.niche4")}</span>
+            </div>
+            <div className="flex flex-row items-center justify-center gap-2 bg-slate-50 px-3 py-2 rounded-full border border-slate-100 text-center shrink-0">
+              <CarFront className="w-3.5 h-3.5 text-slate-800 shrink-0" />{" "}
+              <span>{t(lang, "feat.niche5")}</span>
+            </div>
+            <div className="flex flex-row items-center justify-center gap-2 bg-slate-50 px-3 py-2 rounded-full border border-slate-100 text-center shrink-0">
+              <ShoppingBag className="w-3.5 h-3.5 text-emerald-500 shrink-0" />{" "}
+              <span>{t(lang, "feat.niche6")}</span>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

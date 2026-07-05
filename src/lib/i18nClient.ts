@@ -12,6 +12,13 @@ export const clientDict = {
     'hero.desc': 'Biashara na wauzaji waliopimwa na kuidhinishwa pekee ndio wanaouza hapa. Tunahakikisha ubora, uhalisi, na viwango vya huduma pamoja na usalama wa malipo (PaySafe) chini ya mwavuli wa Orbi.',
     'hero.shop_now': 'Nunua Sasa',
     
+    'feat.niche1': 'Elektroniki & Simu',
+    'feat.niche2': 'Mavazi & Mitindo',
+    'feat.niche3': 'Samani & Nyumbani',
+    'feat.niche4': 'Afya & Urembo',
+    'feat.niche5': 'Magari & Vipuri',
+    'feat.niche6': 'Chakula & Vinywaji',
+    
     'filter.sort': 'Panga:',
     'filter.default': 'Kawaida',
     'filter.asc': 'Bei (Ndogo - Kubwa)',
@@ -88,6 +95,13 @@ export const clientDict = {
     'hero.subtitle': 'Curated Marketplace of Trusted Sellers',
     'hero.desc': 'Only pre-approved, vetted businesses and sellers. Every product carries an implicit Orbi guarantee of trust, with full payment protection and PaySafe services ensuring a safe and verified shopping experience.',
     'hero.shop_now': 'Shop Now',
+    
+    'feat.niche1': 'Electronics & Tech',
+    'feat.niche2': 'Fashion & Apparel',
+    'feat.niche3': 'Home & Furniture',
+    'feat.niche4': 'Health & Beauty',
+    'feat.niche5': 'Auto & Motors',
+    'feat.niche6': 'Supermarket & Food',
     
     'filter.sort': 'Sort:',
     'filter.default': 'Default',
