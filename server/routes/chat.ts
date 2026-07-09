@@ -16,6 +16,21 @@ const safeErrorMessage = (error: any) => {
   return message.length > 240 ? `${message.slice(0, 240)}...` : message;
 };
 
+const normalizeParticipantKey = (id: any, role?: any) => {
+  const value = String(id || "").trim();
+  const roleValue = String(role || "").trim().toLowerCase();
+  if (
+    roleValue === "admin" ||
+    value === "admin" ||
+    value === "support" ||
+    value === "official" ||
+    value === "00000000-0000-0000-0000-000000000001"
+  ) {
+    return "admin";
+  }
+  return value;
+};
+
 // GET /api/v1/chat/conversations
 router.get("/conversations", async (req, res) => {
   try {
@@ -103,11 +118,16 @@ router.post("/conversations/:id/messages", async (req, res) => {
     let systemWarning = null;
 
     // Check if the conversation is a support chat (with admin)
-    const { data: convData } = await db.from('conversations').select('participants').eq('id', id).single();
+    const { data: convData } = await db.from('conversations').select('participants, unread_count').eq('id', id).single();
     let isSupportChat = false;
+    let conversationParticipants: any[] = [];
+    let conversationUnreadCount: Record<string, number> = {};
     if (convData && convData.participants) {
-        const participants = typeof convData.participants === 'string' ? JSON.parse(convData.participants) : convData.participants;
-        isSupportChat = participants.some((p: any) => p.id === "00000000-0000-0000-0000-000000000001" || p.id === "admin" || p.id === "official" || p.id === "support");
+        conversationParticipants = typeof convData.participants === 'string' ? JSON.parse(convData.participants) : convData.participants;
+        conversationUnreadCount = convData.unread_count
+          ? (typeof convData.unread_count === 'string' ? JSON.parse(convData.unread_count) : convData.unread_count)
+          : {};
+        isSupportChat = conversationParticipants.some((p: any) => p.id === "00000000-0000-0000-0000-000000000001" || p.id === "admin" || p.id === "official" || p.id === "support" || p.role === "admin");
     }
 
     if (!isSupportChat) {
@@ -188,10 +208,19 @@ router.post("/conversations/:id/messages", async (req, res) => {
     const { error } = await db.from('chat_messages').insert(payloadsToInsert);
     if (error) throw error;
 
-    // Update conversation lastMessage
+    const senderKey = normalizeParticipantKey(msg.senderId, msg.senderRole);
+    const nextUnreadCount = { ...conversationUnreadCount };
+    conversationParticipants.forEach((participant: any) => {
+        const participantKey = normalizeParticipantKey(participant.id, participant.role);
+        if (!participantKey || participantKey === senderKey) return;
+        nextUnreadCount[participantKey] = Number(nextUnreadCount[participantKey] || 0) + 1;
+    });
+
+    // Update conversation lastMessage and unread counters
     const convPayload = {
         last_message: processedContent, // Use processed content
-        last_message_at: timestamp
+        last_message_at: timestamp,
+        unread_count: nextUnreadCount
     };
     await db.from('conversations').update(convPayload).eq('id', id);
 
@@ -429,6 +458,9 @@ router.post("/conversations/:id/mark-read", async (req, res) => {
   try {
     const { id } = req.params;
     const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ success: false, error: "userId is required." });
+    }
     const db = getDb(req);
     
     // In a real app we only mark messages where sender_id != userId
@@ -439,6 +471,24 @@ router.post("/conversations/:id/mark-read", async (req, res) => {
       .eq('is_read', false);
       
     if (error) throw error;
+
+    const { data: convData } = await db
+      .from('conversations')
+      .select('unread_count')
+      .eq('id', id)
+      .single();
+
+    const unreadCount = convData?.unread_count
+      ? (typeof convData.unread_count === 'string' ? JSON.parse(convData.unread_count) : convData.unread_count)
+      : {};
+    unreadCount[normalizeParticipantKey(userId)] = 0;
+
+    const { error: updateConversationErr } = await db
+      .from('conversations')
+      .update({ unread_count: unreadCount })
+      .eq('id', id);
+
+    if (updateConversationErr) throw updateConversationErr;
     
     res.json({ success: true });
   } catch (error: any) {
