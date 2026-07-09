@@ -105,16 +105,23 @@ router.post("/conversations/:id/messages", async (req, res) => {
   try {
     const { id } = req.params;
     const msg = req.body;
+    const content = String(msg?.content || "").trim();
     
     // Block guest/ghost users from sending any chat messages
     if (!msg.senderId || msg.senderId.startsWith("guest") || msg.senderId === "guest") {
         return res.status(403).json({ success: false, error: "Only registered and active accounts are allowed to send messages." });
     }
+    if (!content) {
+        return res.status(400).json({ success: false, error: "Message content is required." });
+    }
+    if (!["customer", "seller", "admin", "system"].includes(String(msg.senderRole || ""))) {
+        return res.status(400).json({ success: false, error: "A valid sender role is required." });
+    }
 
     const db = getDb(req);
     
     const timestamp = Date.now();
-    let processedContent = msg.content;
+    let processedContent = content;
     let systemWarning = null;
 
     // Check if the conversation is a support chat (with admin)
@@ -155,7 +162,7 @@ router.post("/conversations/:id/messages", async (req, res) => {
     
         const io = req.app.get("io");
         const userLang = msg.lang === "sw" ? "sw" : "en";
-        const securityStatus = await checkOffPlatformPayment(msg.content, msg.senderId, msg.senderRole, io, userLang);
+        const securityStatus = await checkOffPlatformPayment(content, msg.senderId, msg.senderRole, io, userLang);
         
         if (securityStatus.frozen) {
             return res.status(403).json({ 
@@ -381,6 +388,9 @@ router.post("/conversations/:id/messages", async (req, res) => {
 router.post("/conversations", async (req, res) => {
     try {
         const { participants } = req.body;
+        if (!Array.isArray(participants) || participants.length < 2) {
+            return res.status(400).json({ success: false, error: "At least two conversation participants are required." });
+        }
         
         // Reject conversation creation if any participant is a guest
         const hasGuest = (participants || []).some((p: any) => !p.id || String(p.id).startsWith("guest") || p.id === "guest");
