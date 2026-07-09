@@ -26,6 +26,9 @@ ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'activ
 ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS "deleteRequested" BOOLEAN DEFAULT false;
 ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS tin TEXT;
 ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS preferred_language TEXT DEFAULT 'sw';
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS security_flags INTEGER DEFAULT 0;
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS block_reason TEXT;
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS last_security_flag_at TIMESTAMPTZ;
 
 -- Trigger to hash password on insert or update
 CREATE OR REPLACE FUNCTION public.encrypt_customer_password()
@@ -319,6 +322,31 @@ CREATE TABLE IF NOT EXISTS public.messages (
   legacy_id TEXT
 );
 
+-- Real-time Chat Conversations Table
+CREATE TABLE IF NOT EXISTS public.conversations (
+  id TEXT PRIMARY KEY,
+  participants JSONB NOT NULL DEFAULT '[]'::jsonb,
+  last_message TEXT,
+  last_message_at BIGINT,
+  unread_count JSONB DEFAULT '{}'::jsonb,
+  created_at BIGINT NOT NULL
+);
+
+-- Real-time Chat Messages Table
+CREATE TABLE IF NOT EXISTS public.chat_messages (
+  id TEXT PRIMARY KEY,
+  conversation_id TEXT NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
+  sender_id TEXT NOT NULL,
+  sender_role TEXT NOT NULL,
+  sender_name TEXT,
+  content TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT false,
+  timestamp BIGINT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_id ON public.chat_messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_created_at ON public.conversations(created_at DESC);
+
 -- Coupons Table
 CREATE TABLE IF NOT EXISTS public.coupons (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -380,6 +408,8 @@ ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.invoice_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.portal_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.delivery_zones ENABLE ROW LEVEL SECURITY;
@@ -410,6 +440,14 @@ DROP POLICY IF EXISTS "Admin manage order_items" ON public.order_items;
 DROP POLICY IF EXISTS "Public insert messages" ON public.messages;
 DROP POLICY IF EXISTS "Public select/read messages" ON public.messages;
 DROP POLICY IF EXISTS "Admin manage messages" ON public.messages;
+DROP POLICY IF EXISTS "Allow anon read conversations" ON public.conversations;
+DROP POLICY IF EXISTS "Allow anon insert conversations" ON public.conversations;
+DROP POLICY IF EXISTS "Allow anon update conversations" ON public.conversations;
+DROP POLICY IF EXISTS "Allow anon delete conversations" ON public.conversations;
+DROP POLICY IF EXISTS "Allow anon read chat_messages" ON public.chat_messages;
+DROP POLICY IF EXISTS "Allow anon insert chat_messages" ON public.chat_messages;
+DROP POLICY IF EXISTS "Allow anon update chat_messages" ON public.chat_messages;
+DROP POLICY IF EXISTS "Allow anon delete chat_messages" ON public.chat_messages;
 
 DROP POLICY IF EXISTS "Public insert customers" ON public.customers;
 DROP POLICY IF EXISTS "Public read customers matching data" ON public.customers;
@@ -464,6 +502,16 @@ CREATE POLICY "Admin manage order_items" ON public.order_items FOR ALL USING (au
 CREATE POLICY "Public insert messages" ON public.messages FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public select/read messages" ON public.messages FOR SELECT USING (true);
 CREATE POLICY "Admin manage messages" ON public.messages FOR ALL USING (auth.role() = 'authenticated');
+
+-- Real-time chat: backend-mediated access for registered customer/seller/admin conversations
+CREATE POLICY "Allow anon read conversations" ON public.conversations FOR SELECT USING (true);
+CREATE POLICY "Allow anon insert conversations" ON public.conversations FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow anon update conversations" ON public.conversations FOR UPDATE USING (true);
+CREATE POLICY "Allow anon delete conversations" ON public.conversations FOR DELETE USING (true);
+CREATE POLICY "Allow anon read chat_messages" ON public.chat_messages FOR SELECT USING (true);
+CREATE POLICY "Allow anon insert chat_messages" ON public.chat_messages FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow anon update chat_messages" ON public.chat_messages FOR UPDATE USING (true);
+CREATE POLICY "Allow anon delete chat_messages" ON public.chat_messages FOR DELETE USING (true);
 
 -- Customers: Consumers can register. Admins can manage
 CREATE POLICY "Public insert customers" ON public.customers FOR INSERT WITH CHECK (true);
@@ -784,6 +832,9 @@ ALTER TABLE public.sellers ADD COLUMN IF NOT EXISTS pickup_place_id TEXT;
 ALTER TABLE public.sellers ADD COLUMN IF NOT EXISTS pickup_lat NUMERIC(10,7);
 ALTER TABLE public.sellers ADD COLUMN IF NOT EXISTS pickup_lng NUMERIC(10,7);
 ALTER TABLE public.sellers ADD COLUMN IF NOT EXISTS pickup_zone_id TEXT;
+ALTER TABLE public.sellers ADD COLUMN IF NOT EXISTS security_flags INTEGER DEFAULT 0;
+ALTER TABLE public.sellers ADD COLUMN IF NOT EXISTS block_reason TEXT;
+ALTER TABLE public.sellers ADD COLUMN IF NOT EXISTS last_security_flag_at TIMESTAMPTZ;
 
 -- RLS for Sellers
 ALTER TABLE public.sellers ENABLE ROW LEVEL SECURITY;
