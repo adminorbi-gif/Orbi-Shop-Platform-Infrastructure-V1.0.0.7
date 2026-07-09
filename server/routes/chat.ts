@@ -542,4 +542,103 @@ router.delete("/conversations/:id/messages", async (req, res) => {
   }
 });
 
+// POST /api/v1/chat/backfill-legacy
+// Maintenance-only bridge for hosts where raw SQL migrations cannot be executed directly.
+router.post("/backfill-legacy", async (req, res) => {
+  try {
+    const expectedToken =
+      process.env.ORBI_SHOP_MAINTENANCE_TOKEN ||
+      process.env.ORBI_SHOP_TALK_API_KEY ||
+      process.env.ORBI_SHOP_PAY_WEBHOOK_SECRET;
+    const providedToken = String(req.headers["x-orbi-maintenance-token"] || "");
+
+    if (!expectedToken || providedToken !== expectedToken) {
+      return res.status(403).json({ success: false, error: "Maintenance authorization failed." });
+    }
+
+    const db = getDb(req);
+    const { data: legacyMessages, error: legacyErr } = await db
+      .from("messages")
+      .select("*")
+      .order("created_at", { ascending: true });
+    if (legacyErr) throw legacyErr;
+
+    let conversationsUpserted = 0;
+    let messagesUpserted = 0;
+
+    for (const msg of legacyMessages || []) {
+      const customerKey =
+        msg.customer_id ||
+        `legacy-customer-${Buffer.from(`${msg.phone || ""}:${msg.name || ""}`).toString("hex").slice(0, 48)}`;
+      const conversationId = `legacy-support-${customerKey}`;
+      const createdAt = msg.created_at ? new Date(msg.created_at).getTime() : Date.now();
+      const hasReply = Boolean(String(msg.admin_reply || "").trim());
+      const replyAt = createdAt + 1;
+      const participants = [
+        { id: customerKey, role: "customer", name: msg.name || "Customer" },
+        { id: "admin", role: "admin", name: "Orbi Admin" },
+      ];
+
+      const unreadCount = {
+        admin: msg.is_read ? 0 : 1,
+        [customerKey]: hasReply ? 1 : 0,
+      };
+
+      const { error: convErr } = await db.from("conversations").upsert(
+        {
+          id: conversationId,
+          participants,
+          last_message: hasReply ? msg.admin_reply : msg.message,
+          last_message_at: hasReply ? replyAt : createdAt,
+          unread_count: unreadCount,
+          created_at: createdAt,
+        },
+        { onConflict: "id" },
+      );
+      if (convErr) throw convErr;
+      conversationsUpserted += 1;
+
+      const rows = [
+        {
+          id: `legacy-message-${msg.id}`,
+          conversation_id: conversationId,
+          sender_id: customerKey,
+          sender_role: "customer",
+          sender_name: msg.name || "Customer",
+          content: msg.message || "",
+          is_read: Boolean(msg.is_read),
+          timestamp: createdAt,
+        },
+      ];
+
+      if (hasReply) {
+        rows.push({
+          id: `legacy-reply-${msg.id}`,
+          conversation_id: conversationId,
+          sender_id: "admin",
+          sender_role: "admin",
+          sender_name: "Orbi Admin",
+          content: msg.admin_reply,
+          is_read: false,
+          timestamp: replyAt,
+        });
+      }
+
+      const { error: msgErr } = await db.from("chat_messages").upsert(rows, { onConflict: "id" });
+      if (msgErr) throw msgErr;
+      messagesUpserted += rows.length;
+    }
+
+    res.json({
+      success: true,
+      conversationsUpserted,
+      messagesUpserted,
+      legacyMessages: legacyMessages?.length || 0,
+    });
+  } catch (error: any) {
+    console.error("POST /api/v1/chat/backfill-legacy error:", safeErrorMessage(error));
+    res.status(503).json({ success: false, error: "Legacy messages could not be backfilled." });
+  }
+});
+
 export default router;
