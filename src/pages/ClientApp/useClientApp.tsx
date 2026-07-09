@@ -9,6 +9,7 @@ import {
   InvertedIndexSearch,
 } from "../../lib/SearchEngine";
 import { formatCurrency } from "../../lib/storage";
+import { fetchConversations } from "../../lib/chat";
 import {
   Product,
   Promotion,
@@ -1180,6 +1181,7 @@ const { showAlert, showConfirm } = useDialog();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [systemNiches, setSystemNiches] = useState<Niche[]>([]);
   const [guestMessages, setGuestMessages] = useState<Message[]>([]);
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
 
   // --- Loyalty Program & Receipt Scanner States ---
   const [forcePointsUpdate, setForcePointsUpdate] = useState(0);
@@ -1992,9 +1994,13 @@ Zawadi ya Alama za Uaminifu zilizoongezwa kwenye kibeti chako: +${earned} Points
   useEffect(() => {
     if (!activeUser) {
       setGuestMessages([]);
+      setChatUnreadCount(0);
       return;
     }
     const fetchGuestMsgs = async () => {
+      const userKey = String(
+        activeUser.id || (activeUser as any).legacy_id || activeUser.email || "",
+      );
       try {
         const all = await db.getMessages();
         const userMsgs = all.filter((m) => {
@@ -2017,6 +2023,21 @@ Zawadi ya Alama za Uaminifu zilizoongezwa kwenye kibeti chako: +${earned} Points
       } catch (err) {
         console.warn("Error loading customer messages in header:", err);
       }
+
+      if (!userKey) {
+        setChatUnreadCount(0);
+        return;
+      }
+      try {
+        const conversations = await fetchConversations(userKey, "customer");
+        const totalUnread = conversations.reduce((sum: number, conv: any) => {
+          const unread = Number(conv?.unreadCount?.[userKey] || 0);
+          return sum + (Number.isFinite(unread) ? unread : 0);
+        }, 0);
+        setChatUnreadCount(totalUnread);
+      } catch (err) {
+        console.warn("Error loading customer chat unread count:", err);
+      }
     };
     fetchGuestMsgs();
 
@@ -2027,8 +2048,8 @@ Zawadi ya Alama za Uaminifu zilizoongezwa kwenye kibeti chako: +${earned} Points
   }, [activeUser]);
 
   const unreadCount = useMemo(() => {
-    if (!activeUser || guestMessages.length === 0) return 0;
-    return guestMessages.filter((m) => {
+    if (!activeUser) return 0;
+    const legacyUnread = guestMessages.filter((m) => {
       // Message is from admin if it is admin initiated OR has an admin reply
       const isFromAdmin =
         m.message === "Ujumbe kutoka Orbi Shop" ||
@@ -2038,7 +2059,8 @@ Zawadi ya Alama za Uaminifu zilizoongezwa kwenye kibeti chako: +${earned} Points
         !!m.adminReply;
       return isFromAdmin && !readReplyIds.includes(m.id);
     }).length;
-  }, [guestMessages, activeUser, readReplyIds]);
+    return Math.max(legacyUnread, chatUnreadCount);
+  }, [guestMessages, activeUser, readReplyIds, chatUnreadCount]);
 
   const logoutClient = async () => {
     localStorage.removeItem("Orbishop_customers");
