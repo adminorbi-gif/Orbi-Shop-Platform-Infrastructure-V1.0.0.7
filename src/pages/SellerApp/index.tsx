@@ -10,6 +10,7 @@ import { PriceDisplay } from "../../components/PriceDisplay";
 import { TanzaniaFlag, UKFlag } from "../../components/client/LanguageSelector";
 import { Product, Order, SellerProfile, Niche } from "../../types";
 import { ChatWidget } from "../../components/chat/ChatWidget";
+import { fetchConversations } from "../../lib/chat";
 
 import {
   AICopilotWidget,
@@ -95,6 +96,33 @@ export default function SellerApp({
     "daily" | "weekly" | "monthly" | "yearly"
   >("yearly");
   const nextLocaleLabel = lang === "sw" ? "English" : "Kiswahili";
+  const [sellerChatUnread, setSellerChatUnread] = useState(0);
+  const sellerChatUserId = String(
+    seller.id || (seller as any).legacy_id || seller.email || "seller",
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadSellerChatUnread = async () => {
+      try {
+        const conversations = await fetchConversations(sellerChatUserId, "seller");
+        const totalUnread = conversations.reduce((sum: number, conv: any) => {
+          const unread = Number(conv?.unreadCount?.[sellerChatUserId] || 0);
+          return sum + (Number.isFinite(unread) ? unread : 0);
+        }, 0);
+        if (isMounted) setSellerChatUnread(totalUnread);
+      } catch (err) {
+        console.warn("Failed to load seller chat unread count:", err);
+      }
+    };
+    loadSellerChatUnread();
+    const interval = window.setInterval(loadSellerChatUnread, 15000);
+    return () => {
+      isMounted = false;
+      window.clearInterval(interval);
+    };
+  }, [sellerChatUserId]);
+
   const orderAxisFormatter = (value: number | string) =>
     `${Number(value).toLocaleString()} ${lang === "sw" ? "oda" : "orders"}`;
   const dashboardPeriodOptions: Array<{
@@ -672,10 +700,19 @@ export default function SellerApp({
 
             <button
               onClick={() => setTab("support")}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition duration-150 cursor-pointer ${tab === "support" ? "bg-slate-950 text-white shadow-lg shadow-slate-950/15 font-black" : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"}`}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition duration-150 cursor-pointer ${tab === "support" ? "bg-slate-950 text-white shadow-lg shadow-slate-950/15 font-black" : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"}`}
             >
-              <MessageSquare size={17} />
-              <span>{lang === "sw" ? "Msaada & Chat" : "Support Chat"}</span>
+              <div className="flex items-center gap-3">
+                <MessageSquare size={17} />
+                <span>{lang === "sw" ? "Msaada & Chat" : "Support Chat"}</span>
+              </div>
+              {sellerChatUnread > 0 && (
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-lg ${tab === "support" ? "bg-white text-slate-950" : "bg-rose-100 text-rose-600"}`}
+                >
+                  {sellerChatUnread > 99 ? "99+" : sellerChatUnread}
+                </span>
+              )}
             </button>
 
             <button
@@ -746,6 +783,7 @@ export default function SellerApp({
                 id: "support",
                 label: lang === "sw" ? "Chat" : "Chat",
                 icon: MessageSquare,
+                badge: sellerChatUnread,
               },
               {
                 id: "ai_copilot",
@@ -2143,7 +2181,7 @@ export default function SellerApp({
                 <div className="h-[calc(100dvh-15rem)] min-h-[540px] rounded-[1.65rem] border border-slate-200/70 bg-slate-50 p-2 sm:p-3 shadow-sm overflow-hidden">
                   <ChatWidget
                     currentUserId={String(
-                      seller.id || (seller as any).legacy_id || seller.email || "seller",
+                      sellerChatUserId,
                     )}
                     currentUserRole="seller"
                     currentUserName={seller.name || seller.email || "Seller"}
