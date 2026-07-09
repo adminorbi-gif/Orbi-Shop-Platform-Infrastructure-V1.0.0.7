@@ -9,6 +9,8 @@ import { formatCurrency } from "../../lib/storage";
 import { PriceDisplay } from "../../components/PriceDisplay";
 import { TanzaniaFlag, UKFlag } from "../../components/client/LanguageSelector";
 import { Product, Order, SellerProfile, Niche } from "../../types";
+import { ChatWidget } from "../../components/chat/ChatWidget";
+import { fetchConversations } from "../../lib/chat";
 
 import {
   AICopilotWidget,
@@ -45,6 +47,7 @@ import {
   Send,
   Building,
   Megaphone,
+  MessageSquare,
   Zap,
   Tag,
   Store,
@@ -93,6 +96,33 @@ export default function SellerApp({
     "daily" | "weekly" | "monthly" | "yearly"
   >("yearly");
   const nextLocaleLabel = lang === "sw" ? "English" : "Kiswahili";
+  const [sellerChatUnread, setSellerChatUnread] = useState(0);
+  const sellerChatUserId = String(
+    seller.id || (seller as any).legacy_id || seller.email || "seller",
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadSellerChatUnread = async () => {
+      try {
+        const conversations = await fetchConversations(sellerChatUserId, "seller");
+        const totalUnread = conversations.reduce((sum: number, conv: any) => {
+          const unread = Number(conv?.unreadCount?.[sellerChatUserId] || 0);
+          return sum + (Number.isFinite(unread) ? unread : 0);
+        }, 0);
+        if (isMounted) setSellerChatUnread(totalUnread);
+      } catch (err) {
+        console.warn("Failed to load seller chat unread count:", err);
+      }
+    };
+    loadSellerChatUnread();
+    const interval = window.setInterval(loadSellerChatUnread, 15000);
+    return () => {
+      isMounted = false;
+      window.clearInterval(interval);
+    };
+  }, [sellerChatUserId]);
+
   const orderAxisFormatter = (value: number | string) =>
     `${Number(value).toLocaleString()} ${lang === "sw" ? "oda" : "orders"}`;
   const dashboardPeriodOptions: Array<{
@@ -669,6 +699,23 @@ export default function SellerApp({
             </button>
 
             <button
+              onClick={() => setTab("support")}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition duration-150 cursor-pointer ${tab === "support" ? "bg-slate-950 text-white shadow-lg shadow-slate-950/15 font-black" : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"}`}
+            >
+              <div className="flex items-center gap-3">
+                <MessageSquare size={17} />
+                <span>{lang === "sw" ? "Msaada & Chat" : "Support Chat"}</span>
+              </div>
+              {sellerChatUnread > 0 && (
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-lg ${tab === "support" ? "bg-white text-slate-950" : "bg-rose-100 text-rose-600"}`}
+                >
+                  {sellerChatUnread > 99 ? "99+" : sellerChatUnread}
+                </span>
+              )}
+            </button>
+
+            <button
               onClick={() => setTab("ai_copilot")}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition duration-150 cursor-pointer ${tab === "ai_copilot" ? "bg-gradient-to-r from-slate-950 to-slate-800 text-white shadow-lg shadow-slate-950/15 font-black" : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"}`}
             >
@@ -731,6 +778,12 @@ export default function SellerApp({
                 label: lang === "sw" ? "Oda" : "Orders",
                 icon: ShoppingCart,
                 badge: sellerOrders.length,
+              },
+              {
+                id: "support",
+                label: lang === "sw" ? "Chat" : "Chat",
+                icon: MessageSquare,
+                badge: sellerChatUnread,
               },
               {
                 id: "ai_copilot",
@@ -2099,6 +2152,47 @@ export default function SellerApp({
                       );
                     })
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* VIEW: SELLER SUPPORT CHAT */}
+            {tab === "support" && (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <div className="seller-dashboard-hero rounded-[1.65rem] border border-slate-200/70 bg-white/95 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                      {lang === "sw" ? "Kituo cha msaada" : "Support center"}
+                    </p>
+                    <h1 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight mt-1">
+                      {lang === "sw" ? "Mawasiliano ya Seller" : "Seller Support Chat"}
+                    </h1>
+                    <p className="text-slate-500 text-xs font-semibold mt-1 max-w-2xl">
+                      {lang === "sw"
+                        ? "Tuma ujumbe kwa timu ya Orbi kuhusu oda, bidhaa, malipo, au duka lako bila kuondoka kwenye portal."
+                        : "Message the Orbi team about orders, products, payouts, or store operations without leaving the portal."}
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-black text-emerald-700">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    {lang === "sw" ? "Support ipo hewani" : "Support online"}
+                  </span>
+                </div>
+                <div className="h-[calc(100dvh-15rem)] min-h-[540px] rounded-[1.65rem] border border-slate-200/70 bg-slate-50 p-2 sm:p-3 shadow-sm overflow-hidden">
+                  <ChatWidget
+                    currentUserId={String(
+                      sellerChatUserId,
+                    )}
+                    currentUserRole="seller"
+                    currentUserName={seller.name || seller.email || "Seller"}
+                    currentUserAvatar={seller.avatar}
+                    targetParticipantId="support"
+                    targetParticipantName="Orbi Shop Support"
+                    targetParticipantAvatar="https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png"
+                    lang={lang}
+                    products={sellerProducts}
+                    hideHeader
+                  />
                 </div>
               </div>
             )}

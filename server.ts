@@ -24,6 +24,7 @@ import adsRouter from "./server/routes/ads.js";
 import aiRouter from "./server/routes/ai.js";
 import analyticsRouter from "./server/routes/analytics.js";
 import authRouter from "./server/routes/auth.js";
+import chatRouter from "./server/routes/chat.js";
 import checkoutRouter from "./server/routes/checkout.js";
 import customersRouter from "./server/routes/customers.js";
 import deliveryRouter from "./server/routes/delivery.js";
@@ -303,6 +304,7 @@ async function startServer() {
   app.use("/api/v1/analytics", looseLimiter, analyticsRouter);
   app.use("/api/analytics", looseLimiter, analyticsRouter);
   app.use("/api/auth", strictLimiter, authRouter);
+  app.use("/api/v1/chat", strictLimiter, chatRouter);
   app.use("/api/v1/checkout", strictLimiter, checkoutRouter);
   app.use("/api/checkout", strictLimiter, checkoutRouter);
   app.use("/api/v1/customers", strictLimiter, customersRouter);

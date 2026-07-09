@@ -19,6 +19,7 @@ import { supabase } from "../../lib/supabase";
 import { formatCurrency } from "../../lib/storage";
 import { PriceDisplay } from "../../components/PriceDisplay";
 import { db } from "../../lib/db";
+import { fetchConversations } from "../../lib/chat";
 import { SchemaValidator } from "../../utils/schemaValidation";
 import { PhotoQualityGuide } from "../../components/PhotoQualityGuide";
 import {
@@ -1753,8 +1754,32 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       .slice(0, 6);
   }, [displayedOrders, products, lang]);
 
+  const [adminChatUnreadCount, setAdminChatUnreadCount] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadAdminChatUnread = async () => {
+      try {
+        const conversations = await fetchConversations("admin", "admin");
+        const totalUnread = conversations.reduce((sum: number, conv: any) => {
+          const unread = Number(conv?.unreadCount?.admin || 0);
+          return sum + (Number.isFinite(unread) ? unread : 0);
+        }, 0);
+        if (isMounted) setAdminChatUnreadCount(totalUnread);
+      } catch (err) {
+        console.warn("Failed to load admin chat unread count:", err);
+      }
+    };
+    loadAdminChatUnread();
+    const interval = window.setInterval(loadAdminChatUnread, 15000);
+    return () => {
+      isMounted = false;
+      window.clearInterval(interval);
+    };
+  }, []);
+
   const adminUnreadCount = useMemo(() => {
-    return messages.filter((m) => {
+    const legacyUnread = messages.filter((m) => {
       const isAdminInitiated =
         m.message === "Ujumbe kutoka Orbi Shop" ||
         m.message === "Admin initiated dummy" ||
@@ -1762,7 +1787,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         m.message === "Ujumbe toka kwa Orbi Shop";
       return !isAdminInitiated && !m.isRead;
     }).length;
-  }, [messages]);
+    return Math.max(legacyUnread, adminChatUnreadCount);
+  }, [messages, adminChatUnreadCount]);
 
   const sellersNotificationCount = useMemo(() => {
     return (messages || [])
