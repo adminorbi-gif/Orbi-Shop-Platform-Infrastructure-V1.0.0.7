@@ -1,6 +1,20 @@
 import { useClientApp } from "./useClientApp";
 import { WhatAreYouLookingFor } from "./components/WhatAreYouLookingFor";
-import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from "react";
+import {
+  DynamicPropertyFilter,
+  DynamicFilters,
+} from "../../components/client/DynamicPropertyFilter";
+import { NicheHub } from "../../components/client/NicheHub";
+import { NicheShoppingCenter } from "../../components/client/NicheShoppingCenter";
+import { parseKeyAttributes } from "../../utils/propertyExtractor";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  Suspense,
+  lazy,
+} from "react";
 import { lazyWithRetry } from "../../utils/lazyWithRetry";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "../../lib/supabase";
@@ -235,6 +249,7 @@ import {
   Waves,
   Webcam,
   Wheat,
+  Filter,
 } from "lucide-react";
 import { Lang, t } from "../../lib/i18nClient";
 import {
@@ -289,13 +304,24 @@ const getCachedDeliveryRules = async () => {
   return deliveryRulesPromise;
 };
 
-const formatDeliveryDateRange = (minDays: number, maxDays: number, lang: Lang) => {
+const formatDeliveryDateRange = (
+  minDays: number,
+  maxDays: number,
+  lang: Lang,
+) => {
   const locale = lang === "sw" ? "sw-TZ" : "en-US";
-  const formatOpts: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "numeric" };
+  const formatOpts: Intl.DateTimeFormatOptions = {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  };
   const minDate = new Date();
   minDate.setDate(minDate.getDate() + Math.max(0, Number(minDays || 0)));
   const maxDate = new Date();
-  maxDate.setDate(maxDate.getDate() + Math.max(Number(minDays || 0), Number(maxDays || minDays || 0)));
+  maxDate.setDate(
+    maxDate.getDate() +
+      Math.max(Number(minDays || 0), Number(maxDays || minDays || 0)),
+  );
   const minLabel = minDate.toLocaleDateString(locale, formatOpts);
   const maxLabel = maxDate.toLocaleDateString(locale, formatOpts);
   return minLabel === maxLabel ? minLabel : `${minLabel} - ${maxLabel}`;
@@ -306,7 +332,12 @@ const parseEtaDays = (eta: string) => {
   if (normalized.includes("saa") || normalized.includes("hour")) {
     return null;
   }
-  if (!normalized || normalized.includes("leo") || normalized.includes("today") || normalized.includes("instant")) {
+  if (
+    !normalized ||
+    normalized.includes("leo") ||
+    normalized.includes("today") ||
+    normalized.includes("instant")
+  ) {
     return { min: 0, max: 0 };
   }
   const match = normalized.match(/(\d+)(?:\s*-\s*(\d+))?/);
@@ -323,7 +354,9 @@ const productMotionSeed = (value: string) => {
   return seed;
 };
 import { AppBarBackgroundSlider } from "../../components/AppBarBackgroundSlider";
-const TrackOrderModal = lazyWithRetry(() => import("../../components/TrackOrderModal"));
+const TrackOrderModal = lazyWithRetry(
+  () => import("../../components/TrackOrderModal"),
+);
 const ReviewModal = lazyWithRetry(() => import("../../components/ReviewModal"));
 import ScratchCardChallenge from "../../components/ScratchCardChallenge";
 import CookieConsent from "../../components/CookieConsent";
@@ -342,8 +375,8 @@ import {
   ProductSkeleton,
   MediaRenderer,
   PackageIcon,
-  CustomerProfile
-} from './components';
+  CustomerProfile,
+} from "./components";
 import { getLoyaltyPoints } from "../../lib/helpers";
 
 const formatItemCount = (num: number) => {
@@ -503,8 +536,6 @@ function CustomSelect({
   );
 }
 
-
-
 export const formatOrderNumber = (order: any) => {
   return order.id.substring(0, 8).toUpperCase();
 };
@@ -514,14 +545,13 @@ const slugify = (text: string) => {
     .toString()
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w-]+/g, '')
-    .replace(/--+/g, '-');
+    .replace(/\s+/g, "-")
+    .replace(/[^\w-]+/g, "")
+    .replace(/--+/g, "-");
 };
 
-
 export default function ClientApp() {
-    const {
+  const {
     showAlert,
     showConfirm,
     toastMsg,
@@ -724,15 +754,18 @@ export default function ClientApp() {
     updateQuantity,
     handleOpenInternalChat,
     totalCart,
-    renderSearchSuggestions
+    renderSearchSuggestions,
   } = useClientApp();
 
   const [familySearch, setFamilySearch] = useState("");
   const [familySortOrder, setFamilySortOrder] = useState("default");
+  const [activeDynamicFilters, setActiveDynamicFilters] =
+    useState<DynamicFilters>({});
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const familyProducts = useMemo(() => {
     if (!selectedFamily) return [];
-    return products.filter(p => {
+    return products.filter((p) => {
       let fam = p.family || "";
       if (p.category && p.category.includes("::")) {
         fam = p.category.split("::")[2] || fam;
@@ -743,15 +776,41 @@ export default function ClientApp() {
 
   const filteredFamilyProducts = useMemo(() => {
     let list = [...familyProducts];
-    
+
     // Apply local search
     if (familySearch.trim()) {
       const q = familySearch.toLowerCase();
-      list = list.filter(p => {
+      list = list.filter((p) => {
         const name = (p.name || "").toLowerCase();
         const nameSw = (p.nameSw || "").toLowerCase();
         const desc = (p.description || "").toLowerCase();
         return name.includes(q) || nameSw.includes(q) || desc.includes(q);
+      });
+    }
+
+    // Apply dynamic property filters
+    if (Object.keys(activeDynamicFilters).length > 0) {
+      list = list.filter((p) => {
+        const pAttrs = parseKeyAttributes(p.description, p.features || []);
+
+        // For each active filter key, the product must have at least one matching value
+        for (const key in activeDynamicFilters) {
+          const allowedValues = activeDynamicFilters[key];
+          if (allowedValues.length === 0) continue;
+
+          // Check if product has this key (case insensitive)
+          const pAttrMatch = pAttrs.find(
+            (a) => a.key.toLowerCase() === key.toLowerCase(),
+          );
+          if (!pAttrMatch) return false; // missing the attribute entirely
+
+          // Check if the product's value matches one of the allowed values
+          if (!allowedValues.includes(pAttrMatch.value.trim())) {
+            return false;
+          }
+        }
+
+        return true;
       });
     }
 
@@ -761,52 +820,94 @@ export default function ClientApp() {
     } else if (familySortOrder === "desc") {
       list.sort((a, b) => b.price - a.price);
     } else if (familySortOrder === "newest") {
-      list.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+      list.sort(
+        (a, b) =>
+          new Date(b.created_at || 0).getTime() -
+          new Date(a.created_at || 0).getTime(),
+      );
     } else if (familySortOrder === "popular") {
       list.sort((a, b) => (salesCounts[b.id] || 0) - (salesCounts[a.id] || 0));
     }
-    
+
     return list;
-  }, [familyProducts, familySearch, familySortOrder, salesCounts]);
+  }, [
+    familyProducts,
+    familySearch,
+    familySortOrder,
+    salesCounts,
+    activeDynamicFilters,
+  ]);
 
   // Reset family filters when selected family changes
   useEffect(() => {
     setFamilySearch("");
     setFamilySortOrder("default");
+    setActiveDynamicFilters({});
   }, [selectedFamily]);
 
   return (
     <>
       <Helmet>
         <title>
-          {selectedProduct 
-            ? `Bei ya ${selectedProduct.nameSw || selectedProduct.name} - ${lang === "sw" ? 'TSh ' : ''}${formatCurrency(selectedProduct.price)}${lang !== "sw" ? ' TZS' : ''} | Orbi Shop` 
+          {selectedProduct
+            ? `Bei ya ${selectedProduct.nameSw || selectedProduct.name} - ${lang === "sw" ? "TSh " : ""}${formatCurrency(selectedProduct.price)}${lang !== "sw" ? " TZS" : ""} | Orbi Shop`
             : selectedFamily
               ? `${lang === "sw" ? `Bidhaa za Familia ya ${selectedFamily}` : `${selectedFamily} Product Family`} | Orbi Shop`
-              : (lang === "sw" ? "Orbi Shop - Soko Linaloaminika Tanzania" : "Orbi Shop - Trusted E-Commerce Marketplace Tanzania")}
+              : lang === "sw"
+                ? "Orbi Shop - Soko Linaloaminika Tanzania"
+                : "Orbi Shop - Trusted E-Commerce Marketplace Tanzania"}
         </title>
-        <meta 
-          name="description" 
-          content={selectedProduct 
-            ? `Nunua ${selectedProduct.nameSw || selectedProduct.name} kwa bei ya ${formatCurrency(selectedProduct.price)}. ${selectedProduct.description.substring(0, 150)}... Wauzaji walioidhinishwa Orbi Shop Tanzania.` 
-            : selectedFamily
-              ? `${lang === "sw" ? `Gundua mkusanyiko rasmi wa bidhaa za familia ya ${selectedFamily} nchini Tanzania.` : `Discover the official product collection from the ${selectedFamily} brand family in Tanzania.`} Nunua kwa amani Orbi Shop.`
-              : (lang === "sw" ? "Soko linaloaminika la mtandaoni Tanzania linalounganisha wauzaji na wanunuzi kwa bidhaa bora za elektroniki, mitindo, na nyumbani." : "Tanzania's trusted online marketplace connecting sellers and buyers with premium electronics, fashion, and home goods.")} 
+        <meta
+          name="description"
+          content={
+            selectedProduct
+              ? `Nunua ${selectedProduct.nameSw || selectedProduct.name} kwa bei ya ${formatCurrency(selectedProduct.price)}. ${selectedProduct.description.substring(0, 150)}... Wauzaji walioidhinishwa Orbi Shop Tanzania.`
+              : selectedFamily
+                ? `${lang === "sw" ? `Gundua mkusanyiko rasmi wa bidhaa za familia ya ${selectedFamily} nchini Tanzania.` : `Discover the official product collection from the ${selectedFamily} brand family in Tanzania.`} Nunua kwa amani Orbi Shop.`
+                : lang === "sw"
+                  ? "Soko linaloaminika la mtandaoni Tanzania linalounganisha wauzaji na wanunuzi kwa bidhaa bora za elektroniki, mitindo, na nyumbani."
+                  : "Tanzania's trusted online marketplace connecting sellers and buyers with premium electronics, fashion, and home goods."
+          }
         />
-        <meta property="og:title" content={selectedProduct 
-            ? `Bei ya ${selectedProduct.nameSw || selectedProduct.name} - ${lang === "sw" ? 'TSh ' : ''}${formatCurrency(selectedProduct.price)}${lang !== "sw" ? ' TZS' : ''} | Orbi Shop` 
-            : (lang === "sw" ? "Orbi Shop - Soko Linaloaminika Tanzania" : "Orbi Shop - Trusted E-Commerce Marketplace Tanzania")} />
-        <meta property="og:description" content={selectedProduct 
-            ? `Nunua ${selectedProduct.nameSw || selectedProduct.name} kwa bei ya ${formatCurrency(selectedProduct.price)}. ${selectedProduct.description.substring(0, 150)}... Wauzaji walioidhinishwa Orbi Shop Tanzania.`
-            : (lang === "sw" ? "Nunua na Orbi - Soko linaloaminika zaidi la E-commerce nchini Tanzania na Afrika. Ubora na usalama wa malipo uliothibitishwa." : "Shop with Orbi - The Most Trusted E-Commerce Marketplace in Tanzania and Africa. quality, authenticity, and guaranteed payment protection.")} />
-        {selectedProduct && selectedProduct.images && selectedProduct.images[0] && (
-          <meta property="og:image" content={selectedProduct.images[0]} />
-        )}
-        <meta property="og:type" content={selectedProduct ? "product" : "website"} />
+        <meta
+          property="og:title"
+          content={
+            selectedProduct
+              ? `Bei ya ${selectedProduct.nameSw || selectedProduct.name} - ${lang === "sw" ? "TSh " : ""}${formatCurrency(selectedProduct.price)}${lang !== "sw" ? " TZS" : ""} | Orbi Shop`
+              : lang === "sw"
+                ? "Orbi Shop - Soko Linaloaminika Tanzania"
+                : "Orbi Shop - Trusted E-Commerce Marketplace Tanzania"
+          }
+        />
+        <meta
+          property="og:description"
+          content={
+            selectedProduct
+              ? `Nunua ${selectedProduct.nameSw || selectedProduct.name} kwa bei ya ${formatCurrency(selectedProduct.price)}. ${selectedProduct.description.substring(0, 150)}... Wauzaji walioidhinishwa Orbi Shop Tanzania.`
+              : lang === "sw"
+                ? "Nunua na Orbi - Soko linaloaminika zaidi la E-commerce nchini Tanzania na Afrika. Ubora na usalama wa malipo uliothibitishwa."
+                : "Shop with Orbi - The Most Trusted E-Commerce Marketplace in Tanzania and Africa. quality, authenticity, and guaranteed payment protection."
+          }
+        />
+        {selectedProduct &&
+          selectedProduct.images &&
+          selectedProduct.images[0] && (
+            <meta property="og:image" content={selectedProduct.images[0]} />
+          )}
+        <meta
+          property="og:type"
+          content={selectedProduct ? "product" : "website"}
+        />
       </Helmet>
       {showAboutPage && (
         <div className="fixed inset-0 z-[999999] bg-white overflow-y-auto">
-          <Suspense fallback={<div className="flex items-center justify-center h-full p-8"><div className="w-8 h-8 border-4 border-slate-200 border-t-emerald-500 rounded-full animate-spin"></div></div>}>
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center h-full p-8">
+                <div className="w-8 h-8 border-4 border-slate-200 border-t-emerald-500 rounded-full animate-spin"></div>
+              </div>
+            }
+          >
             <AboutUsPage
               lang={lang}
               onClose={() => setShowAboutPage(false)}
@@ -819,9 +920,9 @@ export default function ClientApp() {
       {/* Dynamic SEO Product Discovery Map - Hidden from UI but accessible to search engine crawlers */}
       <div className="sr-only" aria-hidden="true">
         <h3>Product Sitemap Discovery - Bei za Bidhaa Tanzania</h3>
-        {products.slice(0, 150).map(p => {
+        {products.slice(0, 150).map((p) => {
           const swName = p.nameSw || p.name;
-          const swUrl = `/?product=${p.id}&name=${encodeURIComponent(p.name)}&price=${p.price}${p.nameSw ? `&nameSw=${encodeURIComponent(p.nameSw)}` : ''}`;
+          const swUrl = `/?product=${p.id}&name=${encodeURIComponent(p.name)}&price=${p.price}${p.nameSw ? `&nameSw=${encodeURIComponent(p.nameSw)}` : ""}`;
           return (
             <a key={`seo-link-${p.id}`} href={swUrl} title={`Bei ya ${swName}`}>
               Nunua {swName} - Bei ya {p.price} TZS - Orbi Shop Tanzania
@@ -1255,128 +1356,7 @@ export default function ClientApp() {
               {showSuggestions && renderSearchSuggestions()}
             </div>
           </div>
-
-          {/* Quick Niche Sub Menu Horizontal Scroll */}
-          <div
-            className="relative z-0 w-full bg-white text-slate-800"
-            onMouseLeave={() => {
-              setHoveredNiche(null);
-              setHoveredCategory(null);
-            }}
-          >
-            <style>{`.no-scrollbar::-webkit-scrollbar { display: none; }`}</style>
-
-            <div
-              className="flex px-4 sm:px-6 gap-6 overflow-x-auto no-scrollbar items-center border-none"
-              ref={nicheScrollRef}
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-            >
-              {niches.map((n: Niche) => {
-                const Icon = iconMap[n.icon] || Globe;
-                const isSelected = selectedNiche === n.name;
-                const count =
-                  n.name === "Zote"
-                    ? products.length
-                    : products.filter(
-                        (p) => (p.niche || "Mengineyo") === n.name,
-                      ).length;
-                return (
-                  <button
-                    key={n.name}
-                    onClick={() => {
-                      setSelectedNiche(n.name);
-                      setSelectedCategory("Zote");
-                      setSearch("");
-                    }}
-                    onMouseEnter={(e) => {
-                      if (window.innerWidth < 720) return;
-                      setHoveredNiche(n.name);
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const parentRect =
-                        e.currentTarget.parentElement?.parentElement?.getBoundingClientRect();
-                      if (parentRect) {
-                        setHoveredNicheX(rect.left - parentRect.left);
-                      }
-                    }}
-                    className={`flex items-center gap-1.5 py-1.5 sm:py-2 font-bold text-[11px] sm:text-xs transition-all shrink-0 cursor-pointer border-b-2 outline-none ${
-                      isSelected
-                        ? "border-[#ff4c00] text-[#ff4c00]"
-                        : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
-                    }`}
-                  >
-                    <Icon
-                      size={13}
-                      className={
-                        isSelected ? "text-[#ff4c00]" : "text-slate-400"
-                      }
-                    />
-                    <span className="whitespace-nowrap">{n.name}</span>
-                    <span
-                      className={`text-[9px] px-1.5 py-0.5 font-black rounded-full leading-none ${isSelected ? "bg-[#ff4c00]/10 text-[#ff4c00]" : "bg-slate-100 text-slate-500"}`}
-                    >
-                      {formatItemCount(count)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Hover Mega Menu for Niche Products */}
-            {hoveredNiche && megaMenuProducts.length > 0 && (
-              <div
-                className="absolute top-full bg-white shadow-2xl z-[100] p-4 border border-slate-200 rounded-b-2xl mt-0 w-[320px] sm:w-[480px] transition-all duration-150"
-                style={{
-                  left:
-                    hoveredNicheX !== null
-                      ? `${Math.max(12, Math.min(hoveredNicheX, window.innerWidth - 500))}px`
-                      : "12px",
-                }}
-              >
-                <h3 className="text-xs font-black text-slate-800 flex items-center gap-1.5 mb-3">
-                  <Star size={14} className="text-amber-500 fill-amber-500" />
-                  {lang === "sw" ? "Bidhaa Bora za" : "Top Pro Products in: "}
-                  <span className="text-amber-600 ml-1">{hoveredNiche}</span>
-                </h3>
-                <div className="flex overflow-x-auto gap-3 no-scrollbar pb-1.5 w-full">
-                  {megaMenuProducts.map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => {
-                        setSelectedProduct(p);
-                        setSelectedNiche(p.niche || "Mengineyo");
-                        setHoveredNiche(null);
-                      }}
-                      className="flex-none w-[110px] sm:w-[130px] flex flex-col text-left group bg-slate-50 rounded-xl p-2 hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200 cursor-pointer"
-                    >
-                      <div className="w-full aspect-[4/3] rounded-lg bg-slate-200 overflow-hidden mb-2">
-                        {p.images && p.images[0] ? (
-                          <img
-                            src={p.images[0]}
-                            className="w-full h-full object-contain p-1 group-hover:scale-110 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-400">
-                            <ShoppingBag />
-                          </div>
-                        )}
-                      </div>
-                      <h4 className="text-[11px] font-bold text-slate-800 line-clamp-1 group-hover:text-amber-600 transition-colors">
-                        {p.name}
-                      </h4>
-                      <p className="text-[9px] text-slate-500 truncate mt-0.5">
-                        {p.category}
-                      </p>
-                      <div className="mt-1 font-black text-slate-900 text-xs">
-                        <PriceDisplay amount={p.price} className="text-xs" />
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
         </header>
-
         {showProfile && activeUser ? (
           <main className="flex-1 w-full flex flex-col bg-slate-50">
             <CustomerProfile
@@ -1450,10 +1430,10 @@ export default function ClientApp() {
               <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 py-4">
                 {/* Breadcrumbs */}
                 <div className="flex items-center gap-2 mb-6 text-xs text-slate-500 font-medium">
-                  <button 
+                  <button
                     onClick={() => {
                       setSelectedFamily(null);
-                    }} 
+                    }}
                     className="hover:text-slate-800 transition flex items-center gap-1"
                   >
                     Home
@@ -1461,7 +1441,9 @@ export default function ClientApp() {
                   <span>/</span>
                   <span className="text-slate-400">Brand Family</span>
                   <span>/</span>
-                  <span className="bg-slate-200/80 text-slate-700 px-2 py-0.5 rounded-md font-semibold">{selectedFamily}</span>
+                  <span className="bg-slate-200/80 text-slate-700 px-2 py-0.5 rounded-md font-semibold">
+                    {selectedFamily}
+                  </span>
                 </div>
 
                 {/* Brand Hero Card */}
@@ -1469,34 +1451,49 @@ export default function ClientApp() {
                   {/* Decorative background patterns */}
                   <div className="absolute top-0 right-0 -mt-10 -mr-10 w-60 h-60 bg-indigo-500 rounded-full blur-3xl opacity-20 pointer-events-none"></div>
                   <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-48 h-48 bg-emerald-500 rounded-full blur-3xl opacity-10 pointer-events-none"></div>
-                  
+
                   <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="max-w-3xl">
                       <div className="inline-flex items-center gap-1.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3.5 py-1.5 rounded-full text-xs font-black tracking-wide uppercase mb-4 shadow-sm backdrop-blur-md">
                         <Award size={14} className="animate-pulse" />
-                        <span>{lang === "sw" ? "Mkusanyiko Rasmi uliothibitishwa" : "Official Certified Family"}</span>
+                        <span>
+                          {lang === "sw"
+                            ? "Mkusanyiko Rasmi uliothibitishwa"
+                            : "Official Certified Family"}
+                        </span>
                       </div>
                       <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white mb-4">
-                        {selectedFamily} <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-indigo-300">{lang === "sw" ? "Mkusanyiko wetu" : "Collection"}</span>
+                        {selectedFamily}{" "}
+                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-indigo-300">
+                          {lang === "sw" ? "Mkusanyiko wetu" : "Collection"}
+                        </span>
                       </h1>
                       <p className="text-slate-300 text-sm md:text-base leading-relaxed max-w-2xl">
-                        {lang === "sw" 
-                          ? `Gundua kila bidhaa bora inayomilikiwa na familia mashuhuri ya ${selectedFamily}. Bidhaa zote hapa zimethibitishwa nchini Tanzania kuwa halisi kutoka kwa wauzaji wakuu wenye dhamana kamili ya malipo ya Orbi.` 
+                        {lang === "sw"
+                          ? `Gundua kila bidhaa bora inayomilikiwa na familia mashuhuri ya ${selectedFamily}. Bidhaa zote hapa zimethibitishwa nchini Tanzania kuwa halisi kutoka kwa wauzaji wakuu wenye dhamana kamili ya malipo ya Orbi.`
                           : `Browse all high-end certified assets within the prestigious ${selectedFamily} ecosystem. Safe purchases backed by our Orbi payment protection system and trusted sellers across Tanzania.`}
                       </p>
                     </div>
 
                     <div className="bg-white/10 backdrop-blur-md border border-white/10 p-5 rounded-2xl shrink-0 text-center md:text-left flex flex-row md:flex-col items-center justify-around gap-4 shadow-inner md:w-56">
                       <div className="text-center md:text-left">
-                        <span className="text-xs text-indigo-200 block font-semibold">{lang === "sw" ? "Bidhaa Zinazopatikana" : "Available Catalog"}</span>
-                        <strong className="text-2xl font-black text-white">{familyProducts.length}</strong>
+                        <span className="text-xs text-indigo-200 block font-semibold">
+                          {lang === "sw"
+                            ? "Bidhaa Zinazopatikana"
+                            : "Available Catalog"}
+                        </span>
+                        <strong className="text-2xl font-black text-white">
+                          {familyProducts.length}
+                        </strong>
                       </div>
                       <div className="h-8 w-px bg-white/10 md:h-px md:w-full"></div>
                       <div className="text-center md:text-left">
-                        <span className="text-xs text-indigo-200 block font-semibold">{lang === "sw" ? "Kiwango cha Chini" : "Lowest Price"}</span>
+                        <span className="text-xs text-indigo-200 block font-semibold">
+                          {lang === "sw" ? "Kiwango cha Chini" : "Lowest Price"}
+                        </span>
                         <strong className="text-xl font-black text-emerald-300">
-                          {familyProducts.length > 0 
-                            ? `TSh ${formatCurrency(Math.min(...familyProducts.map(p => p.price)))}` 
+                          {familyProducts.length > 0
+                            ? `TSh ${formatCurrency(Math.min(...familyProducts.map((p) => p.price)))}`
                             : "TSh 0"}
                         </strong>
                       </div>
@@ -1508,17 +1505,24 @@ export default function ClientApp() {
                 <div className="bg-white rounded-2xl p-4 md:p-6 mb-8 border border-slate-200 shadow-xs flex flex-col md:flex-row gap-4 items-center justify-between">
                   {/* Search input */}
                   <div className="relative w-full md:max-w-md">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <Search
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                      size={18}
+                    />
                     <input
                       type="text"
                       value={familySearch}
                       onChange={(e) => setFamilySearch(e.target.value)}
-                      placeholder={lang === "sw" ? `Tafuta ndani ya familia ya ${selectedFamily}...` : `Search inside ${selectedFamily}...`}
+                      placeholder={
+                        lang === "sw"
+                          ? `Tafuta ndani ya familia ya ${selectedFamily}...`
+                          : `Search inside ${selectedFamily}...`
+                      }
                       className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition"
                     />
                     {familySearch && (
-                      <button 
-                        onClick={() => setFamilySearch("")} 
+                      <button
+                        onClick={() => setFamilySearch("")}
                         className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                       >
                         <X size={16} />
@@ -1529,16 +1533,32 @@ export default function ClientApp() {
                   {/* Sorting controls */}
                   <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
                     <span className="text-xs font-black text-slate-500 whitespace-nowrap flex items-center gap-1 shrink-0">
-                      <ArrowUpDown size={14} /> {lang === "sw" ? "Panga kwa:" : "Sort by:"}
+                      <ArrowUpDown size={14} />{" "}
+                      {lang === "sw" ? "Panga kwa:" : "Sort by:"}
                     </span>
                     <div className="flex items-center gap-1.5 shrink-0">
                       {[
-                        { id: "default", label: lang === "sw" ? "Kawaida" : "Default" },
-                        { id: "asc", label: lang === "sw" ? "Bei Chini" : "Price Low-High" },
-                        { id: "desc", label: lang === "sw" ? "Bei Juu" : "Price High-Low" },
-                        { id: "newest", label: lang === "sw" ? "Mpya Zaidi" : "Newest" },
-                        { id: "popular", label: lang === "sw" ? "Maarufu" : "Popular" },
-                      ].map(opt => (
+                        {
+                          id: "default",
+                          label: lang === "sw" ? "Kawaida" : "Default",
+                        },
+                        {
+                          id: "asc",
+                          label: lang === "sw" ? "Bei Chini" : "Price Low-High",
+                        },
+                        {
+                          id: "desc",
+                          label: lang === "sw" ? "Bei Juu" : "Price High-Low",
+                        },
+                        {
+                          id: "newest",
+                          label: lang === "sw" ? "Mpya Zaidi" : "Newest",
+                        },
+                        {
+                          id: "popular",
+                          label: lang === "sw" ? "Maarufu" : "Popular",
+                        },
+                      ].map((opt) => (
                         <button
                           key={opt.id}
                           onClick={() => setFamilySortOrder(opt.id)}
@@ -1555,1288 +1575,1574 @@ export default function ClientApp() {
                   </div>
                 </div>
 
-                {/* Product Listing Area */}
-                <div>
-                  {filteredFamilyProducts.length > 0 ? (
-                    <div className="orbi-product-list-grid py-1">
-                      <AnimatePresence mode="popLayout">
-                        {filteredFamilyProducts.map((p) => {
-                          const pSeller = sellers.find(s => s.id === p.sellerId);
-                          return (
-                            <motion.div
-                              key={p.id}
-                              layout
-                              initial={{ opacity: 0, scale: 0.9, y: 15, rotate: -1 }}
-                              animate={{ opacity: 1, scale: 1, y: 0, rotate: 0 }}
-                              exit={{ opacity: 0, scale: 0.9, rotate: 1 }}
-                              transition={{ 
-                                layout: { type: "spring", stiffness: 250, damping: 22 },
-                                default: { duration: 0.3, ease: "easeOut" }
-                              }}
-                            >
-                              <ProductCard
-                                p={p}
-                                seller={pSeller}
-                                onAdd={(openCart) => addToCart(p, openCart)}
-                                onSelect={() => handleProductSelect(p)}
-                                onInteract={() => trackProductInteraction(p)}
-                                onViewSeller={setViewSeller}
-                                lang={lang}
-                                isLiked={likedProductIds.includes(p.id)}
-                                onLikeToggle={toggleLikeProduct}
-                              />
-                            </motion.div>
-                          );
-                        })}
-                      </AnimatePresence>
-                    </div>
-                  ) : (
-                    <div className="text-center py-20 bg-white rounded-3xl border border-slate-200/60 shadow-xs px-6">
-                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
-                        <Search size={28} />
-                      </div>
-                      <h3 className="text-lg font-black text-slate-800 mb-1">
-                        {lang === "sw" ? "Hakuna bidhaa inayolingana" : "No matching products found"}
-                      </h3>
-                      <p className="text-sm text-slate-500 max-w-md mx-auto mb-6">
-                        {lang === "sw" 
-                          ? `Tulishindwa kupata bidhaa yoyote katika familia ya ${selectedFamily} inayolingana na neno lako la utafutaji.` 
-                          : `We couldn't find any products in the ${selectedFamily} brand family matching your search term.`}
-                      </p>
+                {/* Product Listing Area Layout */}
+                <div className="flex flex-col md:flex-row gap-6 items-start mt-6">
+                  {/* Desktop Filter Sidebar */}
+                  <div className="w-full md:w-64 shrink-0 hidden md:block">
+                    <DynamicPropertyFilter
+                      products={familyProducts}
+                      activeFilters={activeDynamicFilters}
+                      onFilterChange={setActiveDynamicFilters}
+                      lang={lang}
+                    />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    {/* Mobile Filters Toggle */}
+                    <div className="md:hidden mb-6">
                       <button
-                        onClick={() => setFamilySearch("")}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black px-5 py-2.5 rounded-xl transition"
+                        onClick={() => setShowMobileFilters(!showMobileFilters)}
+                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold flex items-center justify-center gap-2 shadow-sm text-slate-700"
                       >
-                        {lang === "sw" ? "Anza upya utafutaji" : "Reset Search"}
+                        <Filter size={18} className="text-indigo-600" />
+                        {lang === "sw" ? "Fungua Vichungi" : "Open Filters"}
+                      </button>
+
+                      {showMobileFilters && (
+                        <div className="mt-4">
+                          <DynamicPropertyFilter
+                            products={familyProducts}
+                            activeFilters={activeDynamicFilters}
+                            onFilterChange={setActiveDynamicFilters}
+                            lang={lang}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {filteredFamilyProducts.length > 0 ? (
+                      <div className="orbi-product-list-grid py-1">
+                        <AnimatePresence mode="popLayout">
+                          {filteredFamilyProducts.map((p) => {
+                            const pSeller = sellers.find(
+                              (s) => s.id === p.sellerId,
+                            );
+                            return (
+                              <motion.div
+                                key={p.id}
+                                layout
+                                initial={{
+                                  opacity: 0,
+                                  scale: 0.9,
+                                  y: 15,
+                                  rotate: -1,
+                                }}
+                                animate={{
+                                  opacity: 1,
+                                  scale: 1,
+                                  y: 0,
+                                  rotate: 0,
+                                }}
+                                exit={{ opacity: 0, scale: 0.9, rotate: 1 }}
+                                transition={{
+                                  layout: {
+                                    type: "spring",
+                                    stiffness: 250,
+                                    damping: 22,
+                                  },
+                                  default: { duration: 0.3, ease: "easeOut" },
+                                }}
+                              >
+                                <ProductCard
+                                  p={p}
+                                  seller={pSeller}
+                                  onAdd={(openCart) => addToCart(p, openCart)}
+                                  onSelect={() => handleProductSelect(p)}
+                                  onInteract={() => trackProductInteraction(p)}
+                                  onViewSeller={setViewSeller}
+                                  lang={lang}
+                                  isLiked={likedProductIds.includes(p.id)}
+                                  onLikeToggle={toggleLikeProduct}
+                                />
+                              </motion.div>
+                            );
+                          })}
+                        </AnimatePresence>
+                      </div>
+                    ) : (
+                      <div className="text-center py-20 bg-white rounded-3xl border border-slate-200/60 shadow-xs px-6">
+                        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+                          <Search size={28} />
+                        </div>
+                        <h3 className="text-lg font-black text-slate-800 mb-1">
+                          {lang === "sw"
+                            ? "Hakuna bidhaa inayolingana"
+                            : "No matching products found"}
+                        </h3>
+                        <p className="text-sm text-slate-500 max-w-md mx-auto mb-6">
+                          {lang === "sw"
+                            ? `Tulishindwa kupata bidhaa yoyote katika familia ya ${selectedFamily} inayolingana na neno lako la utafutaji.`
+                            : `We couldn't find any products in the ${selectedFamily} brand family matching your search term.`}
+                        </p>
+                        <button
+                          onClick={() => setFamilySearch("")}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black px-5 py-2.5 rounded-xl transition"
+                        >
+                          {lang === "sw"
+                            ? "Anza upya utafutaji"
+                            : "Reset Search"}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* What are you looking for automated recommendation bar */}
+                    <div className="mt-12">
+                      <WhatAreYouLookingFor
+                        products={products}
+                        sellers={sellers}
+                        lang={lang}
+                        onSelectFamily={(fam) => {
+                          setSelectedFamily(fam);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                      />
+                    </div>
+
+                    {/* Brand Footer Info Card */}
+                    <div className="mt-16 bg-slate-100 border border-slate-200/60 rounded-3xl p-6 flex flex-col md:flex-row items-center gap-6">
+                      <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-700 shadow-xs border border-slate-150">
+                        <Store size={22} />
+                      </div>
+                      <div className="flex-1 text-center md:text-left">
+                        <h4 className="text-sm font-black text-slate-800 mb-1">
+                          {lang === "sw"
+                            ? `Kuhusu Familia ya Bidhaa za ${selectedFamily}`
+                            : `About the ${selectedFamily} Brand Family`}
+                        </h4>
+                        <p className="text-xs text-slate-500 leading-relaxed max-w-3xl">
+                          {lang === "sw"
+                            ? `Bidhaa hizi zimeorodheshwa na wauzaji wenye leseni na kusafirishwa chini ya mfumo thabiti wa ukaguzi vya bidhaa ili kuhakikisha usalama na kuridhika kwa 100%. Wasiliana na msaada wetu ikiwa una maswali zaidi.`
+                            : `These products are registered by authorized dealers and shipped under a strict authentication process to ensure maximum security and 100% customer satisfaction. Contact support if you need assistance.`}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedFamily(null);
+                        }}
+                        className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 text-xs font-black px-5 py-2.5 rounded-xl transition"
+                      >
+                        {lang === "sw"
+                          ? "Gundua Bidhaa Zingine"
+                          : "Explore Other Brands"}
                       </button>
                     </div>
-                  )}
-                </div>
-
-                {/* What are you looking for automated recommendation bar */}
-                <div className="mt-12">
-                  <WhatAreYouLookingFor
-                    products={products}
-                    sellers={sellers}
-                    lang={lang}
-                    onSelectFamily={(fam) => {
-                      setSelectedFamily(fam);
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
-                  />
-                </div>
-
-                {/* Brand Footer Info Card */}
-                <div className="mt-16 bg-slate-100 border border-slate-200/60 rounded-3xl p-6 flex flex-col md:flex-row items-center gap-6">
-                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-700 shadow-xs border border-slate-150">
-                    <Store size={22} />
                   </div>
-                  <div className="flex-1 text-center md:text-left">
-                    <h4 className="text-sm font-black text-slate-800 mb-1">
-                      {lang === "sw" ? `Kuhusu Familia ya Bidhaa za ${selectedFamily}` : `About the ${selectedFamily} Brand Family`}
-                    </h4>
-                    <p className="text-xs text-slate-500 leading-relaxed max-w-3xl">
-                      {lang === "sw"
-                        ? `Bidhaa hizi zimeorodheshwa na wauzaji wenye leseni na kusafirishwa chini ya mfumo thabiti wa ukaguzi vya bidhaa ili kuhakikisha usalama na kuridhika kwa 100%. Wasiliana na msaada wetu ikiwa una maswali zaidi.`
-                        : `These products are registered by authorized dealers and shipped under a strict authentication process to ensure maximum security and 100% customer satisfaction. Contact support if you need assistance.`}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setSelectedFamily(null);
-                    }}
-                    className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 text-xs font-black px-5 py-2.5 rounded-xl transition"
-                  >
-                    {lang === "sw" ? "Gundua Bidhaa Zingine" : "Explore Other Brands"}
-                  </button>
                 </div>
               </div>
             ) : (
               <>
                 <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8">
-                {!viewSeller ? (
-                <>
-                  {/* Promos */}
-                  {isLoading ? (
-                    <div className="bg-slate-200 animate-pulse max-[720px]:w-[calc(100%+16px)] max-[720px]:-mx-2 sm:max-[720px]:w-[calc(100%+32px)] sm:max-[720px]:-mx-4 min-[720px]:w-full min-[720px]:mx-0 max-[720px]:rounded-none min-[720px]:rounded-[14px] max-[720px]:aspect-[27/20] min-[720px]:aspect-[16/9] md:aspect-[21/9] lg:aspect-[24/9] max-h-[360px] mb-8 shadow-sm"></div>
-                  ) : carouselAds.length > 0 ? (
-                    <div className="mb-10">
-                      <PromoCarousel
-                        promos={carouselAds}
+                  {!viewSeller ? (
+                    <>
+                      {/* Promos */}
+                      {isLoading ? (
+                        <div className="bg-slate-200 animate-pulse max-[720px]:w-[calc(100%+16px)] max-[720px]:-mx-2 sm:max-[720px]:w-[calc(100%+32px)] sm:max-[720px]:-mx-4 min-[720px]:w-full min-[720px]:mx-0 max-[720px]:rounded-none min-[720px]:rounded-[14px] max-[720px]:aspect-[27/20] min-[720px]:aspect-[16/9] md:aspect-[21/9] lg:aspect-[24/9] max-h-[360px] mb-8 shadow-sm"></div>
+                      ) : carouselAds.length > 0 ? (
+                        <div className="mb-10">
+                          <PromoCarousel
+                            promos={carouselAds}
+                            products={products}
+                            onAddToCart={addToCart}
+                            onViewPromo={setViewPromo}
+                          />
+                        </div>
+                      ) : null}
+
+                      {/* Promotional Countdown Banners */}
+                      <PromotionalBannersSection
+                        banners={promotionalBanners}
                         products={products}
                         onAddToCart={addToCart}
-                        onViewPromo={setViewPromo}
+                        onSelectProduct={setSelectedProduct}
+                        lang={lang}
                       />
-                    </div>
-                  ) : null}
-
-                  {/* Promotional Countdown Banners */}
-                  <PromotionalBannersSection
-                    banners={promotionalBanners}
-                    products={products}
-                    onAddToCart={addToCart}
-                    onSelectProduct={setSelectedProduct}
-                    lang={lang}
-                  />
-
-                </>
-              ) : (
-                <div className="mb-10 bg-white rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 shadow-sm border border-slate-200">
-                  <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden shrink-0 border-4 border-slate-50 shadow-md">
-                    {viewSeller.avatar ? (
-                      <img
-                        src={viewSeller.avatar}
-                        alt={viewSeller.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-slate-200 flex items-center justify-center text-slate-400">
-                        <Store size={40} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 text-center md:text-left flex flex-col items-center md:items-start group">
-                    <button
-                      onClick={() => setViewSeller(null)}
-                      className="text-sm font-bold text-slate-500 hover:text-orange-600 flex items-center gap-1 mb-2 bg-slate-100 hover:bg-orange-50 px-3 py-1 rounded-full transition-colors"
-                    >
-                      <ChevronLeft size={16} />{" "}
-                      {lang === "sw" ? "Rudi" : "Back"}
-                    </button>
-                    <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-2">
-                      {viewSeller.name}
-                    </h2>
-                    <p className="text-slate-600 max-w-2xl text-sm md:text-base leading-relaxed mb-4">
-                      {viewSeller.description}
-                    </p>
-                    <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-xl text-sm font-bold border border-blue-100">
-                      <ShieldCheck size={18} className="text-blue-500" />
-                      {lang === "sw"
-                        ? "Muuzaji Aliyethibitishwa"
-                        : "Verified Seller"}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Main Store Area */}
-            <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 mt-2 md:mt-3">
-              <div className="w-full space-y-3 sm:space-y-4">
-                {/* Custom Arrangements Visual Lookup Panel */}
-                <div className="pt-1 pb-0">
-                  {(selectedArrangementTier !== "all" ||
-                    selectedArrangementVibe !== "all" ||
-                    selectedArrangementWrap !== "all") && (
-                    <div className="flex justify-end mb-2">
-                      <button
-                        onClick={() => {
-                          setSelectedArrangementTier("all");
-                          setSelectedArrangementVibe("all");
-                          setSelectedArrangementWrap("all");
-                        }}
-                        className="text-[10px] font-black text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-full px-2 py-1 transition cursor-pointer"
-                      >
-                        {lang === "sw" ? "Futa Vyote (Reset)" : "Clear Options"}
-                      </button>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-3 gap-1 md:gap-2">
-                    {/* Select 1: Arrangement Tier */}
-                    <CustomSelect
-                      value={selectedArrangementTier}
-                      onChange={setSelectedArrangementTier}
-                      iconLabel="🛍️"
-                      label={
-                        lang === "sw"
-                          ? "Kiwango cha Thamani (Tier)"
-                          : "Arrangement Tier"
-                      }
-                      align="left"
-                      options={[
-                        {
-                          id: "all",
-                          label: lang === "sw" ? "Ngazi Zote" : "All Tiers",
-                          subtitle: "No price restrictions",
-                        },
-                        {
-                          id: "standard",
-                          label:
-                            lang === "sw"
-                              ? "Kawaida / Budget"
-                              : "Standard Essentials",
-                          subtitle: "Eco-friendly, essential gifts",
-                        },
-                        {
-                          id: "premium",
-                          label:
-                            lang === "sw"
-                              ? "Kifahari / Premium"
-                              : "Premium Artistry",
-                          subtitle: "Handcrafted deluxe options",
-                        },
-                        {
-                          id: "luxury",
-                          label:
-                            lang === "sw" ? "Kifalme / Luxury" : "Royal Luxury",
-                          subtitle: "Bespoke high-end masterpieces",
-                        },
-                      ]}
-                    />
-
-                    {/* Select 2: Color Vibes / Aesthetics */}
-                    <CustomSelect
-                      value={selectedArrangementVibe}
-                      onChange={setSelectedArrangementVibe}
-                      iconLabel="🎨"
-                      label={
-                        lang === "sw"
-                          ? "Mandhari ya Rangi (Vibe)"
-                          : "Arrangement Vibe"
-                      }
-                      align="center"
-                      options={[
-                        {
-                          id: "all",
-                          label:
-                            lang === "sw"
-                              ? "Mandhari Zote"
-                              : "All Vibes & Colors",
-                        },
-                        {
-                          id: "romance",
-                          label:
-                            lang === "sw"
-                              ? "🔴 Upendo (Red / Rose)"
-                              : "🔴 Crimson Romance",
-                        },
-                        {
-                          id: "serenity",
-                          label:
-                            lang === "sw"
-                              ? "⚪ Utulivu (Pink / White)"
-                              : "⚪ Pastel Serenity",
-                        },
-                        {
-                          id: "amber",
-                          label:
-                            lang === "sw"
-                              ? "🟠 Machweo (Gold / orange)"
-                              : "🟠 Sunset Amber",
-                        },
-                        {
-                          id: "emerald",
-                          label:
-                            lang === "sw"
-                              ? "🟢 Mali na Kijani (Green)"
-                              : "🟢 Emerald Wealth",
-                        },
-                        {
-                          id: "minimalist",
-                          label:
-                            lang === "sw"
-                              ? "⚫ Rahisi ya Kisasa (Sleek)"
-                              : "⚫ Modern Minimalist",
-                        },
-                      ]}
-                    />
-
-                    {/* Select 3: Presentation Box/Wrap Style */}
-                    <CustomSelect
-                      value={selectedArrangementWrap}
-                      onChange={setSelectedArrangementWrap}
-                      iconLabel="🎁"
-                      label={
-                        lang === "sw"
-                          ? "Mtindo wa Ufungashaji"
-                          : "Presentation Style"
-                      }
-                      align="right"
-                      options={[
-                        {
-                          id: "all",
-                          label:
-                            lang === "sw"
-                              ? "Aina Zote za Mipango"
-                              : "All Presentations",
-                        },
-                        {
-                          id: "box",
-                          label:
-                            lang === "sw"
-                              ? "Kasha Maalum la Zawadi"
-                              : "Signature Gift Box",
-                        },
-                        {
-                          id: "wrap",
-                          label:
-                            lang === "sw"
-                              ? "Karatasi Kifahari / Buketi"
-                              : "Special Wrap / Bouquets",
-                        },
-                        {
-                          id: "basket",
-                          label:
-                            lang === "sw"
-                              ? "Kikapu cha Mkono / Hamper"
-                              : "Handcrafted Basket",
-                        },
-                        {
-                          id: "acrylic",
-                          label:
-                            lang === "sw"
-                              ? "Glasi ya Kioo ya Acrylic"
-                              : "Bespoke Acrylic Cube",
-                        },
-                      ]}
-                    />
-                  </div>
-
-                  {/* Match counter banner */}
-                  <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-black text-slate-500">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span>
-                        {lang === "sw"
-                          ? `${filteredProducts.length} Mpangilio umeoana na vigezo vyako`
-                          : `${filteredProducts.length} arrangements match your criteria`}
-                      </span>
-                    </div>
-                    {(selectedArrangementTier !== "all" ||
-                      selectedArrangementVibe !== "all" ||
-                      selectedArrangementWrap !== "all") && (
-                      <div className="text-[10px] text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-100 uppercase tracking-wider animate-pulse">
-                        {lang === "sw"
-                          ? "Mchujo Umewashwa!"
-                          : "Vibe-match Active!"}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Top Selling & Recommended (Segmented Behavior Modules) */}
-                <div className="flex flex-col space-y-6 sm:space-y-10">
-                  {/* BEHAVIOR MODULE 1: TOP DEALS (Lowest Prices with specific pricing formatting & labels) */}
-                  {(topDealsProducts.length > 0 || isLoading) &&
-                    selectedCategory === "Zote" &&
-                    search === "" && (
-                      <div className="lg:py-6 py-4 bg-transparent relative overflow-hidden flex flex-col border-b border-slate-200">
-                        <div className="flex items-center justify-between mb-4">
-                          <div>
-                            <h3 className="text-lg md:text-xl font-extrabold text-slate-950 tracking-tight flex items-center gap-1.5 leading-tight">
-                              {lang === "sw" ? "Ofa Moto-Moto" : "Top Deals"}
-                            </h3>
-                            <p className="text-[10px] md:text-xs text-slate-400 font-medium">
-                              {lang === "sw"
-                                ? "Okoa kwa bei nafuu kupita kawaida sokoni"
-                                : "Score the lowest prices on Orbi Shop"}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1 text-slate-400 hover:text-slate-600 cursor-pointer transition">
-                            <span className="text-xs font-bold">
-                              {lang === "sw" ? "Zote" : "View All"}
-                            </span>
-                            <ChevronRight size={18} />
-                          </div>
-                        </div>
-
-                        <div className="flex gap-2.5 md:gap-3 overflow-x-auto pb-4 pt-1 scrollbar-none flex-nowrap -mx-2 px-2 sm:-mx-4 sm:px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8">
-                          {isLoading ? (
-                            Array.from({ length: 6 }).map((_, i) => (
-                              <div key={`td-skel-${i}`} className="w-[105px] sm:w-[155px] shrink-0 h-full">
-                                <ProductSkeleton />
-                              </div>
-                            ))
-                          ) : topDealsProducts.map((p) => {
-                            const pSeller = sellers.find(
-                              (s) => s.id === p.sellerId,
-                            );
-                            const hasDiscount =
-                              p.oldPrice && p.oldPrice > p.price;
-                            const percentOff = hasDiscount
-                              ? Math.round(
-                                  ((p.oldPrice! - p.price) / p.oldPrice!) * 100,
-                                )
-                              : 0;
-
-                            return (
-                              <div
-                                key={`deal-${p.id}`}
-                                onClick={() => handleProductSelect(p)}
-                                className="w-[105px] sm:w-[155px] shrink-0 bg-white hover:-translate-y-0.5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-slate-100/60 p-1.5 sm:p-2 rounded-xl sm:rounded-2xl transition-all cursor-pointer snap-start flex flex-col group justify-between"
-                              >
-                                <div>
-                                  <div className="aspect-square w-full rounded-lg sm:rounded-xl overflow-hidden bg-[#f1f5f9]/50 relative mb-2">
-                                    <img
-                                      src={p.images[0]}
-                                      alt={p.name}
-                                      className="w-full h-full object-contain p-1 group-hover:scale-[1.03] transition duration-500"
-                                      referrerPolicy="no-referrer"
-                                    />
-                                    {hasDiscount && (
-                                      <div className="absolute top-1.5 left-1.5 bg-rose-600/90 text-white text-[9px] px-1.5 py-0.5 rounded backdrop-blur-xs font-bold leading-none shadow-xs">
-                                        -{percentOff}%
-                                      </div>
-                                    )}
-                                    {pSeller?.isPro && (
-                                      <div className="absolute top-1.5 right-1.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[7px] px-1 py-0.5 rounded shadow-xs font-bold uppercase tracking-widest leading-none">
-                                        PRO
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  <h4 className="text-[12px] sm:text-[13px] font-black text-slate-800 line-clamp-2 leading-[1.3] group-hover:text-[#ff4c00] transition-colors mb-1">
-                                    {p.name}
-                                  </h4>
-                                </div>
-
-                                <div className="mt-1">
-                                  <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                                    <PriceDisplay
-                                      amount={p.price}
-                                      colorClass="text-[#ff4c00]"
-                                      className="text-[12px] sm:text-[14px] flex-shrink-0"
-                                    />
-                                    {p.oldPrice && p.oldPrice > p.price && (
-                                      <PriceDisplay
-                                        amount={p.oldPrice}
-                                        colorClass="text-slate-400/90 line-through font-medium"
-                                        className="text-[9px] sm:text-[10px]"
-                                      />
-                                    )}
-                                  </div>
-                                  <p className="text-[9px] text-[#ff4c00] mt-0.5 font-medium leading-none text-left truncate w-full">
-                                    {lang === "sw"
-                                      ? "Chini kwa zinazofanana"
-                                      : "Lowest among similar"}
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                  {/* BEHAVIOR MODULE 2: NEW ARRIVALS (Newest items showcase) */}
-                  {(newArrivalsProducts.length > 0 || isLoading) &&
-                    selectedCategory === "Zote" &&
-                    search === "" && (
-                      <div className="lg:py-6 py-4 bg-transparent relative overflow-hidden flex flex-col border-b border-slate-200">
-                        <div className="flex items-center justify-between mb-4">
-                          <div>
-                            <h3 className="text-lg md:text-xl font-extrabold text-slate-950 tracking-tight flex items-center gap-1.5 leading-tight">
-                              {lang === "sw" ? "Hivi Karibuni" : "New Arrivals"}
-                              <span className="text-[10px] font-black uppercase bg-emerald-500 text-white px-2 py-0.5 rounded-full tracking-wider animate-pulse">
-                                {lang === "sw" ? "MPYA" : "NEW"}
-                              </span>
-                            </h3>
-                            <p className="text-[10px] md:text-xs text-slate-400 font-medium mt-1">
-                              {lang === "sw"
-                                ? "Wahi bidhaa mpya kabisa zilizotufikia mapema"
-                                : "Stay ahead with the latest offerings"}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1 text-slate-400 hover:text-slate-600 cursor-pointer transition">
-                            <span className="text-xs font-bold">
-                              {lang === "sw" ? "Zote" : "View All"}
-                            </span>
-                            <ChevronRight size={18} />
-                          </div>
-                        </div>
-
-                        {/* Slide track */}
-                        <div className="flex gap-2.5 md:gap-3 overflow-x-auto pb-4 pt-1 scrollbar-none flex-nowrap -mx-2 px-2 sm:-mx-4 sm:px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8">
-                          {isLoading ? (
-                            Array.from({ length: 6 }).map((_, i) => (
-                              <div key={`na-skel-${i}`} className="w-[105px] sm:w-[155px] shrink-0 h-full">
-                                <ProductSkeleton />
-                              </div>
-                            ))
-                          ) : newArrivalsProducts.map((p) => {
-                            const pSeller = sellers.find(
-                              (s) => s.id === p.sellerId,
-                            );
-                            return (
-                              <div
-                                key={`new-${p.id}`}
-                                onClick={() => handleProductSelect(p)}
-                                className="w-[105px] sm:w-[155px] shrink-0 bg-white hover:-translate-y-0.5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-slate-100/60 p-1.5 sm:p-2 rounded-xl sm:rounded-2xl transition-all cursor-pointer snap-start flex flex-col group justify-between"
-                              >
-                                <div>
-                                  <div className="aspect-square w-full rounded-lg sm:rounded-xl overflow-hidden bg-[#f1f5f9]/50 relative mb-2">
-                                    <img
-                                      src={p.images[0]}
-                                      alt={p.name}
-                                      className="w-full h-full object-contain p-1 group-hover:scale-[1.03] transition duration-500"
-                                      referrerPolicy="no-referrer"
-                                    />
-                                    <div className="absolute top-1.5 left-1.5 bg-slate-900/80 text-white text-[9px] px-1.5 py-0.5 rounded font-bold backdrop-blur-xs leading-none shadow-xs">
-                                      {lang === "sw" ? "Mpyaa" : "Fresh In"}
-                                    </div>
-                                    {pSeller?.isPro && (
-                                      <div className="absolute top-1.5 right-1.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[7px] px-1 py-0.5 rounded shadow-xs font-bold uppercase tracking-widest leading-none">
-                                        PRO
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  <h4 className="text-[12px] sm:text-[13px] font-black text-slate-800 line-clamp-2 leading-[1.3] group-hover:text-[#ff4c00] transition-colors mb-1">
-                                    {p.name}
-                                  </h4>
-                                </div>
-
-                                <div className="mt-1">
-                                  <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                                    <PriceDisplay
-                                      amount={p.price}
-                                      colorClass="text-[#ff4c00]"
-                                      className="text-[12px] sm:text-[14px] flex-shrink-0"
-                                    />
-                                    {p.oldPrice && p.oldPrice > p.price && (
-                                      <PriceDisplay
-                                        amount={p.oldPrice}
-                                        colorClass="text-slate-400/90 line-through font-medium"
-                                        className="text-[9px] sm:text-[10px]"
-                                      />
-                                    )}
-                                  </div>
-                                  <p className="text-[9px] text-[#ff4c00] mt-0.5 font-medium leading-none text-left truncate w-full">
-                                    {p.category}
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                  {/* BEHAVIOR MODULE 3: PRO & PREMIUM FEATURED SELLERS (Vendor Prioritization) */}
-                  {(proSellerProducts.length > 0 || isLoading) &&
-                    selectedCategory === "Zote" &&
-                    search === "" && (
-                      <div
-                        id="pro-sellers-picks-scroller-section"
-                        className="lg:py-6 py-4 bg-transparent relative overflow-hidden flex flex-col border-b border-slate-200"
-                      >
-                        <div className="flex items-center justify-between mb-4">
-                          <div>
-                            <h3 className="text-lg md:text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-1.5 leading-tight">
-                              {lang === "sw"
-                                ? "Wauzaji walio pendekezwa"
-                                : "Pro Sellers' Pick"}
-                              <span className="text-[9px] font-black uppercase bg-gradient-to-r from-orange-500 to-amber-500 text-white px-2 py-0.5 rounded shadow-xs flex items-center gap-0.5">
-                                APPROVED <Store size={8} />
-                              </span>
-                            </h3>
-                            <p className="text-[10px] md:text-xs text-slate-400 font-medium mt-1">
-                              {lang === "sw"
-                                ? "Bidhaa zilizothibitishwa moja kwa moja kutoka kwa wauzaji wetu bora"
-                                : "Premium certified products directly from top-tier wholesale stores"}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1 text-slate-400 hover:text-slate-600 cursor-pointer transition">
-                            <span className="text-xs font-bold">
-                              {lang === "sw" ? "Gundua" : "Explore"}
-                            </span>
-                            <ChevronRight size={18} />
-                          </div>
-                        </div>
-
-                        {/* Slide track */}
-                        <div className="flex gap-2.5 md:gap-3 overflow-x-auto pb-4 pt-1 scrollbar-none flex-nowrap -mx-2 px-2 sm:-mx-4 sm:px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8">
-                          {isLoading ? (
-                            Array.from({ length: 6 }).map((_, i) => (
-                              <div key={`pro-skel-${i}`} className="w-[130px] sm:w-[155px] shrink-0 h-full">
-                                <ProductSkeleton />
-                              </div>
-                            ))
-                          ) : proSellerProducts.map((p) => {
-                            const pSeller = sellers.find(
-                              (s) => s.id === p.sellerId,
-                            );
-                            return (
-                              <div
-                                key={`pro-${p.id}`}
-                                onClick={() => handleProductSelect(p)}
-                                className="w-[130px] sm:w-[155px] shrink-0 bg-transparent hover:bg-slate-50 transition cursor-pointer snap-start flex flex-col group justify-between"
-                              >
-                                <div>
-                                  <div className="aspect-square w-full rounded-lg sm:rounded-xl overflow-hidden bg-slate-100 relative mb-2">
-                                    <img
-                                      src={p.images[0]}
-                                      alt={p.name}
-                                      className="w-full h-full object-contain p-1 group-hover:scale-[1.03] transition duration-500"
-                                      referrerPolicy="no-referrer"
-                                    />
-                                    <div className="absolute top-1.5 left-1.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs flex items-center gap-0.5">
-                                      {lang === "sw"
-                                        ? "DUKA RASMI"
-                                        : "PRO STORE"}
-                                    </div>
-                                  </div>
-
-                                  <h4 className="text-[12px] sm:text-[13px] font-black text-slate-800 line-clamp-2 leading-[1.3] group-hover:text-[#ff4c00] transition-colors mb-1">
-                                    {p.name}
-                                  </h4>
-                                </div>
-
-                                <div className="mt-1">
-                                  <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                                    <PriceDisplay
-                                      amount={p.price}
-                                      colorClass="text-[#ff4c00]"
-                                      className="text-[13px] sm:text-[14px] flex-shrink-0"
-                                    />
-                                    {p.oldPrice && p.oldPrice > p.price && (
-                                      <PriceDisplay
-                                        amount={p.oldPrice}
-                                        colorClass="text-slate-400/90 line-through font-medium"
-                                        className="text-[9px] sm:text-[10px]"
-                                      />
-                                    )}
-                                  </div>
-                                  {pSeller && (
-                                    <p className="text-[9px] text-[#ff4c00] mt-0.5 font-medium flex items-center gap-1 w-full truncate">
-                                      <Store size={10} className="shrink-0" />{" "}
-                                      {pSeller.name}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                </div>
-
-                {/* All Products Header and Filters unified in same row */}
-                <div className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-5 mb-6 bg-transparent">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
-                    <div className="shrink-0">
-                      <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
-                        Our Collection
-                      </h2>
-                      <p className="text-sm text-slate-500 mt-1">
-                        {filteredProducts.length}{" "}
-                        {lang === "sw"
-                          ? "Bidhaa Zilizopatikana"
-                          : "Products Found"}
-                      </p>
-                    </div>
-
-                    {/* Sorting Selection Dropdown with Custom Personalized Indicator */}
-                    <div className="flex items-center gap-2 shrink-0 bg-transparent transition-all self-start sm:self-auto min-w-[170px] z-20">
-                      {likedProductIds.length > 0 &&
-                        sortOrder === "default" && (
-                          <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 border border-rose-100 text-[10px] font-black text-rose-600 animate-pulse shrink-0 shadow-xs">
-                            <Heart
-                              size={11}
-                              fill="currentColor"
-                              className="text-rose-500"
-                            />
-                            <span>
-                              {lang === "sw"
-                                ? `${likedProductIds.length} Pendwa Zimepewa Kipaumbele!`
-                                : `Favorites Highlighted (${likedProductIds.length})`}
-                            </span>
+                    </>
+                  ) : (
+                    <div className="mb-10 bg-white rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 shadow-sm border border-slate-200">
+                      <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden shrink-0 border-4 border-slate-50 shadow-md">
+                        {viewSeller.avatar ? (
+                          <img
+                            src={viewSeller.avatar}
+                            alt={viewSeller.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-slate-200 flex items-center justify-center text-slate-400">
+                            <Store size={40} />
                           </div>
                         )}
-
-                      <CustomSelect
-                        value={sortOrder}
-                        onChange={(v) => setSortOrder(v as any)}
-                        iconLabel={
-                          <ArrowUpDown size={13} className="text-slate-500" />
-                        }
-                        label={
-                          lang === "sw"
-                            ? "Upangaji wa Bidhaa"
-                            : "Sort Preferences"
-                        }
-                        options={[
-                          { id: "default", label: t(lang, "filter.default") },
-                          { id: "asc", label: t(lang, "filter.asc") },
-                          { id: "desc", label: t(lang, "filter.desc") },
-                          { id: "newest", label: t(lang, "filter.newest") },
-                          { id: "popular", label: t(lang, "filter.popular") },
-                        ]}
-                      />
+                      </div>
+                      <div className="flex-1 text-center md:text-left flex flex-col items-center md:items-start group">
+                        <button
+                          onClick={() => setViewSeller(null)}
+                          className="text-sm font-bold text-slate-500 hover:text-orange-600 flex items-center gap-1 mb-2 bg-slate-100 hover:bg-orange-50 px-3 py-1 rounded-full transition-colors"
+                        >
+                          <ChevronLeft size={16} />{" "}
+                          {lang === "sw" ? "Rudi" : "Back"}
+                        </button>
+                        <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-2">
+                          {viewSeller.name}
+                        </h2>
+                        <p className="text-slate-600 max-w-2xl text-sm md:text-base leading-relaxed mb-4">
+                          {viewSeller.description}
+                        </p>
+                        <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-xl text-sm font-bold border border-blue-100">
+                          <ShieldCheck size={18} className="text-blue-500" />
+                          {lang === "sw"
+                            ? "Muuzaji Aliyethibitishwa"
+                            : "Verified Seller"}
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
+                </div>
 
-                  <div className="w-full flex justify-center mt-2">
-                    {/* Categories list */}
-                    <div
-                      className="relative w-full"
-                      onMouseLeave={() => setHoveredCategory(null)}
-                    >
-                      <div className="py-2 w-full">
-                        <div className="flex justify-center items-center gap-6 flex-wrap w-full px-2">
-                          {isLoading
-                            ? Array.from({ length: 4 }).map((_, i) => (
-                                <div
-                                  key={i}
-                                  className="h-9 w-20 bg-slate-100 animate-pulse rounded-full shrink-0"
-                                ></div>
-                              ))
-                            : categories.map((c: any) => {
-                                let catObj = null;
-                                if (selectedNiche === "Zote") {
-                                  for (const n of niches || []) {
-                                    const found = n.categories?.find((cat: any) => cat.name === c);
-                                    if (found) {
-                                      catObj = found;
-                                      break;
-                                    }
-                                  }
-                                } else {
-                                  const currentNicheObj = niches?.find((n: any) => n.name === selectedNiche);
-                                  catObj = currentNicheObj?.categories?.find((cat: any) => cat.name === c);
-                                }
-                                const catImage = catObj?.image;
+                {/* Main Grid or Niche Hub or Niche Shopping Center */}
+                {selectedNiche === "Zote" &&
+                (!committedSearch || committedSearch.trim() === "") &&
+                selectedCategory === "Zote" &&
+                !selectedFamily &&
+                !viewSeller ? (
+                  <NicheHub
+                    niches={niches}
+                    products={products}
+                    lang={lang}
+                    onSelectNiche={(n) => {
+                      setSelectedNiche(n);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                  />
+                ) : selectedNiche !== "Zote" &&
+                  (!committedSearch || committedSearch.trim() === "") &&
+                  !viewSeller ? (
+                  <NicheShoppingCenter
+                    activeDynamicFilters={activeDynamicFilters}
+                    setActiveDynamicFilters={setActiveDynamicFilters}
+                    nicheObj={
+                      niches.find((n) => n.name === selectedNiche) || niches[0]
+                    }
+                    allCategories={categories}
+                    products={products}
+                    lang={lang}
+                    onBack={() => {
+                      setSelectedNiche("Zote");
+                      setSelectedCategory("Zote");
+                      setSelectedFamily(null);
+                    }}
+                    onSelectCategory={setSelectedCategory}
+                    onSelectFamily={setSelectedFamily}
+                    selectedCategory={selectedCategory}
+                    selectedFamily={selectedFamily}
+                    renderProductCard={(p) => {
+                      const pSeller = sellers.find((s) => s.id === p.sellerId);
+                      return (
+                        <ProductCard
+                          p={p}
+                          seller={pSeller}
+                          onAdd={(openCart) => addToCart(p, openCart)}
+                          onSelect={() => handleProductSelect(p)}
+                          onInteract={() => trackProductInteraction(p)}
+                          onViewSeller={(s) => {
+                            setViewSeller(s);
+                            setSelectedNiche("Zote");
+                            setSelectedCategory("Zote");
+                            setSearch("");
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                          lang={lang}
+                          reviews={allReviews[p.id] || []}
+                          isLiked={likedProductIds.includes(p.id)}
+                          onLikeToggle={toggleLikeProduct}
+                        />
+                      );
+                    }}
+                  />
+                ) : (
+                  <>
+                    {/* Main Store Area */}
+                    <div className="w-full px-2 sm:px-4 md:px-6 lg:px-8 mt-2 md:mt-3">
+                      <div className="w-full space-y-3 sm:space-y-4">
+                        {/* Custom Arrangements Visual Lookup Panel */}
+                        <div className="pt-1 pb-0">
+                          {(selectedArrangementTier !== "all" ||
+                            selectedArrangementVibe !== "all" ||
+                            selectedArrangementWrap !== "all") && (
+                            <div className="flex justify-end mb-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedArrangementTier("all");
+                                  setSelectedArrangementVibe("all");
+                                  setSelectedArrangementWrap("all");
+                                }}
+                                className="text-[10px] font-black text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-full px-2 py-1 transition cursor-pointer"
+                              >
+                                {lang === "sw"
+                                  ? "Futa Vyote (Reset)"
+                                  : "Clear Options"}
+                              </button>
+                            </div>
+                          )}
 
-                                return (
-                                <button
-                                  key={c}
-                                  onClick={() => handleCategorySelect(c)}
-                                  onMouseEnter={(e) => {
-                                    if (window.innerWidth < 720) return;
-                                    setHoveredCategory(c);
-                                    const rect =
-                                      e.currentTarget.getBoundingClientRect();
-                                    const parentRect =
-                                      e.currentTarget.parentElement?.parentElement?.parentElement?.getBoundingClientRect();
-                                    if (parentRect) {
-                                      setHoveredCategoryX(
-                                        rect.left - parentRect.left,
-                                      );
-                                    }
-                                  }}
-                                  className={`flex flex-col items-center gap-1.5 transition-all duration-300 outline-none cursor-pointer shrink-0 ${
-                                    selectedCategory === c
-                                      ? "opacity-100 scale-105"
-                                      : "opacity-60 hover:opacity-100 hover:scale-[1.02]"
-                                  }`}
-                                >
-                                  <div className={`w-[92px] h-[92px] shrink-0 rounded-full bg-slate-100 border-[5px] overflow-hidden flex items-center justify-center transition-transform duration-300 ${selectedCategory === c ? "border-slate-900 shadow-lg" : "border-transparent"}`}>
-                                    {catImage ? (
-                                      <img src={catImage} alt={c} className="w-full h-full object-cover" />
-                                    ) : (
-                                      <span className="text-[10px] font-bold text-slate-400 uppercase">{c === "Zote" ? (lang === "sw" ? "ZOTE" : "ALL") : c.slice(0,3)}</span>
-                                    )}
+                          <div className="grid grid-cols-3 gap-1 md:gap-2">
+                            {/* Select 1: Arrangement Tier */}
+                            <CustomSelect
+                              value={selectedArrangementTier}
+                              onChange={setSelectedArrangementTier}
+                              iconLabel="🛍️"
+                              label={
+                                lang === "sw"
+                                  ? "Kiwango cha Thamani (Tier)"
+                                  : "Arrangement Tier"
+                              }
+                              align="left"
+                              options={[
+                                {
+                                  id: "all",
+                                  label:
+                                    lang === "sw" ? "Ngazi Zote" : "All Tiers",
+                                  subtitle: "No price restrictions",
+                                },
+                                {
+                                  id: "standard",
+                                  label:
+                                    lang === "sw"
+                                      ? "Kawaida / Budget"
+                                      : "Standard Essentials",
+                                  subtitle: "Eco-friendly, essential gifts",
+                                },
+                                {
+                                  id: "premium",
+                                  label:
+                                    lang === "sw"
+                                      ? "Kifahari / Premium"
+                                      : "Premium Artistry",
+                                  subtitle: "Handcrafted deluxe options",
+                                },
+                                {
+                                  id: "luxury",
+                                  label:
+                                    lang === "sw"
+                                      ? "Kifalme / Luxury"
+                                      : "Royal Luxury",
+                                  subtitle: "Bespoke high-end masterpieces",
+                                },
+                              ]}
+                            />
+
+                            {/* Select 2: Color Vibes / Aesthetics */}
+                            <CustomSelect
+                              value={selectedArrangementVibe}
+                              onChange={setSelectedArrangementVibe}
+                              iconLabel="🎨"
+                              label={
+                                lang === "sw"
+                                  ? "Mandhari ya Rangi (Vibe)"
+                                  : "Arrangement Vibe"
+                              }
+                              align="center"
+                              options={[
+                                {
+                                  id: "all",
+                                  label:
+                                    lang === "sw"
+                                      ? "Mandhari Zote"
+                                      : "All Vibes & Colors",
+                                },
+                                {
+                                  id: "romance",
+                                  label:
+                                    lang === "sw"
+                                      ? "🔴 Upendo (Red / Rose)"
+                                      : "🔴 Crimson Romance",
+                                },
+                                {
+                                  id: "serenity",
+                                  label:
+                                    lang === "sw"
+                                      ? "⚪ Utulivu (Pink / White)"
+                                      : "⚪ Pastel Serenity",
+                                },
+                                {
+                                  id: "amber",
+                                  label:
+                                    lang === "sw"
+                                      ? "🟠 Machweo (Gold / orange)"
+                                      : "🟠 Sunset Amber",
+                                },
+                                {
+                                  id: "emerald",
+                                  label:
+                                    lang === "sw"
+                                      ? "🟢 Mali na Kijani (Green)"
+                                      : "🟢 Emerald Wealth",
+                                },
+                                {
+                                  id: "minimalist",
+                                  label:
+                                    lang === "sw"
+                                      ? "⚫ Rahisi ya Kisasa (Sleek)"
+                                      : "⚫ Modern Minimalist",
+                                },
+                              ]}
+                            />
+
+                            {/* Select 3: Presentation Box/Wrap Style */}
+                            <CustomSelect
+                              value={selectedArrangementWrap}
+                              onChange={setSelectedArrangementWrap}
+                              iconLabel="🎁"
+                              label={
+                                lang === "sw"
+                                  ? "Mtindo wa Ufungashaji"
+                                  : "Presentation Style"
+                              }
+                              align="right"
+                              options={[
+                                {
+                                  id: "all",
+                                  label:
+                                    lang === "sw"
+                                      ? "Aina Zote za Mipango"
+                                      : "All Presentations",
+                                },
+                                {
+                                  id: "box",
+                                  label:
+                                    lang === "sw"
+                                      ? "Kasha Maalum la Zawadi"
+                                      : "Signature Gift Box",
+                                },
+                                {
+                                  id: "wrap",
+                                  label:
+                                    lang === "sw"
+                                      ? "Karatasi Kifahari / Buketi"
+                                      : "Special Wrap / Bouquets",
+                                },
+                                {
+                                  id: "basket",
+                                  label:
+                                    lang === "sw"
+                                      ? "Kikapu cha Mkono / Hamper"
+                                      : "Handcrafted Basket",
+                                },
+                                {
+                                  id: "acrylic",
+                                  label:
+                                    lang === "sw"
+                                      ? "Glasi ya Kioo ya Acrylic"
+                                      : "Bespoke Acrylic Cube",
+                                },
+                              ]}
+                            />
+                          </div>
+
+                          {/* Match counter banner */}
+                          <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-black text-slate-500">
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                              <span>
+                                {lang === "sw"
+                                  ? `${filteredProducts.length} Mpangilio umeoana na vigezo vyako`
+                                  : `${filteredProducts.length} arrangements match your criteria`}
+                              </span>
+                            </div>
+                            {(selectedArrangementTier !== "all" ||
+                              selectedArrangementVibe !== "all" ||
+                              selectedArrangementWrap !== "all") && (
+                              <div className="text-[10px] text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-100 uppercase tracking-wider animate-pulse">
+                                {lang === "sw"
+                                  ? "Mchujo Umewashwa!"
+                                  : "Vibe-match Active!"}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Top Selling & Recommended (Segmented Behavior Modules) */}
+                        <div className="flex flex-col space-y-6 sm:space-y-10">
+                          {/* BEHAVIOR MODULE 1: TOP DEALS (Lowest Prices with specific pricing formatting & labels) */}
+                          {(topDealsProducts.length > 0 || isLoading) &&
+                            selectedCategory === "Zote" &&
+                            search === "" && (
+                              <div className="lg:py-6 py-4 bg-transparent relative overflow-hidden flex flex-col border-b border-slate-200">
+                                <div className="flex items-center justify-between mb-4">
+                                  <div>
+                                    <h3 className="text-lg md:text-xl font-extrabold text-slate-950 tracking-tight flex items-center gap-1.5 leading-tight">
+                                      {lang === "sw"
+                                        ? "Ofa Moto-Moto"
+                                        : "Top Deals"}
+                                    </h3>
+                                    <p className="text-[10px] md:text-xs text-slate-400 font-medium">
+                                      {lang === "sw"
+                                        ? "Okoa kwa bei nafuu kupita kawaida sokoni"
+                                        : "Score the lowest prices on Orbi Shop"}
+                                    </p>
                                   </div>
-                                  <span className={`text-[10px] font-bold whitespace-nowrap transition-colors duration-300 ${selectedCategory === c ? "text-slate-900" : "text-slate-500"}`}>
-                                    {c}
-                                  </span>
-                                </button>
-                                );
-                              })}
+                                  <div className="flex items-center gap-1 text-slate-400 hover:text-slate-600 cursor-pointer transition">
+                                    <span className="text-xs font-bold">
+                                      {lang === "sw" ? "Zote" : "View All"}
+                                    </span>
+                                    <ChevronRight size={18} />
+                                  </div>
+                                </div>
 
-                          {/* Dedicated visual separator & Special Merchant Filters, keeping them distinct from standard product categories */}
-                          {!viewSeller &&
-                            selectedNiche === "Zote" &&
-                            dynamicSellerCategories.length > 0 && (
-                              <>
-                                <div className="h-5 w-px bg-slate-200 shrink-0 self-center mx-1"></div>
-                                {dynamicSellerCategories.map((sc) => {
-                                  const isSelected = selectedCategory === sc;
-                                  return (
-                                    <button
-                                      key={sc}
-                                      onClick={() => handleCategorySelect(sc)}
-                                      className={`py-1 px-3.5 rounded-full text-xs font-bold whitespace-nowrap transition-all outline-none cursor-pointer flex items-center gap-1.5 shrink-0 border duration-200 ${
-                                        isSelected
-                                          ? sc === "Pro Sellers"
-                                            ? "bg-amber-100 text-amber-800 border-amber-300 shadow-sm font-black"
-                                            : "bg-indigo-100 text-indigo-800 border-indigo-300 shadow-sm font-black"
-                                          : sc === "Pro Sellers"
-                                            ? "bg-amber-50/50 text-amber-700 hover:bg-amber-100/50 border-amber-200"
-                                            : "bg-indigo-50/50 text-indigo-700 hover:bg-indigo-100/50 border-indigo-200"
-                                      }`}
-                                    >
-                                      {sc === "Pro Sellers" ? (
+                                <div className="flex gap-2.5 md:gap-3 overflow-x-auto pb-4 pt-1 scrollbar-none flex-nowrap -mx-2 px-2 sm:-mx-4 sm:px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8">
+                                  {isLoading
+                                    ? Array.from({ length: 6 }).map((_, i) => (
+                                        <div
+                                          key={`td-skel-${i}`}
+                                          className="w-[105px] sm:w-[155px] shrink-0 h-full"
+                                        >
+                                          <ProductSkeleton />
+                                        </div>
+                                      ))
+                                    : topDealsProducts.map((p) => {
+                                        const pSeller = sellers.find(
+                                          (s) => s.id === p.sellerId,
+                                        );
+                                        const hasDiscount =
+                                          p.oldPrice && p.oldPrice > p.price;
+                                        const percentOff = hasDiscount
+                                          ? Math.round(
+                                              ((p.oldPrice! - p.price) /
+                                                p.oldPrice!) *
+                                                100,
+                                            )
+                                          : 0;
+
+                                        return (
+                                          <div
+                                            key={`deal-${p.id}`}
+                                            onClick={() =>
+                                              handleProductSelect(p)
+                                            }
+                                            className="w-[105px] sm:w-[155px] shrink-0 bg-white hover:-translate-y-0.5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-slate-100/60 p-1.5 sm:p-2 rounded-xl sm:rounded-2xl transition-all cursor-pointer snap-start flex flex-col group justify-between"
+                                          >
+                                            <div>
+                                              <div className="aspect-square w-full rounded-lg sm:rounded-xl overflow-hidden bg-[#f1f5f9]/50 relative mb-2">
+                                                <img
+                                                  src={p.images[0]}
+                                                  alt={p.name}
+                                                  className="w-full h-full object-contain p-1 group-hover:scale-[1.03] transition duration-500"
+                                                  referrerPolicy="no-referrer"
+                                                />
+                                                {hasDiscount && (
+                                                  <div className="absolute top-1.5 left-1.5 bg-rose-600/90 text-white text-[9px] px-1.5 py-0.5 rounded backdrop-blur-xs font-bold leading-none shadow-xs">
+                                                    -{percentOff}%
+                                                  </div>
+                                                )}
+                                                {pSeller?.isPro && (
+                                                  <div className="absolute top-1.5 right-1.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[7px] px-1 py-0.5 rounded shadow-xs font-bold uppercase tracking-widest leading-none">
+                                                    PRO
+                                                  </div>
+                                                )}
+                                              </div>
+
+                                              <h4 className="text-[12px] sm:text-[13px] font-black text-slate-800 line-clamp-2 leading-[1.3] group-hover:text-[#ff4c00] transition-colors mb-1">
+                                                {p.name}
+                                              </h4>
+                                            </div>
+
+                                            <div className="mt-1">
+                                              <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                                                <PriceDisplay
+                                                  amount={p.price}
+                                                  colorClass="text-[#ff4c00]"
+                                                  className="text-[12px] sm:text-[14px] flex-shrink-0"
+                                                />
+                                                {p.oldPrice &&
+                                                  p.oldPrice > p.price && (
+                                                    <PriceDisplay
+                                                      amount={p.oldPrice}
+                                                      colorClass="text-slate-400/90 line-through font-medium"
+                                                      className="text-[9px] sm:text-[10px]"
+                                                    />
+                                                  )}
+                                              </div>
+                                              <p className="text-[9px] text-[#ff4c00] mt-0.5 font-medium leading-none text-left truncate w-full">
+                                                {lang === "sw"
+                                                  ? "Chini kwa zinazofanana"
+                                                  : "Lowest among similar"}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                </div>
+                              </div>
+                            )}
+
+                          {/* BEHAVIOR MODULE 2: NEW ARRIVALS (Newest items showcase) */}
+                          {(newArrivalsProducts.length > 0 || isLoading) &&
+                            selectedCategory === "Zote" &&
+                            search === "" && (
+                              <div className="lg:py-6 py-4 bg-transparent relative overflow-hidden flex flex-col border-b border-slate-200">
+                                <div className="flex items-center justify-between mb-4">
+                                  <div>
+                                    <h3 className="text-lg md:text-xl font-extrabold text-slate-950 tracking-tight flex items-center gap-1.5 leading-tight">
+                                      {lang === "sw"
+                                        ? "Hivi Karibuni"
+                                        : "New Arrivals"}
+                                      <span className="text-[10px] font-black uppercase bg-emerald-500 text-white px-2 py-0.5 rounded-full tracking-wider animate-pulse">
+                                        {lang === "sw" ? "MPYA" : "NEW"}
+                                      </span>
+                                    </h3>
+                                    <p className="text-[10px] md:text-xs text-slate-400 font-medium mt-1">
+                                      {lang === "sw"
+                                        ? "Wahi bidhaa mpya kabisa zilizotufikia mapema"
+                                        : "Stay ahead with the latest offerings"}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-1 text-slate-400 hover:text-slate-600 cursor-pointer transition">
+                                    <span className="text-xs font-bold">
+                                      {lang === "sw" ? "Zote" : "View All"}
+                                    </span>
+                                    <ChevronRight size={18} />
+                                  </div>
+                                </div>
+
+                                {/* Slide track */}
+                                <div className="flex gap-2.5 md:gap-3 overflow-x-auto pb-4 pt-1 scrollbar-none flex-nowrap -mx-2 px-2 sm:-mx-4 sm:px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8">
+                                  {isLoading
+                                    ? Array.from({ length: 6 }).map((_, i) => (
+                                        <div
+                                          key={`na-skel-${i}`}
+                                          className="w-[105px] sm:w-[155px] shrink-0 h-full"
+                                        >
+                                          <ProductSkeleton />
+                                        </div>
+                                      ))
+                                    : newArrivalsProducts.map((p) => {
+                                        const pSeller = sellers.find(
+                                          (s) => s.id === p.sellerId,
+                                        );
+                                        return (
+                                          <div
+                                            key={`new-${p.id}`}
+                                            onClick={() =>
+                                              handleProductSelect(p)
+                                            }
+                                            className="w-[105px] sm:w-[155px] shrink-0 bg-white hover:-translate-y-0.5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-slate-100/60 p-1.5 sm:p-2 rounded-xl sm:rounded-2xl transition-all cursor-pointer snap-start flex flex-col group justify-between"
+                                          >
+                                            <div>
+                                              <div className="aspect-square w-full rounded-lg sm:rounded-xl overflow-hidden bg-[#f1f5f9]/50 relative mb-2">
+                                                <img
+                                                  src={p.images[0]}
+                                                  alt={p.name}
+                                                  className="w-full h-full object-contain p-1 group-hover:scale-[1.03] transition duration-500"
+                                                  referrerPolicy="no-referrer"
+                                                />
+                                                <div className="absolute top-1.5 left-1.5 bg-slate-900/80 text-white text-[9px] px-1.5 py-0.5 rounded font-bold backdrop-blur-xs leading-none shadow-xs">
+                                                  {lang === "sw"
+                                                    ? "Mpyaa"
+                                                    : "Fresh In"}
+                                                </div>
+                                                {pSeller?.isPro && (
+                                                  <div className="absolute top-1.5 right-1.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[7px] px-1 py-0.5 rounded shadow-xs font-bold uppercase tracking-widest leading-none">
+                                                    PRO
+                                                  </div>
+                                                )}
+                                              </div>
+
+                                              <h4 className="text-[12px] sm:text-[13px] font-black text-slate-800 line-clamp-2 leading-[1.3] group-hover:text-[#ff4c00] transition-colors mb-1">
+                                                {p.name}
+                                              </h4>
+                                            </div>
+
+                                            <div className="mt-1">
+                                              <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                                                <PriceDisplay
+                                                  amount={p.price}
+                                                  colorClass="text-[#ff4c00]"
+                                                  className="text-[12px] sm:text-[14px] flex-shrink-0"
+                                                />
+                                                {p.oldPrice &&
+                                                  p.oldPrice > p.price && (
+                                                    <PriceDisplay
+                                                      amount={p.oldPrice}
+                                                      colorClass="text-slate-400/90 line-through font-medium"
+                                                      className="text-[9px] sm:text-[10px]"
+                                                    />
+                                                  )}
+                                              </div>
+                                              <p className="text-[9px] text-[#ff4c00] mt-0.5 font-medium leading-none text-left truncate w-full">
+                                                {p.category}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                </div>
+                              </div>
+                            )}
+
+                          {/* BEHAVIOR MODULE 3: PRO & PREMIUM FEATURED SELLERS (Vendor Prioritization) */}
+                          {(proSellerProducts.length > 0 || isLoading) &&
+                            selectedCategory === "Zote" &&
+                            search === "" && (
+                              <div
+                                id="pro-sellers-picks-scroller-section"
+                                className="lg:py-6 py-4 bg-transparent relative overflow-hidden flex flex-col border-b border-slate-200"
+                              >
+                                <div className="flex items-center justify-between mb-4">
+                                  <div>
+                                    <h3 className="text-lg md:text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-1.5 leading-tight">
+                                      {lang === "sw"
+                                        ? "Wauzaji walio pendekezwa"
+                                        : "Pro Sellers' Pick"}
+                                      <span className="text-[9px] font-black uppercase bg-gradient-to-r from-orange-500 to-amber-500 text-white px-2 py-0.5 rounded shadow-xs flex items-center gap-0.5">
+                                        APPROVED <Store size={8} />
+                                      </span>
+                                    </h3>
+                                    <p className="text-[10px] md:text-xs text-slate-400 font-medium mt-1">
+                                      {lang === "sw"
+                                        ? "Bidhaa zilizothibitishwa moja kwa moja kutoka kwa wauzaji wetu bora"
+                                        : "Premium certified products directly from top-tier wholesale stores"}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-1 text-slate-400 hover:text-slate-600 cursor-pointer transition">
+                                    <span className="text-xs font-bold">
+                                      {lang === "sw" ? "Gundua" : "Explore"}
+                                    </span>
+                                    <ChevronRight size={18} />
+                                  </div>
+                                </div>
+
+                                {/* Slide track */}
+                                <div className="flex gap-2.5 md:gap-3 overflow-x-auto pb-4 pt-1 scrollbar-none flex-nowrap -mx-2 px-2 sm:-mx-4 sm:px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8">
+                                  {isLoading
+                                    ? Array.from({ length: 6 }).map((_, i) => (
+                                        <div
+                                          key={`pro-skel-${i}`}
+                                          className="w-[130px] sm:w-[155px] shrink-0 h-full"
+                                        >
+                                          <ProductSkeleton />
+                                        </div>
+                                      ))
+                                    : proSellerProducts.map((p) => {
+                                        const pSeller = sellers.find(
+                                          (s) => s.id === p.sellerId,
+                                        );
+                                        return (
+                                          <div
+                                            key={`pro-${p.id}`}
+                                            onClick={() =>
+                                              handleProductSelect(p)
+                                            }
+                                            className="w-[130px] sm:w-[155px] shrink-0 bg-transparent hover:bg-slate-50 transition cursor-pointer snap-start flex flex-col group justify-between"
+                                          >
+                                            <div>
+                                              <div className="aspect-square w-full rounded-lg sm:rounded-xl overflow-hidden bg-slate-100 relative mb-2">
+                                                <img
+                                                  src={p.images[0]}
+                                                  alt={p.name}
+                                                  className="w-full h-full object-contain p-1 group-hover:scale-[1.03] transition duration-500"
+                                                  referrerPolicy="no-referrer"
+                                                />
+                                                <div className="absolute top-1.5 left-1.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs flex items-center gap-0.5">
+                                                  {lang === "sw"
+                                                    ? "DUKA RASMI"
+                                                    : "PRO STORE"}
+                                                </div>
+                                              </div>
+
+                                              <h4 className="text-[12px] sm:text-[13px] font-black text-slate-800 line-clamp-2 leading-[1.3] group-hover:text-[#ff4c00] transition-colors mb-1">
+                                                {p.name}
+                                              </h4>
+                                            </div>
+
+                                            <div className="mt-1">
+                                              <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                                                <PriceDisplay
+                                                  amount={p.price}
+                                                  colorClass="text-[#ff4c00]"
+                                                  className="text-[13px] sm:text-[14px] flex-shrink-0"
+                                                />
+                                                {p.oldPrice &&
+                                                  p.oldPrice > p.price && (
+                                                    <PriceDisplay
+                                                      amount={p.oldPrice}
+                                                      colorClass="text-slate-400/90 line-through font-medium"
+                                                      className="text-[9px] sm:text-[10px]"
+                                                    />
+                                                  )}
+                                              </div>
+                                              {pSeller && (
+                                                <p className="text-[9px] text-[#ff4c00] mt-0.5 font-medium flex items-center gap-1 w-full truncate">
+                                                  <Store
+                                                    size={10}
+                                                    className="shrink-0"
+                                                  />{" "}
+                                                  {pSeller.name}
+                                                </p>
+                                              )}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                </div>
+                              </div>
+                            )}
+
+                          {/* All Products Header and Filters unified in same row */}
+                          <div className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-5 mb-6 bg-transparent">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
+                              <div className="shrink-0">
+                                <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
+                                  Our Collection
+                                </h2>
+                                <p className="text-sm text-slate-500 mt-1">
+                                  {filteredProducts.length}{" "}
+                                  {lang === "sw"
+                                    ? "Bidhaa Zilizopatikana"
+                                    : "Products Found"}
+                                </p>
+                              </div>
+
+                              {/* Sorting Selection Dropdown with Custom Personalized Indicator */}
+                              <div className="flex items-center gap-2 shrink-0 bg-transparent transition-all self-start sm:self-auto min-w-[170px] z-20">
+                                {likedProductIds.length > 0 &&
+                                  sortOrder === "default" && (
+                                    <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 border border-rose-100 text-[10px] font-black text-rose-600 animate-pulse shrink-0 shadow-xs">
+                                      <Heart
+                                        size={11}
+                                        fill="currentColor"
+                                        className="text-rose-500"
+                                      />
+                                      <span>
+                                        {lang === "sw"
+                                          ? `${likedProductIds.length} Pendwa Zimepewa Kipaumbele!`
+                                          : `Favorites Highlighted (${likedProductIds.length})`}
+                                      </span>
+                                    </div>
+                                  )}
+
+                                <CustomSelect
+                                  value={sortOrder}
+                                  onChange={(v) => setSortOrder(v as any)}
+                                  iconLabel={
+                                    <ArrowUpDown
+                                      size={13}
+                                      className="text-slate-500"
+                                    />
+                                  }
+                                  label={
+                                    lang === "sw"
+                                      ? "Upangaji wa Bidhaa"
+                                      : "Sort Preferences"
+                                  }
+                                  options={[
+                                    {
+                                      id: "default",
+                                      label: t(lang, "filter.default"),
+                                    },
+                                    { id: "asc", label: t(lang, "filter.asc") },
+                                    {
+                                      id: "desc",
+                                      label: t(lang, "filter.desc"),
+                                    },
+                                    {
+                                      id: "newest",
+                                      label: t(lang, "filter.newest"),
+                                    },
+                                    {
+                                      id: "popular",
+                                      label: t(lang, "filter.popular"),
+                                    },
+                                  ]}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="w-full flex justify-center mt-2">
+                              {/* Categories list */}
+                              <div
+                                className="relative w-full"
+                                onMouseLeave={() => setHoveredCategory(null)}
+                              >
+                                <div className="py-2 w-full">
+                                  <div className="flex justify-center items-center gap-6 flex-wrap w-full px-2">
+                                    {isLoading
+                                      ? Array.from({ length: 4 }).map(
+                                          (_, i) => (
+                                            <div
+                                              key={i}
+                                              className="h-9 w-20 bg-slate-100 animate-pulse rounded-full shrink-0"
+                                            ></div>
+                                          ),
+                                        )
+                                      : categories.map((c: any) => {
+                                          let catObj = null;
+                                          if (selectedNiche === "Zote") {
+                                            for (const n of niches || []) {
+                                              const found = n.categories?.find(
+                                                (cat: any) => cat.name === c,
+                                              );
+                                              if (found) {
+                                                catObj = found;
+                                                break;
+                                              }
+                                            }
+                                          } else {
+                                            const currentNicheObj =
+                                              niches?.find(
+                                                (n: any) =>
+                                                  n.name === selectedNiche,
+                                              );
+                                            catObj =
+                                              currentNicheObj?.categories?.find(
+                                                (cat: any) => cat.name === c,
+                                              );
+                                          }
+                                          const catImage = catObj?.image;
+
+                                          return (
+                                            <button
+                                              key={c}
+                                              onClick={() =>
+                                                handleCategorySelect(c)
+                                              }
+                                              onMouseEnter={(e) => {
+                                                if (window.innerWidth < 720)
+                                                  return;
+                                                setHoveredCategory(c);
+                                                const rect =
+                                                  e.currentTarget.getBoundingClientRect();
+                                                const parentRect =
+                                                  e.currentTarget.parentElement?.parentElement?.parentElement?.getBoundingClientRect();
+                                                if (parentRect) {
+                                                  setHoveredCategoryX(
+                                                    rect.left - parentRect.left,
+                                                  );
+                                                }
+                                              }}
+                                              className={`flex flex-col items-center gap-1.5 transition-all duration-300 outline-none cursor-pointer shrink-0 ${
+                                                selectedCategory === c
+                                                  ? "opacity-100 scale-105"
+                                                  : "opacity-60 hover:opacity-100 hover:scale-[1.02]"
+                                              }`}
+                                            >
+                                              <div
+                                                className={`w-[92px] h-[92px] shrink-0 rounded-full bg-slate-100 border-[5px] overflow-hidden flex items-center justify-center transition-transform duration-300 ${selectedCategory === c ? "border-slate-900 shadow-lg" : "border-transparent"}`}
+                                              >
+                                                {catImage ? (
+                                                  <img
+                                                    src={catImage}
+                                                    alt={c}
+                                                    className="w-full h-full object-cover"
+                                                  />
+                                                ) : (
+                                                  <span className="text-[10px] font-bold text-slate-400 uppercase">
+                                                    {c === "Zote"
+                                                      ? lang === "sw"
+                                                        ? "ZOTE"
+                                                        : "ALL"
+                                                      : c.slice(0, 3)}
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <span
+                                                className={`text-[10px] font-bold whitespace-nowrap transition-colors duration-300 ${selectedCategory === c ? "text-slate-900" : "text-slate-500"}`}
+                                              >
+                                                {c}
+                                              </span>
+                                            </button>
+                                          );
+                                        })}
+
+                                    {/* Dedicated visual separator & Special Merchant Filters, keeping them distinct from standard product categories */}
+                                    {!viewSeller &&
+                                      selectedNiche === "Zote" &&
+                                      dynamicSellerCategories.length > 0 && (
                                         <>
-                                          <Sparkles
-                                            size={11}
-                                            className={`${isSelected ? "text-amber-600 fill-amber-350 animate-bounce" : "text-amber-500"} shrink-0`}
-                                          />
-                                          <span>
-                                            {lang === "sw"
-                                              ? "Wauzaji wa Pro"
-                                              : "Pro Sellers"}
-                                          </span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Briefcase
-                                            size={11}
-                                            className={`${isSelected ? "text-indigo-600" : "text-indigo-500"} shrink-0`}
-                                          />
-                                          <span>
-                                            {lang === "sw"
-                                              ? "Kununua Juu/Jumla"
-                                              : "Wholesale Store"}
-                                          </span>
+                                          <div className="h-5 w-px bg-slate-200 shrink-0 self-center mx-1"></div>
+                                          {dynamicSellerCategories.map((sc) => {
+                                            const isSelected =
+                                              selectedCategory === sc;
+                                            return (
+                                              <button
+                                                key={sc}
+                                                onClick={() =>
+                                                  handleCategorySelect(sc)
+                                                }
+                                                className={`py-1 px-3.5 rounded-full text-xs font-bold whitespace-nowrap transition-all outline-none cursor-pointer flex items-center gap-1.5 shrink-0 border duration-200 ${
+                                                  isSelected
+                                                    ? sc === "Pro Sellers"
+                                                      ? "bg-amber-100 text-amber-800 border-amber-300 shadow-sm font-black"
+                                                      : "bg-indigo-100 text-indigo-800 border-indigo-300 shadow-sm font-black"
+                                                    : sc === "Pro Sellers"
+                                                      ? "bg-amber-50/50 text-amber-700 hover:bg-amber-100/50 border-amber-200"
+                                                      : "bg-indigo-50/50 text-indigo-700 hover:bg-indigo-100/50 border-indigo-200"
+                                                }`}
+                                              >
+                                                {sc === "Pro Sellers" ? (
+                                                  <>
+                                                    <Sparkles
+                                                      size={11}
+                                                      className={`${isSelected ? "text-amber-600 fill-amber-350 animate-bounce" : "text-amber-500"} shrink-0`}
+                                                    />
+                                                    <span>
+                                                      {lang === "sw"
+                                                        ? "Wauzaji wa Pro"
+                                                        : "Pro Sellers"}
+                                                    </span>
+                                                  </>
+                                                ) : (
+                                                  <>
+                                                    <Briefcase
+                                                      size={11}
+                                                      className={`${isSelected ? "text-indigo-600" : "text-indigo-500"} shrink-0`}
+                                                    />
+                                                    <span>
+                                                      {lang === "sw"
+                                                        ? "Kununua Juu/Jumla"
+                                                        : "Wholesale Store"}
+                                                    </span>
+                                                  </>
+                                                )}
+                                              </button>
+                                            );
+                                          })}
                                         </>
                                       )}
-                                    </button>
-                                  );
-                                })}
-                              </>
-                            )}
-                        </div>
-                      </div>
+                                  </div>
+                                </div>
 
-                      {/* Hover Mega Menu for Category Products */}
-                      {hoveredCategory && megaMenuProducts.length > 0 && (
-                        <div
-                          className="absolute top-full bg-white shadow-lg z-[100] p-4 md:p-6 border border-slate-100 rounded-xl mt-1 w-[290px] sm:w-[480px] transition-all duration-150"
-                          style={{
-                            left:
-                              hoveredCategoryX !== null
-                                ? `${Math.max(12, Math.min(hoveredCategoryX, window.innerWidth - 500))}px`
-                                : "auto",
-                            right: hoveredCategoryX !== null ? "auto" : "0px",
-                          }}
-                        >
-                          <h3 className="text-sm font-black text-slate-800 flex items-center gap-2 mb-4">
-                            <Star
-                              size={16}
-                              className="text-[#ff4c00] fill-[#ff4c00]"
-                            />
-                            {lang === "sw"
-                              ? "Bidhaa Bora za"
-                              : "Top Pro Products in: "}
-                            <span className="text-[#ff4c00] ml-1">
-                              {hoveredCategory}
-                            </span>
-                          </h3>
-                          <div className="flex overflow-x-auto gap-3 pb-2 no-scrollbar w-full">
-                            {megaMenuProducts.slice(0, 4).map((p) => (
-                              <button
-                                key={p.id}
-                                onClick={() => {
-                                  setSelectedProduct(p);
-                                  setSelectedCategory(p.category);
-                                  setHoveredCategory(null);
-                                }}
-                                className="flex-none w-[120px] md:w-[130px] flex flex-col text-left group bg-transparent rounded-lg p-1 hover:bg-slate-50 transition-colors cursor-pointer"
-                              >
-                                <div className="w-full aspect-[4/3] rounded-lg bg-slate-100 overflow-hidden mb-2">
-                                  {p.images && p.images[0] ? (
-                                    <img
-                                      src={p.images[0]}
-                                      className="w-full h-full object-contain p-1 group-hover:scale-110 transition-transform duration-500"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-slate-400">
-                                      <ShoppingBag />
+                                {/* Hover Mega Menu for Category Products */}
+                                {hoveredCategory &&
+                                  megaMenuProducts.length > 0 && (
+                                    <div
+                                      className="absolute top-full bg-white shadow-lg z-[100] p-4 md:p-6 border border-slate-100 rounded-xl mt-1 w-[290px] sm:w-[480px] transition-all duration-150"
+                                      style={{
+                                        left:
+                                          hoveredCategoryX !== null
+                                            ? `${Math.max(12, Math.min(hoveredCategoryX, window.innerWidth - 500))}px`
+                                            : "auto",
+                                        right:
+                                          hoveredCategoryX !== null
+                                            ? "auto"
+                                            : "0px",
+                                      }}
+                                    >
+                                      <h3 className="text-sm font-black text-slate-800 flex items-center gap-2 mb-4">
+                                        <Star
+                                          size={16}
+                                          className="text-[#ff4c00] fill-[#ff4c00]"
+                                        />
+                                        {lang === "sw"
+                                          ? "Bidhaa Bora za"
+                                          : "Top Pro Products in: "}
+                                        <span className="text-[#ff4c00] ml-1">
+                                          {hoveredCategory}
+                                        </span>
+                                      </h3>
+                                      <div className="flex overflow-x-auto gap-3 pb-2 no-scrollbar w-full">
+                                        {megaMenuProducts
+                                          .slice(0, 4)
+                                          .map((p) => (
+                                            <button
+                                              key={p.id}
+                                              onClick={() => {
+                                                setSelectedProduct(p);
+                                                setSelectedCategory(p.category);
+                                                setHoveredCategory(null);
+                                              }}
+                                              className="flex-none w-[120px] md:w-[130px] flex flex-col text-left group bg-transparent rounded-lg p-1 hover:bg-slate-50 transition-colors cursor-pointer"
+                                            >
+                                              <div className="w-full aspect-[4/3] rounded-lg bg-slate-100 overflow-hidden mb-2">
+                                                {p.images && p.images[0] ? (
+                                                  <img
+                                                    src={p.images[0]}
+                                                    className="w-full h-full object-contain p-1 group-hover:scale-110 transition-transform duration-500"
+                                                  />
+                                                ) : (
+                                                  <div className="w-full h-full flex items-center justify-center text-slate-400">
+                                                    <ShoppingBag />
+                                                  </div>
+                                                )}
+                                              </div>
+                                              <h4 className="text-xs font-bold text-slate-800 line-clamp-1 group-hover:text-amber-600 transition-colors">
+                                                {p.name}
+                                              </h4>
+                                              <div className="mt-2 font-black text-slate-900 text-xs">
+                                                <PriceDisplay
+                                                  amount={p.price}
+                                                  className="text-xs"
+                                                />
+                                              </div>
+                                            </button>
+                                          ))}
+                                      </div>
                                     </div>
                                   )}
-                                </div>
-                                <h4 className="text-xs font-bold text-slate-800 line-clamp-1 group-hover:text-amber-600 transition-colors">
-                                  {p.name}
-                                </h4>
-                                <div className="mt-2 font-black text-slate-900 text-xs">
-                                  <PriceDisplay
-                                    amount={p.price}
-                                    className="text-xs"
-                                  />
-                                </div>
-                              </button>
-                            ))}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
 
-                {/* Active Filters Ribbon */}
-                {(() => {
-                  const hasActiveFilters = !!(
-                    (committedSearch && committedSearch.trim().length > 0) ||
-                    selectedCategory !== "Zote" ||
-                    selectedNiche !== "Zote" ||
-                    selectedArrangementTier !== "all" ||
-                    selectedArrangementVibe !== "all" ||
-                    selectedArrangementWrap !== "all"
-                  );
-                  if (!hasActiveFilters) return null;
-                  return (
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-slate-50 border border-slate-200/65 rounded-2xl p-4 mb-6 shadow-xs animate-in fade-in duration-200">
-                      <div className="flex items-center gap-1.5 text-xs font-black text-slate-500 uppercase tracking-widest shrink-0">
-                        <Sparkles
-                          size={14}
-                          className="text-[#ff4c00] animate-pulse"
-                        />
-                        <span>
-                          {lang === "sw"
-                            ? "Vichujio Amilifu:"
-                            : "Active Filters:"}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-2 items-center flex-1">
-                        {committedSearch && (
-                          <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl text-xs font-black text-slate-800 flex items-center gap-1.5 shadow-xs">
-                            <span>"{committedSearch}"</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSearch("");
-                                setCommittedSearch("");
-                              }}
-                              className="text-slate-400 hover:text-red-500 transition cursor-pointer p-0.5"
-                            >
-                              <X size={12} strokeWidth={2.5} />
-                            </button>
-                          </span>
-                        )}
-                        {selectedCategory !== "Zote" && (
-                          <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl text-xs font-black text-slate-800 flex items-center gap-1.5 shadow-xs">
-                            <span>{selectedCategory}</span>
-                            <button
-                              type="button"
-                              onClick={() => setSelectedCategory("Zote")}
-                              className="text-slate-400 hover:text-red-500 transition cursor-pointer p-0.5"
-                            >
-                              <X size={12} strokeWidth={2.5} />
-                            </button>
-                          </span>
-                        )}
-                        {selectedNiche !== "Zote" && (
-                          <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl text-xs font-black text-slate-800 flex items-center gap-1.5 shadow-xs">
-                            <span>{selectedNiche}</span>
-                            <button
-                              type="button"
-                              onClick={() => setSelectedNiche("Zote")}
-                              className="text-slate-400 hover:text-red-500 transition cursor-pointer p-0.5"
-                            >
-                              <X size={12} strokeWidth={2.5} />
-                            </button>
-                          </span>
-                        )}
-                        {selectedArrangementTier !== "all" && (
-                          <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl text-xs font-black text-slate-800 flex items-center gap-1.5 shadow-xs">
-                            <span>
-                              {selectedArrangementTier === "luxury"
-                                ? lang === "sw"
-                                  ? "Luxury"
-                                  : "Luxury"
-                                : selectedArrangementTier === "premium"
-                                  ? lang === "sw"
-                                    ? "Premium"
-                                    : "Premium"
-                                  : lang === "sw"
-                                    ? "Budget"
-                                    : "Standard"}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setSelectedArrangementTier("all")}
-                              className="text-slate-400 hover:text-red-500 transition cursor-pointer p-0.5"
-                            >
-                              <X size={12} strokeWidth={2.5} />
-                            </button>
-                          </span>
-                        )}
-                        {selectedArrangementVibe !== "all" && (
-                          <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl text-xs font-black text-slate-800 flex items-center gap-1.5 shadow-xs">
-                            <span>{selectedArrangementVibe.toUpperCase()}</span>
-                            <button
-                              type="button"
-                              onClick={() => setSelectedArrangementVibe("all")}
-                              className="text-slate-400 hover:text-red-500 transition cursor-pointer p-0.5"
-                            >
-                              <X size={12} strokeWidth={2.5} />
-                            </button>
-                          </span>
-                        )}
-                        {selectedArrangementWrap !== "all" && (
-                          <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl text-xs font-black text-slate-800 flex items-center gap-1.5 shadow-xs">
-                            <span>{selectedArrangementWrap.toUpperCase()}</span>
-                            <button
-                              type="button"
-                              onClick={() => setSelectedArrangementWrap("all")}
-                              className="text-slate-400 hover:text-red-500 transition cursor-pointer p-0.5"
-                            >
-                              <X size={12} strokeWidth={2.5} />
-                            </button>
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSearch("");
-                          setCommittedSearch("");
-                          setSelectedCategory("Zote");
-                          setSelectedNiche("Zote");
-                          setSelectedArrangementTier("all");
-                          setSelectedArrangementVibe("all");
-                          setSelectedArrangementWrap("all");
-                        }}
-                        className="text-xs font-black text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100/80 border border-rose-200 px-4 py-2 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1.5 self-end sm:self-auto shrink-0 shadow-xs"
-                      >
-                        <Trash size={14} />
-                        <span>
-                          {lang === "sw" ? "Futa Vyote" : "Clear All"}
-                        </span>
-                      </button>
-                    </div>
-                  );
-                })()}
-
-                {/* Main Grid */}
-                <div className="">
-                  {isLoading ? (
-                    <div className="orbi-product-list-grid py-1">
-                      {Array.from({ length: 12 }).map((_, i) => (
-                        <ProductSkeleton key={i} />
-                      ))}
-                    </div>
-                  ) : filteredProducts.length > 0 ? (
-                    <div className="orbi-product-list-grid py-1">
-                      <AnimatePresence mode="popLayout">
-                        {filteredProducts.flatMap((p, idx) => {
-                          const pSeller = sellers.find(
-                            (s) => s.id === p.sellerId,
-                          );
-
-                          const cards = [
-                            <motion.div
-                              key={p.id}
-                              layout
-                              initial={{ opacity: 0, scale: 0.9, y: 15, rotate: -1 }}
-                              animate={{ opacity: 1, scale: 1, y: 0, rotate: 0 }}
-                              exit={{ opacity: 0, scale: 0.9, rotate: 1 }}
-                              transition={{ 
-                                layout: { type: "spring", stiffness: 250, damping: 22 },
-                                default: { duration: 0.3, ease: "easeOut" }
-                              }}
-                            >
-                              <ProductCard
-                                p={p}
-                                seller={pSeller}
-                                onAdd={(openCart) => addToCart(p, openCart)}
-                                onSelect={() => handleProductSelect(p)}
-                                onInteract={() => trackProductInteraction(p)}
-                                onViewSeller={(s) => {
-                                  setViewSeller(s);
-                                  setSelectedNiche("Zote");
-                                  setSelectedCategory("Zote");
-                                  setSearch("");
-                                  window.scrollTo({ top: 0, behavior: "smooth" });
-                                }}
-                                lang={lang}
-                                reviews={allReviews[p.id] || []}
-                                isLiked={likedProductIds.includes(p.id)}
-                                onLikeToggle={toggleLikeProduct}
-                              />
-                            </motion.div>,
-                          ];
-
-                          // Inject dynamic "What are you looking for?" scrolling banner in the product stream
-                          if (idx === 6 || (filteredProducts.length < 7 && idx === filteredProducts.length - 1)) {
-                            cards.push(
-                              <motion.div
-                                key="what-are-you-looking-for-row-break"
-                                layout
-                                className="col-span-full py-4"
-                                initial={{ opacity: 0, y: 15 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.3 }}
-                              >
-                                <WhatAreYouLookingFor
-                                  products={products}
-                                  sellers={sellers}
-                                  lang={lang}
-                                  onSelectFamily={(fam) => {
-                                    setSelectedFamily(fam);
-                                    window.scrollTo({ top: 0, behavior: "smooth" });
-                                  }}
-                                />
-                              </motion.div>
+                          {/* Active Filters Ribbon */}
+                          {(() => {
+                            const hasActiveFilters = !!(
+                              (committedSearch &&
+                                committedSearch.trim().length > 0) ||
+                              selectedCategory !== "Zote" ||
+                              selectedNiche !== "Zote" ||
+                              selectedArrangementTier !== "all" ||
+                              selectedArrangementVibe !== "all" ||
+                              selectedArrangementWrap !== "all"
                             );
-                          }
+                            if (!hasActiveFilters) return null;
+                            return (
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-slate-50 border border-slate-200/65 rounded-2xl p-4 mb-6 shadow-xs animate-in fade-in duration-200">
+                                <div className="flex items-center gap-1.5 text-xs font-black text-slate-500 uppercase tracking-widest shrink-0">
+                                  <Sparkles
+                                    size={14}
+                                    className="text-[#ff4c00] animate-pulse"
+                                  />
+                                  <span>
+                                    {lang === "sw"
+                                      ? "Vichujio Amilifu:"
+                                      : "Active Filters:"}
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-2 items-center flex-1">
+                                  {committedSearch && (
+                                    <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl text-xs font-black text-slate-800 flex items-center gap-1.5 shadow-xs">
+                                      <span>"{committedSearch}"</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSearch("");
+                                          setCommittedSearch("");
+                                        }}
+                                        className="text-slate-400 hover:text-red-500 transition cursor-pointer p-0.5"
+                                      >
+                                        <X size={12} strokeWidth={2.5} />
+                                      </button>
+                                    </span>
+                                  )}
+                                  {selectedCategory !== "Zote" && (
+                                    <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl text-xs font-black text-slate-800 flex items-center gap-1.5 shadow-xs">
+                                      <span>{selectedCategory}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setSelectedCategory("Zote")
+                                        }
+                                        className="text-slate-400 hover:text-red-500 transition cursor-pointer p-0.5"
+                                      >
+                                        <X size={12} strokeWidth={2.5} />
+                                      </button>
+                                    </span>
+                                  )}
+                                  {selectedNiche !== "Zote" && (
+                                    <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl text-xs font-black text-slate-800 flex items-center gap-1.5 shadow-xs">
+                                      <span>{selectedNiche}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => setSelectedNiche("Zote")}
+                                        className="text-slate-400 hover:text-red-500 transition cursor-pointer p-0.5"
+                                      >
+                                        <X size={12} strokeWidth={2.5} />
+                                      </button>
+                                    </span>
+                                  )}
+                                  {selectedArrangementTier !== "all" && (
+                                    <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl text-xs font-black text-slate-800 flex items-center gap-1.5 shadow-xs">
+                                      <span>
+                                        {selectedArrangementTier === "luxury"
+                                          ? lang === "sw"
+                                            ? "Luxury"
+                                            : "Luxury"
+                                          : selectedArrangementTier ===
+                                              "premium"
+                                            ? lang === "sw"
+                                              ? "Premium"
+                                              : "Premium"
+                                            : lang === "sw"
+                                              ? "Budget"
+                                              : "Standard"}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setSelectedArrangementTier("all")
+                                        }
+                                        className="text-slate-400 hover:text-red-500 transition cursor-pointer p-0.5"
+                                      >
+                                        <X size={12} strokeWidth={2.5} />
+                                      </button>
+                                    </span>
+                                  )}
+                                  {selectedArrangementVibe !== "all" && (
+                                    <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl text-xs font-black text-slate-800 flex items-center gap-1.5 shadow-xs">
+                                      <span>
+                                        {selectedArrangementVibe.toUpperCase()}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setSelectedArrangementVibe("all")
+                                        }
+                                        className="text-slate-400 hover:text-red-500 transition cursor-pointer p-0.5"
+                                      >
+                                        <X size={12} strokeWidth={2.5} />
+                                      </button>
+                                    </span>
+                                  )}
+                                  {selectedArrangementWrap !== "all" && (
+                                    <span className="bg-white border border-slate-200 px-3 py-1 rounded-xl text-xs font-black text-slate-800 flex items-center gap-1.5 shadow-xs">
+                                      <span>
+                                        {selectedArrangementWrap.toUpperCase()}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setSelectedArrangementWrap("all")
+                                        }
+                                        className="text-slate-400 hover:text-red-500 transition cursor-pointer p-0.5"
+                                      >
+                                        <X size={12} strokeWidth={2.5} />
+                                      </button>
+                                    </span>
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSearch("");
+                                    setCommittedSearch("");
+                                    setSelectedCategory("Zote");
+                                    setSelectedNiche("Zote");
+                                    setSelectedArrangementTier("all");
+                                    setSelectedArrangementVibe("all");
+                                    setSelectedArrangementWrap("all");
+                                  }}
+                                  className="text-xs font-black text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100/80 border border-rose-200 px-4 py-2 rounded-xl transition duration-150 cursor-pointer flex items-center gap-1.5 self-end sm:self-auto shrink-0 shadow-xs"
+                                >
+                                  <Trash size={14} />
+                                  <span>
+                                    {lang === "sw" ? "Futa Vyote" : "Clear All"}
+                                  </span>
+                                </button>
+                              </div>
+                            );
+                          })()}
 
-                          if (
-                            idx === adPlacementIndex &&
-                            sortedAdsList.length > 0
-                          ) {
-                            cards.push(
-                              <motion.div
-                                key="orbi-embedded-carousel-ads"
-                                layout
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.3 }}
-                                className="col-span-full py-2 my-1"
-                                id="orbi-unified-carousel-scroller-section"
-                              >
-                                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-none flex-nowrap scroll-smooth pt-1 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-                                  {sortedAdsList.map((ad) => (
-                                    <div
-                                      key={ad.id}
-                                      id={`orbi-ad-card-${ad.id}`}
-                                      onClick={ad.action}
-                                      className="bg-white rounded-2xl border border-slate-200/60 overflow-hidden hover:border-emerald-500/80 hover:shadow-md cursor-pointer transition-all duration-300 group flex flex-row w-[290px] sm:w-[340px] shrink-0 snap-start h-28"
-                                    >
-                                      {/* Left Ad image creative */}
-                                      <div className="w-[100px] sm:w-[120px] h-full shrink-0 relative overflow-hidden bg-slate-100">
-                                        <img
-                                          src={ad.image}
-                                          alt={ad.title}
-                                          className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
-                                          referrerPolicy="no-referrer"
+                          <div className="">
+                            {isLoading ? (
+                              <div className="orbi-product-list-grid py-1">
+                                {Array.from({ length: 12 }).map((_, i) => (
+                                  <ProductSkeleton key={i} />
+                                ))}
+                              </div>
+                            ) : filteredProducts.length > 0 ? (
+                              <div className="orbi-product-list-grid py-1">
+                                <AnimatePresence mode="popLayout">
+                                  {filteredProducts.flatMap((p, idx) => {
+                                    const pSeller = sellers.find(
+                                      (s) => s.id === p.sellerId,
+                                    );
+
+                                    const cards = [
+                                      <motion.div
+                                        key={p.id}
+                                        layout
+                                        initial={{
+                                          opacity: 0,
+                                          scale: 0.9,
+                                          y: 15,
+                                          rotate: -1,
+                                        }}
+                                        animate={{
+                                          opacity: 1,
+                                          scale: 1,
+                                          y: 0,
+                                          rotate: 0,
+                                        }}
+                                        exit={{
+                                          opacity: 0,
+                                          scale: 0.9,
+                                          rotate: 1,
+                                        }}
+                                        transition={{
+                                          layout: {
+                                            type: "spring",
+                                            stiffness: 250,
+                                            damping: 22,
+                                          },
+                                          default: {
+                                            duration: 0.3,
+                                            ease: "easeOut",
+                                          },
+                                        }}
+                                      >
+                                        <ProductCard
+                                          p={p}
+                                          seller={pSeller}
+                                          onAdd={(openCart) =>
+                                            addToCart(p, openCart)
+                                          }
+                                          onSelect={() =>
+                                            handleProductSelect(p)
+                                          }
+                                          onInteract={() =>
+                                            trackProductInteraction(p)
+                                          }
+                                          onViewSeller={(s) => {
+                                            setViewSeller(s);
+                                            setSelectedNiche("Zote");
+                                            setSelectedCategory("Zote");
+                                            setSearch("");
+                                            window.scrollTo({
+                                              top: 0,
+                                              behavior: "smooth",
+                                            });
+                                          }}
+                                          lang={lang}
+                                          reviews={allReviews[p.id] || []}
+                                          isLiked={likedProductIds.includes(
+                                            p.id,
+                                          )}
+                                          onLikeToggle={toggleLikeProduct}
                                         />
-                                        <div className="absolute top-2 left-2 bg-slate-900/60 text-white text-[8px] px-1.5 py-0.5 rounded font-black tracking-widest uppercase">
-                                          {ad.badge}
-                                        </div>
-                                      </div>
+                                      </motion.div>,
+                                    ];
 
-                                      {/* Right details copy text */}
-                                      <div className="p-3.5 flex-1 flex flex-col justify-between min-w-0">
-                                        <div className="space-y-0.5">
-                                          <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest truncate leading-tight">
-                                            {ad.businessName}
-                                          </p>
-                                          <h4 className="text-[11px] font-black text-slate-900 group-hover:text-emerald-600 leading-snug line-clamp-2 transition-colors whitespace-normal">
-                                            {ad.title}
-                                          </h4>
-                                        </div>
-
-                                        <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 mt-1">
-                                          <span>
-                                            {lang === "sw"
-                                              ? "Gundua"
-                                              : "Discover"}
-                                          </span>
-                                          <ChevronRight
-                                            size={12}
-                                            className="transition-transform group-hover:translate-x-0.5"
+                                    // Inject dynamic "What are you looking for?" scrolling banner in the product stream
+                                    if (
+                                      idx === 6 ||
+                                      (filteredProducts.length < 7 &&
+                                        idx === filteredProducts.length - 1)
+                                    ) {
+                                      cards.push(
+                                        <motion.div
+                                          key="what-are-you-looking-for-row-break"
+                                          layout
+                                          className="col-span-full py-4"
+                                          initial={{ opacity: 0, y: 15 }}
+                                          animate={{ opacity: 1, y: 0 }}
+                                          exit={{ opacity: 0 }}
+                                          transition={{ duration: 0.3 }}
+                                        >
+                                          <WhatAreYouLookingFor
+                                            products={products}
+                                            sellers={sellers}
+                                            lang={lang}
+                                            onSelectFamily={(fam) => {
+                                              setSelectedFamily(fam);
+                                              window.scrollTo({
+                                                top: 0,
+                                                behavior: "smooth",
+                                              });
+                                            }}
                                           />
-                                        </div>
+                                        </motion.div>,
+                                      );
+                                    }
+
+                                    if (
+                                      idx === adPlacementIndex &&
+                                      sortedAdsList.length > 0
+                                    ) {
+                                      cards.push(
+                                        <motion.div
+                                          key="orbi-embedded-carousel-ads"
+                                          layout
+                                          initial={{ opacity: 0, y: 10 }}
+                                          animate={{ opacity: 1, y: 0 }}
+                                          exit={{ opacity: 0 }}
+                                          transition={{ duration: 0.3 }}
+                                          className="col-span-full py-2 my-1"
+                                          id="orbi-unified-carousel-scroller-section"
+                                        >
+                                          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-none flex-nowrap scroll-smooth pt-1 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+                                            {sortedAdsList.map((ad) => (
+                                              <div
+                                                key={ad.id}
+                                                id={`orbi-ad-card-${ad.id}`}
+                                                onClick={ad.action}
+                                                className="bg-white rounded-2xl border border-slate-200/60 overflow-hidden hover:border-emerald-500/80 hover:shadow-md cursor-pointer transition-all duration-300 group flex flex-row w-[290px] sm:w-[340px] shrink-0 snap-start h-28"
+                                              >
+                                                {/* Left Ad image creative */}
+                                                <div className="w-[100px] sm:w-[120px] h-full shrink-0 relative overflow-hidden bg-slate-100">
+                                                  <img
+                                                    src={ad.image}
+                                                    alt={ad.title}
+                                                    className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
+                                                    referrerPolicy="no-referrer"
+                                                  />
+                                                  <div className="absolute top-2 left-2 bg-slate-900/60 text-white text-[8px] px-1.5 py-0.5 rounded font-black tracking-widest uppercase">
+                                                    {ad.badge}
+                                                  </div>
+                                                </div>
+
+                                                {/* Right details copy text */}
+                                                <div className="p-3.5 flex-1 flex flex-col justify-between min-w-0">
+                                                  <div className="space-y-0.5">
+                                                    <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest truncate leading-tight">
+                                                      {ad.businessName}
+                                                    </p>
+                                                    <h4 className="text-[11px] font-black text-slate-900 group-hover:text-emerald-600 leading-snug line-clamp-2 transition-colors whitespace-normal">
+                                                      {ad.title}
+                                                    </h4>
+                                                  </div>
+
+                                                  <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 mt-1">
+                                                    <span>
+                                                      {lang === "sw"
+                                                        ? "Gundua"
+                                                        : "Discover"}
+                                                    </span>
+                                                    <ChevronRight
+                                                      size={12}
+                                                      className="transition-transform group-hover:translate-x-0.5"
+                                                    />
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </motion.div>,
+                                      );
+                                    }
+
+                                    return cards;
+                                  })}
+                                </AnimatePresence>
+                              </div>
+                            ) : (
+                              <div className="space-y-8">
+                                {similarSuggestions.length > 0 ? (
+                                  <div className="space-y-6">
+                                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-4 sm:gap-6 shadow-sm">
+                                      <div className="bg-white p-4 rounded-full shadow-sm text-amber-500 shrink-0">
+                                        <Sparkles
+                                          size={28}
+                                          className="animate-pulse text-amber-500"
+                                        />
+                                      </div>
+                                      <div className="text-center sm:text-left">
+                                        <h4
+                                          id="orbi-similar-matches-heading"
+                                          className="text-lg font-black text-slate-900 mb-1"
+                                        >
+                                          {lang === "sw"
+                                            ? `Hakuna bidhaa iliyopatikana kwa "${debouncedSearch}"`
+                                            : `No items found matching "${debouncedSearch}"`}
+                                        </h4>
+                                        <p className="text-sm font-medium text-slate-600">
+                                          {lang === "sw"
+                                            ? "Lakini tusingependa uondoke mikono mitupu! Hapa tunapendekeza bidhaa zinazofanana na utafutaji wako:"
+                                            : "But we wouldn't want you to leave empty-handed! Here are some similar products we think you'll love:"}
+                                        </p>
                                       </div>
                                     </div>
-                                  ))}
-                                </div>
-                              </motion.div>,
-                            );
-                          }
 
-                          return cards;
-                        })}
-                      </AnimatePresence>
-                    </div>
-                  ) : (
-                    <div className="space-y-8">
-                      {similarSuggestions.length > 0 ? (
-                        <div className="space-y-6">
-                          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-4 sm:gap-6 shadow-sm">
-                            <div className="bg-white p-4 rounded-full shadow-sm text-amber-500 shrink-0">
-                              <Sparkles
-                                size={28}
-                                className="animate-pulse text-amber-500"
-                              />
-                            </div>
-                            <div className="text-center sm:text-left">
-                              <h4
-                                id="orbi-similar-matches-heading"
-                                className="text-lg font-black text-slate-900 mb-1"
-                              >
-                                {lang === "sw"
-                                  ? `Hakuna bidhaa iliyopatikana kwa "${debouncedSearch}"`
-                                  : `No items found matching "${debouncedSearch}"`}
-                              </h4>
-                              <p className="text-sm font-medium text-slate-600">
-                                {lang === "sw"
-                                  ? "Lakini tusingependa uondoke mikono mitupu! Hapa tunapendekeza bidhaa zinazofanana na utafutaji wako:"
-                                  : "But we wouldn't want you to leave empty-handed! Here are some similar products we think you'll love:"}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Similar Products Grid */}
-                          <div className="orbi-product-list-grid py-1">
-                            <AnimatePresence mode="popLayout">
-                              {similarSuggestions.map((p) => {
-                                const pSeller = sellers.find(
-                                  (s) => s.id === p.sellerId,
-                                );
-                                return (
-                                  <motion.div
-                                    key={`similar-${p.id}`}
-                                    layout
-                                    initial={{ opacity: 0, scale: 0.9, y: 15, rotate: -1 }}
-                                    animate={{ opacity: 1, scale: 1, y: 0, rotate: 0 }}
-                                    exit={{ opacity: 0, scale: 0.9, rotate: 1 }}
-                                    transition={{ 
-                                      layout: { type: "spring", stiffness: 250, damping: 22 },
-                                      default: { duration: 0.3, ease: "easeOut" }
-                                    }}
-                                  >
-                                    <ProductCard
-                                      p={p}
-                                      seller={pSeller}
-                                      onAdd={(openCart) => addToCart(p, openCart)}
-                                      onSelect={() => handleProductSelect(p)}
-                                      onInteract={() => trackProductInteraction(p)}
-                                      onViewSeller={(s) => {
-                                        setViewSeller(s);
-                                        setSelectedNiche("Zote");
-                                        setSelectedCategory("Zote");
-                                        setSearch("");
-                                        window.scrollTo({
-                                          top: 0,
-                                          behavior: "smooth",
-                                        });
-                                      }}
-                                      lang={lang}
-                                      reviews={allReviews[p.id] || []}
-                                      isLiked={likedProductIds.includes(p.id)}
-                                      onLikeToggle={toggleLikeProduct}
-                                    />
-                                  </motion.div>
-                                );
-                              })}
-                            </AnimatePresence>
+                                    {/* Similar Products Grid */}
+                                    <div className="orbi-product-list-grid py-1">
+                                      <AnimatePresence mode="popLayout">
+                                        {similarSuggestions.map((p) => {
+                                          const pSeller = sellers.find(
+                                            (s) => s.id === p.sellerId,
+                                          );
+                                          return (
+                                            <motion.div
+                                              key={`similar-${p.id}`}
+                                              layout
+                                              initial={{
+                                                opacity: 0,
+                                                scale: 0.9,
+                                                y: 15,
+                                                rotate: -1,
+                                              }}
+                                              animate={{
+                                                opacity: 1,
+                                                scale: 1,
+                                                y: 0,
+                                                rotate: 0,
+                                              }}
+                                              exit={{
+                                                opacity: 0,
+                                                scale: 0.9,
+                                                rotate: 1,
+                                              }}
+                                              transition={{
+                                                layout: {
+                                                  type: "spring",
+                                                  stiffness: 250,
+                                                  damping: 22,
+                                                },
+                                                default: {
+                                                  duration: 0.3,
+                                                  ease: "easeOut",
+                                                },
+                                              }}
+                                            >
+                                              <ProductCard
+                                                p={p}
+                                                seller={pSeller}
+                                                onAdd={(openCart) =>
+                                                  addToCart(p, openCart)
+                                                }
+                                                onSelect={() =>
+                                                  handleProductSelect(p)
+                                                }
+                                                onInteract={() =>
+                                                  trackProductInteraction(p)
+                                                }
+                                                onViewSeller={(s) => {
+                                                  setViewSeller(s);
+                                                  setSelectedNiche("Zote");
+                                                  setSelectedCategory("Zote");
+                                                  setSearch("");
+                                                  window.scrollTo({
+                                                    top: 0,
+                                                    behavior: "smooth",
+                                                  });
+                                                }}
+                                                lang={lang}
+                                                reviews={allReviews[p.id] || []}
+                                                isLiked={likedProductIds.includes(
+                                                  p.id,
+                                                )}
+                                                onLikeToggle={toggleLikeProduct}
+                                              />
+                                            </motion.div>
+                                          );
+                                        })}
+                                      </AnimatePresence>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col items-center justify-center py-32 bg-white rounded-3xl border border-dashed border-slate-300">
+                                    <div className="bg-slate-50 p-6 rounded-full mb-6 text-slate-300">
+                                      <ShoppingCart size={64} />
+                                    </div>
+                                    <h4 className="text-xl font-bold text-slate-700 mb-2">
+                                      Shopping Center
+                                    </h4>
+                                    <p className="text-slate-500 font-medium max-w-sm text-center">
+                                      {t(lang, "prod.none")}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center py-32 bg-white rounded-3xl border border-dashed border-slate-300">
-                          <div className="bg-slate-50 p-6 rounded-full mb-6 text-slate-300">
-                            <ShoppingCart size={64} />
-                          </div>
-                          <h4 className="text-xl font-bold text-slate-700 mb-2">
-                            Shopping Center
-                          </h4>
-                          <p className="text-slate-500 font-medium max-w-sm text-center">
-                            {t(lang, "prod.none")}
-                          </p>
-                        </div>
-                      )}
+                      </div>
                     </div>
-                  )}
+                  </>
+                )}
+                <div
+                  id="support-contact"
+                  className="w-full px-4 sm:px-6 lg:px-8 mt-12 mb-8"
+                >
+                  <ContactSection lang={lang} user={activeUser} />
                 </div>
-              </div>
-            </div>
-            </>
+              </>
             )}
-
-            {/* Contact Form */}
-            <div
-              id="support-contact"
-              className="w-full px-4 sm:px-6 lg:px-8 mt-12 mb-8"
-            >
-              <ContactSection lang={lang} user={activeUser} />
-            </div>
           </main>
         )}
 
@@ -3160,7 +3466,6 @@ export default function ClientApp() {
                   </button>
                 </div>
               </div>
-
               {/* Chat messages */}
               <div className="flex-1 overflow-y-auto p-5 bg-slate-50/70 space-y-4 flex flex-col [background-image:radial-gradient(#e2e8f0_1.5px,transparent_1.5px)] [background-size:20px_20px]">
                 {aiChatHistory.length === 0 ? (
@@ -3436,7 +3741,10 @@ export default function ClientApp() {
                     {t(lang, "cart.title")}
                   </h2>
                   <p className="mt-1 text-xs font-semibold text-slate-400">
-                    {cart.reduce((a, c) => a + c.quantity, 0)} {lang === "sw" ? "bidhaa ziko tayari kwa checkout salama" : "items ready for secure checkout"}
+                    {cart.reduce((a, c) => a + c.quantity, 0)}{" "}
+                    {lang === "sw"
+                      ? "bidhaa ziko tayari kwa checkout salama"
+                      : "items ready for secure checkout"}
                   </p>
                 </div>
                 <button
@@ -3600,7 +3908,9 @@ export default function ClientApp() {
             availableCoupons={coupons}
             onRefresh={() => loadData(true)}
             updateQuantity={updateQuantity}
-            removeFromCart={(id: string) => setCart(cart.filter((c) => c.product.id !== id))}
+            removeFromCart={(id: string) =>
+              setCart(cart.filter((c) => c.product.id !== id))
+            }
           />
         )}
 
@@ -3730,159 +4040,196 @@ export default function ClientApp() {
         )}
 
         {selectedProduct && (
-          <Suspense fallback={<div className="fixed inset-0 z-50 bg-white flex items-center justify-center p-8"><div className="w-8 h-8 border-4 border-slate-200 border-t-emerald-500 rounded-full animate-spin"></div></div>}>
+          <Suspense
+            fallback={
+              <div className="fixed inset-0 z-50 bg-white flex items-center justify-center p-8">
+                <div className="w-8 h-8 border-4 border-slate-200 border-t-emerald-500 rounded-full animate-spin"></div>
+              </div>
+            }
+          >
             <ProductDetailPage
               product={selectedProduct}
               seller={sellers.find((s) => s.id === selectedProduct.sellerId)}
               allProducts={products}
               relatedProducts={(() => {
-              // 1. Must match the same category to avoid unrelated categories in the same broad niche
-              const sameCategoryProducts = products.filter((p) => {
-                if (p.id === selectedProduct.id) return false;
-                
-                // Match the exact category
-                if (selectedProduct.category && p.category !== selectedProduct.category) {
-                  return false;
-                }
-                
-                // Match the niche (or fallback to broad matching if niche isn't specified)
-                const sNiche = selectedProduct.niche && selectedProduct.niche !== "Zote";
-                if (sNiche && p.niche !== selectedProduct.niche) {
-                  return false;
-                }
-                
-                return true;
-              });
+                // 1. Must match the same category to avoid unrelated categories in the same broad niche
+                const sameCategoryProducts = products.filter((p) => {
+                  if (p.id === selectedProduct.id) return false;
 
-              // If there are no products of the exact same category, fallback to niche-based products
-              const basePool = sameCategoryProducts.length > 0 
-                ? sameCategoryProducts 
-                : products.filter((p) => {
-                    if (p.id === selectedProduct.id) return false;
-                    const sNiche = selectedProduct.niche && selectedProduct.niche !== "Zote";
-                    return sNiche && p.niche === selectedProduct.niche;
-                  });
+                  // Match the exact category
+                  if (
+                    selectedProduct.category &&
+                    p.category !== selectedProduct.category
+                  ) {
+                    return false;
+                  }
 
-              // 2. Score by "Family" similarity to sort closer items first
-              const scored = basePool.map((p) => {
-                let score = 0;
-                
-                // A) Brand / Prefix matching (e.g., both "Sony ..." or "Samsung ...")
-                const firstWord1 = selectedProduct.name.trim().split(/\s+/)[0]?.toLowerCase();
-                const firstWord2 = p.name.trim().split(/\s+/)[0]?.toLowerCase();
-                if (firstWord1 && firstWord1 === firstWord2) {
-                  score += 30;
-                }
+                  // Match the niche (or fallback to broad matching if niche isn't specified)
+                  const sNiche =
+                    selectedProduct.niche && selectedProduct.niche !== "Zote";
+                  if (sNiche && p.niche !== selectedProduct.niche) {
+                    return false;
+                  }
 
-                // B) Title/name keyword overlap (e.g. matching "4K", "Smart", "OLED", "TV")
-                const words1 = selectedProduct.name.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-                const words2 = p.name.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-                const commonWords = words1.filter(w => words2.includes(w));
-                score += commonWords.length * 10;
+                  return true;
+                });
 
-                // C) Tag overlap similarity
-                const p1Tags = selectedProduct.tags || [];
-                const p2Tags = p.tags || [];
-                const commonTags = p1Tags.filter(t => p2Tags.includes(t));
-                score += commonTags.length * 5;
+                // If there are no products of the exact same category, fallback to niche-based products
+                const basePool =
+                  sameCategoryProducts.length > 0
+                    ? sameCategoryProducts
+                    : products.filter((p) => {
+                        if (p.id === selectedProduct.id) return false;
+                        const sNiche =
+                          selectedProduct.niche &&
+                          selectedProduct.niche !== "Zote";
+                        return sNiche && p.niche === selectedProduct.niche;
+                      });
 
-                return { product: p, score };
-              });
+                // 2. Score by "Family" similarity to sort closer items first
+                const scored = basePool.map((p) => {
+                  let score = 0;
 
-              // Sort by highest similarity score first
-              return scored
-                .sort((a, b) => b.score - a.score)
-                .map(item => item.product);
-            })()}
-            onSelectProduct={(p) => {
-              setSelectedProduct(p);
-              const params = new URLSearchParams(window.location.search);
-              params.set("product", p.id);
-              window.history.pushState(
-                {},
-                "",
-                `${window.location.pathname}?${params.toString()}`,
-              );
-            }}
-            onViewSeller={(s) => {
-              setViewSeller(s);
-              setSelectedNiche("Zote");
-              setSelectedCategory("Zote");
-              setSearch("");
-              // Close product details when navigating to seller list
-              setSelectedProduct(null);
-              const params = new URLSearchParams(window.location.search);
-              params.delete("product");
-              const remaining = params.toString();
-              const suffix = remaining ? `?${remaining}` : "";
-              window.history.pushState(
-                {},
-                "",
-                `${window.location.pathname}${suffix}`,
-              );
-              window.scrollTo({ top: 0, behavior: "smooth" });
-            }}
-            onClose={() => {
-              setSelectedProduct(null);
-              const params = new URLSearchParams(window.location.search);
-              params.delete("product");
-              const remaining = params.toString();
-              const suffix = remaining ? `?${remaining}` : "";
-              window.history.pushState(
-                {},
-                "",
-                `${window.location.pathname}${suffix}`,
-              );
-            }}
-            onFilterByFamily={(family) => {
-              const url = `/family/${slugify(family)}`;
-              window.open(url, "_blank");
-            }}
-            onAdd={addToCart}
-            lang={lang}
-            activeUser={activeUser}
-            isLiked={likedProductIds.includes(selectedProduct.id)}
-            onLikeToggle={toggleLikeProduct}
-            // Passing standalone App Bar dependencies
-            globalSettings={globalSettings}
-            cart={cart}
-            onOpenCart={() => setShowCart(true)}
-            onSetLang={(newLang) => setLang(newLang)}
-            onOpenAuth={(mode) => setShowAuth(mode)}
-          />
+                  // A) Brand / Prefix matching (e.g., both "Sony ..." or "Samsung ...")
+                  const firstWord1 = selectedProduct.name
+                    .trim()
+                    .split(/\s+/)[0]
+                    ?.toLowerCase();
+                  const firstWord2 = p.name
+                    .trim()
+                    .split(/\s+/)[0]
+                    ?.toLowerCase();
+                  if (firstWord1 && firstWord1 === firstWord2) {
+                    score += 30;
+                  }
+
+                  // B) Title/name keyword overlap (e.g. matching "4K", "Smart", "OLED", "TV")
+                  const words1 = selectedProduct.name
+                    .toLowerCase()
+                    .split(/\s+/)
+                    .filter((w) => w.length > 2);
+                  const words2 = p.name
+                    .toLowerCase()
+                    .split(/\s+/)
+                    .filter((w) => w.length > 2);
+                  const commonWords = words1.filter((w) => words2.includes(w));
+                  score += commonWords.length * 10;
+
+                  // C) Tag overlap similarity
+                  const p1Tags = selectedProduct.tags || [];
+                  const p2Tags = p.tags || [];
+                  const commonTags = p1Tags.filter((t) => p2Tags.includes(t));
+                  score += commonTags.length * 5;
+
+                  return { product: p, score };
+                });
+
+                // Sort by highest similarity score first
+                return scored
+                  .sort((a, b) => b.score - a.score)
+                  .map((item) => item.product);
+              })()}
+              onSelectProduct={(p) => {
+                setSelectedProduct(p);
+                const params = new URLSearchParams(window.location.search);
+                params.set("product", p.id);
+                window.history.pushState(
+                  {},
+                  "",
+                  `${window.location.pathname}?${params.toString()}`,
+                );
+              }}
+              onViewSeller={(s) => {
+                setViewSeller(s);
+                setSelectedNiche("Zote");
+                setSelectedCategory("Zote");
+                setSearch("");
+                // Close product details when navigating to seller list
+                setSelectedProduct(null);
+                const params = new URLSearchParams(window.location.search);
+                params.delete("product");
+                const remaining = params.toString();
+                const suffix = remaining ? `?${remaining}` : "";
+                window.history.pushState(
+                  {},
+                  "",
+                  `${window.location.pathname}${suffix}`,
+                );
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              onClose={() => {
+                setSelectedProduct(null);
+                const params = new URLSearchParams(window.location.search);
+                params.delete("product");
+                const remaining = params.toString();
+                const suffix = remaining ? `?${remaining}` : "";
+                window.history.pushState(
+                  {},
+                  "",
+                  `${window.location.pathname}${suffix}`,
+                );
+              }}
+              onFilterByFamily={(family) => {
+                const url = `/family/${slugify(family)}`;
+                window.open(url, "_blank");
+              }}
+              onAdd={addToCart}
+              lang={lang}
+              activeUser={activeUser}
+              isLiked={likedProductIds.includes(selectedProduct.id)}
+              onLikeToggle={toggleLikeProduct}
+              // Passing standalone App Bar dependencies
+              globalSettings={globalSettings}
+              cart={cart}
+              onOpenCart={() => setShowCart(true)}
+              onSetLang={(newLang) => setLang(newLang)}
+              onOpenAuth={(mode) => setShowAuth(mode)}
+            />
           </Suspense>
         )}
         {showTrackOrder && (
-          <Suspense fallback={<div className="fixed inset-0 z-50 bg-black/50 backdrop-blur flex items-center justify-center p-8"><div className="w-8 h-8 border-4 border-slate-200 border-t-emerald-500 rounded-full animate-spin"></div></div>}>
+          <Suspense
+            fallback={
+              <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur flex items-center justify-center p-8">
+                <div className="w-8 h-8 border-4 border-slate-200 border-t-emerald-500 rounded-full animate-spin"></div>
+              </div>
+            }
+          >
             <TrackOrderModal onClose={() => setShowTrackOrder(false)} />
           </Suspense>
         )}
         {showReviewModal && selectedProductForReview && (
-          <Suspense fallback={<div className="fixed inset-0 z-50 bg-black/50 backdrop-blur flex items-center justify-center p-8"><div className="w-8 h-8 border-4 border-slate-200 border-t-emerald-500 rounded-full animate-spin"></div></div>}>
+          <Suspense
+            fallback={
+              <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur flex items-center justify-center p-8">
+                <div className="w-8 h-8 border-4 border-slate-200 border-t-emerald-500 rounded-full animate-spin"></div>
+              </div>
+            }
+          >
             <ReviewModal
               productId={selectedProductForReview.id}
               productName={selectedProductForReview.name}
               onClose={() => {
-              setShowReviewModal(false);
-              setSelectedProductForReview(null);
-            }}
-            lang={lang}
-            activeUser={activeUser}
-            onSuccess={(savedReview: Review) => {
-              setAllReviews((prev) => {
-                const updated = { ...prev };
-                if (!updated[selectedProductForReview.id]) {
-                  updated[selectedProductForReview.id] = [];
-                }
-                updated[selectedProductForReview.id] = [
-                  savedReview,
-                  ...updated[selectedProductForReview.id],
-                ];
-                return updated;
-              });
-              loadData(true);
-            }}
-          />
+                setShowReviewModal(false);
+                setSelectedProductForReview(null);
+              }}
+              lang={lang}
+              activeUser={activeUser}
+              onSuccess={(savedReview: Review) => {
+                setAllReviews((prev) => {
+                  const updated = { ...prev };
+                  if (!updated[selectedProductForReview.id]) {
+                    updated[selectedProductForReview.id] = [];
+                  }
+                  updated[selectedProductForReview.id] = [
+                    savedReview,
+                    ...updated[selectedProductForReview.id],
+                  ];
+                  return updated;
+                });
+                loadData(true);
+              }}
+            />
           </Suspense>
         )}
       </div>
@@ -3967,35 +4314,54 @@ const ProductCard: React.FC<ProductCardProps> = ({
   isLiked = false,
   onLikeToggle,
 }) => {
-  const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>(DEFAULT_DELIVERY_ZONES);
-  const [deliveryRules, setDeliveryRules] = useState<DeliveryRule[]>(DEFAULT_DELIVERY_RULES);
+  const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>(
+    DEFAULT_DELIVERY_ZONES,
+  );
+  const [deliveryRules, setDeliveryRules] = useState<DeliveryRule[]>(
+    DEFAULT_DELIVERY_RULES,
+  );
   const isOutOfStock = p.stock <= 0;
   const [imgIdx, setImgIdx] = useState(0);
   const [showFullImage, setShowFullImage] = useState(false);
-  const displayName = lang === "sw" ? (p.nameSw || p.name) : p.name;
+  const displayName = lang === "sw" ? p.nameSw || p.name : p.name;
   const hasDiscount = Boolean(p.oldPrice && p.oldPrice > p.price);
   const discountPercent = hasDiscount
     ? Math.round(((p.oldPrice! - p.price) / p.oldPrice!) * 100)
     : 0;
   const isLowStock = p.stock > 0 && p.stock <= 5;
-  const hasActivePro = Boolean(seller?.isPro && seller?.proUntil && seller.proUntil > Date.now());
+  const hasActivePro = Boolean(
+    seller?.isPro && seller?.proUntil && seller.proUntil > Date.now(),
+  );
   const sellerName = seller?.storeName || seller?.name;
-  const sellerLocation = seller?.location || (lang === "sw" ? "Tanzania" : "Tanzania");
-  const motionSeed = useMemo(() => productMotionSeed(String(p.id || p.legacy_id || p.name)), [p.id, p.legacy_id, p.name]);
-  const deliveryMotionStyle = useMemo(() => ({
-    "--orbi-delivery-slide-delay": `-${((motionSeed % 4500) / 1000).toFixed(2)}s`,
-    "--orbi-delivery-truck-delay": `-${(((motionSeed * 7) % 4800) / 1000).toFixed(2)}s`,
-  }) as React.CSSProperties, [motionSeed]);
+  const sellerLocation =
+    seller?.location || (lang === "sw" ? "Tanzania" : "Tanzania");
+  const motionSeed = useMemo(
+    () => productMotionSeed(String(p.id || p.legacy_id || p.name)),
+    [p.id, p.legacy_id, p.name],
+  );
+  const deliveryMotionStyle = useMemo(
+    () =>
+      ({
+        "--orbi-delivery-slide-delay": `-${((motionSeed % 4500) / 1000).toFixed(2)}s`,
+        "--orbi-delivery-truck-delay": `-${(((motionSeed * 7) % 4800) / 1000).toFixed(2)}s`,
+      }) as React.CSSProperties,
+    [motionSeed],
+  );
 
   const deliverySlides = useMemo(() => {
     const currentLang: Lang = lang === "en" ? "en" : "sw";
-    if (p.stock <= 0) return [currentLang === "sw" ? "Haipatikani sasa" : "Currently unavailable"];
+    if (p.stock <= 0)
+      return [
+        currentLang === "sw" ? "Haipatikani sasa" : "Currently unavailable",
+      ];
 
     const zones = normalizeDeliveryZones(deliveryZones);
     const rules = normalizeDeliveryRules(deliveryRules);
     const productForQuote = {
       ...p,
-      sellerOriginZoneId: p.sellerOriginZoneId || inferDeliveryZoneIdFromLocation(sellerLocation, zones),
+      sellerOriginZoneId:
+        p.sellerOriginZoneId ||
+        inferDeliveryZoneIdFromLocation(sellerLocation, zones),
     };
     const quotes = zones.map((zone) => ({
       zone,
@@ -4008,14 +4374,21 @@ const ProductCard: React.FC<ProductCardProps> = ({
       const reason = firstUnavailable?.quote.reason;
       return [
         p.requiresDeliveryQuote
-          ? (currentLang === "sw" ? "Makadirio maalum ya delivery" : "Custom delivery quote")
-          : reason || (currentLang === "sw" ? "Delivery haijapatikana" : "Delivery unavailable"),
+          ? currentLang === "sw"
+            ? "Makadirio maalum ya delivery"
+            : "Custom delivery quote"
+          : reason ||
+            (currentLang === "sw"
+              ? "Delivery haijapatikana"
+              : "Delivery unavailable"),
       ];
     }
 
     const primary = availableQuotes[0];
     const primaryEta = parseEtaDays(primary.quote.eta);
-    const primaryDate = primaryEta ? formatDeliveryDateRange(primaryEta.min, primaryEta.max, currentLang) : primary.quote.eta;
+    const primaryDate = primaryEta
+      ? formatDeliveryDateRange(primaryEta.min, primaryEta.max, currentLang)
+      : primary.quote.eta;
     const primaryZone = getDeliveryZoneName(primary.zone, currentLang);
     const slides = [
       `${primaryZone}: ${primaryDate}`,
@@ -4023,12 +4396,18 @@ const ProductCard: React.FC<ProductCardProps> = ({
     ];
 
     if (sellerLocation && sellerLocation !== "Tanzania") {
-      slides.push(currentLang === "sw" ? `Kutoka ${sellerLocation}` : `Ships from ${sellerLocation}`);
+      slides.push(
+        currentLang === "sw"
+          ? `Kutoka ${sellerLocation}`
+          : `Ships from ${sellerLocation}`,
+      );
     }
 
     availableQuotes.slice(1, 3).forEach(({ zone, quote }) => {
       const eta = parseEtaDays(quote.eta);
-      slides.push(`${getDeliveryZoneName(zone, currentLang)}: ${eta ? formatDeliveryDateRange(eta.min, eta.max, currentLang) : quote.eta}`);
+      slides.push(
+        `${getDeliveryZoneName(zone, currentLang)}: ${eta ? formatDeliveryDateRange(eta.min, eta.max, currentLang) : quote.eta}`,
+      );
     });
 
     return slides.slice(0, 4);
@@ -4055,15 +4434,31 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   const trustSignals = [
     seller?.isVerifiedSeller
-      ? { icon: ShieldCheck, label: lang === "sw" ? "Verified" : "Verified", className: "text-blue-700 bg-blue-50 ring-blue-100" }
+      ? {
+          icon: ShieldCheck,
+          label: lang === "sw" ? "Verified" : "Verified",
+          className: "text-blue-700 bg-blue-50 ring-blue-100",
+        }
       : null,
     hasActivePro
-      ? { icon: Crown, label: "Pro", className: "text-amber-700 bg-amber-50 ring-amber-100" }
+      ? {
+          icon: Crown,
+          label: "Pro",
+          className: "text-amber-700 bg-amber-50 ring-amber-100",
+        }
       : null,
     avgRating > 0
-      ? { icon: Star, label: `${avgRating}`, className: "text-orange-700 bg-orange-50 ring-orange-100" }
+      ? {
+          icon: Star,
+          label: `${avgRating}`,
+          className: "text-orange-700 bg-orange-50 ring-orange-100",
+        }
       : null,
-  ].filter(Boolean) as Array<{ icon: React.ElementType; label: string; className: string }>;
+  ].filter(Boolean) as Array<{
+    icon: React.ElementType;
+    label: string;
+    className: string;
+  }>;
 
   const nextImg = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -4220,7 +4615,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <div className="flex items-center justify-between gap-2 text-[10px]">
               {avgRating > 0 ? (
                 <div className="flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-1 font-black text-slate-800 ring-1 ring-amber-100">
-                  <Star fill="currentColor" size={11} strokeWidth={0} className="text-amber-500" />
+                  <Star
+                    fill="currentColor"
+                    size={11}
+                    strokeWidth={0}
+                    className="text-amber-500"
+                  />
                   <span>
                     {avgRating}
                     <span className="ml-1 font-semibold text-slate-400">
@@ -4264,15 +4664,25 @@ const ProductCard: React.FC<ProductCardProps> = ({
               >
                 <span className="flex min-w-0 items-center gap-1.5">
                   <span className="orbi-delivery-truck-wrap shrink-0">
-                    <Truck size={11} className="orbi-delivery-truck text-blue-500" />
+                    <Truck
+                      size={11}
+                      className="orbi-delivery-truck text-blue-500"
+                    />
                   </span>
                   <span className="orbi-delivery-rotator min-w-0">
                     <span
                       className={`orbi-delivery-rotator-track ${deliverySlides.length < 2 ? "orbi-delivery-rotator-track--static" : ""}`}
-                      style={{ "--orbi-delivery-slide-duration": `${Math.max(deliverySlides.length, 1) * 4.5}s` } as React.CSSProperties}
+                      style={
+                        {
+                          "--orbi-delivery-slide-duration": `${Math.max(deliverySlides.length, 1) * 4.5}s`,
+                        } as React.CSSProperties
+                      }
                     >
                       {deliverySlides.map((label) => (
-                        <span key={label} className="orbi-delivery-rotator-item">
+                        <span
+                          key={label}
+                          className="orbi-delivery-rotator-item"
+                        >
                           {label}
                         </span>
                       ))}
@@ -4282,7 +4692,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 {sellerLocation && (
                   <span className="hidden min-w-0 items-center gap-1 text-slate-400 sm:flex">
                     <MapPin size={10} className="shrink-0" />
-                    <span className="min-w-0 break-words">{sellerLocation}</span>
+                    <span className="min-w-0 break-words">
+                      {sellerLocation}
+                    </span>
                   </span>
                 )}
               </div>
@@ -4308,7 +4720,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     {trustSignals.slice(0, 2).map((signal) => {
                       const Icon = signal.icon;
                       return (
-                        <span key={signal.label} className={`flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase ring-1 ${signal.className}`}>
+                        <span
+                          key={signal.label}
+                          className={`flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase ring-1 ${signal.className}`}
+                        >
                           <Icon size={8} className="shrink-0" />
                           {signal.label}
                         </span>
@@ -4340,7 +4755,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   title={lang === "sw" ? "Nunua Sasa" : "Buy Now"}
                 >
                   <Zap size={13} className="shrink-0 fill-current" />
-                  <span className="min-w-0 break-words leading-tight">{lang === "sw" ? "Nunua sasa" : "Buy now"}</span>
+                  <span className="min-w-0 break-words leading-tight">
+                    {lang === "sw" ? "Nunua sasa" : "Buy now"}
+                  </span>
                 </button>
               </div>
             ) : (
@@ -4351,10 +4768,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   onSelect(p);
                 }}
                 className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-[11px] font-black text-slate-700 transition hover:border-slate-300 hover:bg-white sm:text-xs"
-                title={lang === "sw" ? "Fungua ukurasa wa bidhaa" : "Open product page"}
+                title={
+                  lang === "sw"
+                    ? "Fungua ukurasa wa bidhaa"
+                    : "Open product page"
+                }
               >
                 <Eye size={13} className="shrink-0" />
-                <span className="min-w-0 break-words">{lang === "sw" ? "Tazama bidhaa" : "View details"}</span>
+                <span className="min-w-0 break-words">
+                  {lang === "sw" ? "Tazama bidhaa" : "View details"}
+                </span>
               </button>
             )}
 
@@ -4370,7 +4793,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   title={lang === "sw" ? "Meseji WhatsApp" : "WhatsApp Seller"}
                 >
                   <MessageCircle size={11} className="shrink-0 fill-current" />
-                  <span className="truncate">{lang === "sw" ? "Chat" : "Chat"}</span>
+                  <span className="truncate">
+                    {lang === "sw" ? "Chat" : "Chat"}
+                  </span>
                 </a>
                 <a
                   href={`tel:${seller.phone}`}
@@ -4379,7 +4804,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   title={lang === "sw" ? "Piga Simu" : "Call Seller"}
                 >
                   <Phone size={10} className="shrink-0" />
-                  <span className="truncate">{lang === "sw" ? "Call" : "Call"}</span>
+                  <span className="truncate">
+                    {lang === "sw" ? "Call" : "Call"}
+                  </span>
                 </a>
               </div>
             )}

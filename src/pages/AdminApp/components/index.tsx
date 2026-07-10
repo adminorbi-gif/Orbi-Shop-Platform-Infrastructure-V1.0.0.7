@@ -21,7 +21,6 @@ import { supabase } from "../../../lib/supabase";
 import { formatCurrency } from "../../../lib/storage";
 import { PriceDisplay } from "../../../components/PriceDisplay";
 import { db, apiFetch } from "../../../lib/db";
-import { ChatWidget } from "../../../components/chat/ChatWidget";
 import GooglePlacePicker from "../../../components/GooglePlacePicker";
 import { quoteProductDelivery } from "../../../lib/deliveryZones";
 import { SchemaValidator } from "../../../utils/schemaValidation";
@@ -8572,41 +8571,6 @@ export function MessagesAdmin({
 }) {
   const { showAlert, showConfirm } = useDialog();
   const { lang } = useI18n();
-
-  return (
-    <div className="space-y-4 animate-in fade-in duration-200">
-      <div className="rounded-[1.65rem] border border-slate-200/70 bg-white/95 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
-            {lang === "sw" ? "Kituo cha mawasiliano" : "Communication center"}
-          </p>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight mt-1">
-            {lang === "sw" ? "Admin Inbox" : "Admin Inbox"}
-          </h1>
-          <p className="text-slate-500 text-xs font-semibold mt-1 max-w-2xl">
-            {lang === "sw"
-              ? "Fuatilia mazungumzo ya wateja na sellers kwenye sehemu moja yenye mfumo mpya wa conversations."
-              : "Track customer and seller conversations in one modern conversation inbox."}
-          </p>
-        </div>
-        <span className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-black text-slate-700">
-          <MessageSquare size={14} />
-          {lang === "sw" ? "Conversations live" : "Live conversations"}
-        </span>
-      </div>
-      <div className="h-[calc(100dvh-14rem)] min-h-[560px] rounded-[1.65rem] border border-slate-200/70 bg-slate-50 p-2 sm:p-3 shadow-sm overflow-hidden">
-        <ChatWidget
-          currentUserId="admin"
-          currentUserRole="admin"
-          currentUserName="Orbi Admin"
-          currentUserAvatar="https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png"
-          lang={lang}
-          products={products}
-          hideHeader
-        />
-      </div>
-    </div>
-  );
 
   // Custom states for setting seller password and force reset on approval
   const [approvingSellerData, setApprovingSellerData] = useState<{

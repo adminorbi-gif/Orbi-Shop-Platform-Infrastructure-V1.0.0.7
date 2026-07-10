@@ -47,7 +47,6 @@ import { ProfileOrdersTab } from "../profile/ProfileOrdersTab";
 import { ProfileMessagesTab } from "../profile/ProfileMessagesTab";
 import { ProfileRewardsTab } from "../profile/ProfileRewardsTab";
 import { ProfileLocatorTab } from "../profile/ProfileLocatorTab";
-import { ChatWidget } from "../../../components/chat/ChatWidget";
 import {
   ShoppingCart,
   Search,
@@ -7487,20 +7486,6 @@ export function CustomerProfile({
           )}
           {tab === "messages" && (
             <ProfileMessagesTab>
-              <ChatWidget
-                currentUserId={String(
-                  user.id || (user as any).legacy_id || user.email || "customer",
-                )}
-                currentUserRole="customer"
-                currentUserName={user.name || user.email || "Customer"}
-                currentUserAvatar={(user as any).avatar}
-                targetParticipantId="support"
-                targetParticipantName="Orbi Shop Support"
-                targetParticipantAvatar="https://media-stock.orbifinancial.com/OrbiShop_Logo_Blue.png"
-                lang={lang}
-                hideHeader
-              />
-              {false && (
               <div className="w-full h-full bg-slate-50 flex flex-col overflow-hidden relative">
                 {/* Unified Chat Header */}
                 {isSelectionMode && profileChatMode === "live" ? (
@@ -8411,7 +8396,6 @@ export function CustomerProfile({
                   </form>
                 )}
               </div>
-              )}
             </ProfileMessagesTab>
           )}
 

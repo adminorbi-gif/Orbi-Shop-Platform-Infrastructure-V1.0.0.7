@@ -137,7 +137,6 @@ const [tab, setTab] = useState<
     | "dashboard"
     | "products"
     | "orders"
-    | "support"
     | "ai_copilot"
     | "marketing"
     | "settings"

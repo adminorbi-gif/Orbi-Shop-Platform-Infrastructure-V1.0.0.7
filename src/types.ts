@@ -391,35 +391,6 @@ export interface Message {
   isRead?: boolean;
 }
 
-export interface ChatMessage {
-  id: string;
-  conversationId: string;
-  senderId: string;
-  senderRole: "customer" | "seller" | "admin" | "system";
-  content: string;
-  timestamp: number;
-  isRead: boolean;
-  senderName?: string;
-  isSending?: boolean;
-  isFailed?: boolean;
-}
-
-export interface ConversationParticipant {
-  id: string;
-  role: "customer" | "seller" | "admin";
-  name: string;
-  avatar?: string;
-}
-
-export interface Conversation {
-  id: string;
-  participants: ConversationParticipant[];
-  lastMessage?: string;
-  lastMessageAt?: number;
-  createdAt: number;
-  unreadCount?: Record<string, number>;
-}
-
 export interface Coupon {
   id: string;
   code: string;
